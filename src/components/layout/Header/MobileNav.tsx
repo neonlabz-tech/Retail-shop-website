@@ -7,10 +7,12 @@ import { usePathname } from 'next/navigation';
 import { Drawer } from '@/components/ui/Drawer';
 import { useUIStore } from '@/store/uiStore';
 import { useWishlistStore } from '@/store/wishlistStore';
+import { useAuthStore } from '@/store/authStore';
 import { getStorefrontFromPath, isGrocerySlug, isPetFoodSlug, isNutritionSlug, isMegastoreSlug, isPhoneCaseSlug, isSmartWatchesSlug, type Storefront } from '@/utils/storefront';
 import { ALL_CATEGORIES } from './AllCategoriesButton';
 import { MEGASTORE_CATEGORIES } from './MegastoreAllCategoriesButton';
 import { formatPrice } from '@/utils/formatPrice';
+import { HeaderLanguageCurrency } from './HeaderLanguageCurrency';
 
 import navigationFashion from '@/data/navigation.json';
 import navigationGrocery from '@/data/navigation-grocery.json';
@@ -227,7 +229,7 @@ interface AccordionRowProps {
 function AccordionRow({
   label, href, isOpen, onToggle, onNavigate, accent, depth = 0, hasChildren,
 }: AccordionRowProps) {
-  const rowItemClass = `flex-1 flex items-center py-[16px] font-medium ${
+  const rowItemClass = `flex-1 flex min-w-0 items-center py-[14px] font-medium ${
     depth === 0 ? 'px-[20px] text-[15px]' : 'px-[36px] text-[14px]'
   }`;
   const color = depth === 0 ? accent.text : accent.primary;
@@ -264,6 +266,7 @@ function AccordionRow({
 
 export function MobileNav() {
   const { mobileMenuOpen, closeMobileMenu } = useUIStore();
+  const { isAuthenticated, user, logout } = useAuthStore();
   const pathname  = usePathname();
   const storefront = getStorefrontFromPath(pathname);
   const navItems   = pickNav(storefront);
@@ -392,9 +395,9 @@ export function MobileNav() {
           </button>
         </div>
       ) : (
-        <div className="flex items-center justify-between py-[14px] pr-[12px] pl-[20px] border-b border-[#eee]">
+        <div className="flex shrink-0 items-center justify-between py-[10px] pr-[12px] pl-[20px] border-b border-[#eee]">
           <Link href="/" onClick={close} className="inline-flex items-center">
-            <Image src="/rkf-logo.png" alt="RKF Distributer" width={110} height={54} className="object-contain h-[48px] w-auto" />
+            <Image src="/rkf-logo.png" alt="RKF Distributer" width={110} height={54} className="object-contain h-[42px] w-auto" />
           </Link>
           <button
             onClick={close}
@@ -546,7 +549,7 @@ export function MobileNav() {
           <Link
             href={wishlistHref}
             onClick={close}
-            className="flex items-center gap-[10px] py-[18px] px-[20px] border-b border-[#eee] no-underline text-[15px] font-medium"
+            className="flex min-h-[56px] items-center gap-[10px] py-[14px] px-[20px] border-b border-[#eee] no-underline text-[15px] font-medium"
             style={{ color: accent.text }}
           >
             <span className="relative inline-flex">
@@ -561,26 +564,65 @@ export function MobileNav() {
             Wishlist
           </Link>
 
-          <div className="pt-[28px] px-[20px] pb-[20px]">
-            <h4 className="text-[22px] font-bold mt-0 mx-0 mb-[18px]" style={{ color: accent.text }}>My account</h4>
-            <button
-              type="button"
+          <section className="px-[20px] pt-[20px] pb-[16px]">
+            <Link
+              href="/profile"
               onClick={close}
-              className="flex items-center justify-center gap-[10px] w-full text-white border-none rounded-[40px] py-[15px] px-[24px] text-[15px] font-semibold cursor-pointer mb-[12px]"
-              style={{ background: accent.primary }}
+              className="text-[20px] leading-[1.3] font-bold mt-0 mx-0 mb-[14px] block no-underline hover:opacity-80 transition-opacity"
+              style={{ color: accent.text }}
             >
-              <IconUser size={18} />
-              Log in
-            </button>
-            <button
-              type="button"
-              onClick={close}
-              className="block w-full bg-transparent border-[1.5px] rounded-[40px] py-[14px] px-[24px] text-[15px] font-semibold cursor-pointer mb-[20px]"
-              style={{ color: accent.text, borderColor: accent.primary }}
-            >
-              Register
-            </button>
-          </div>
+              My account
+            </Link>
+
+            {isAuthenticated ? (
+              <>
+                <Link
+                  href="/profile"
+                  onClick={close}
+                  className="flex min-h-[52px] items-center justify-center gap-[10px] w-full min-w-0 text-white border-none rounded-[40px] py-[12px] px-[16px] text-[15px] font-semibold cursor-pointer mb-[10px] no-underline"
+                  style={{ background: accent.primary }}
+                >
+                  <IconUser size={18} />
+                  <span className="min-w-0 truncate">Profile ({user?.firstName || 'My Account'})</span>
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    logout();
+                    close();
+                  }}
+                  className="block min-h-[52px] w-full bg-transparent border-[1.5px] rounded-[40px] py-[12px] px-[16px] text-[15px] font-semibold cursor-pointer mb-[16px]"
+                  style={{ color: accent.text, borderColor: '#e5e7eb' }}
+                >
+                  Log out
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  onClick={close}
+                  className="flex min-h-[52px] items-center justify-center gap-[10px] w-full text-white border-none rounded-[40px] py-[12px] px-[16px] text-[15px] font-semibold cursor-pointer mb-[10px] no-underline"
+                  style={{ background: accent.primary }}
+                >
+                  <IconUser size={18} />
+                  <span>Log in</span>
+                </Link>
+                <Link
+                  href="/register"
+                  onClick={close}
+                  className="block min-h-[52px] w-full bg-transparent border-[1.5px] rounded-[40px] py-[12px] px-[16px] text-[15px] font-semibold cursor-pointer mb-[16px] text-center no-underline"
+                  style={{ color: accent.text, borderColor: accent.primary }}
+                >
+                  Register
+                </Link>
+              </>
+            )}
+
+            <div className="pt-[12px] border-t border-[#eee] flex items-center justify-start">
+              <HeaderLanguageCurrency />
+            </div>
+          </section>
         </>
       )}
 

@@ -4,6 +4,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { CartItem } from '@/types/cart';
 import { FREE_SHIPPING_THRESHOLD } from '@/lib/constants';
+import { checkAuthOrRedirect } from '@/store/authStore';
 
 interface CartState {
   items: CartItem[];
@@ -38,6 +39,10 @@ export const useCartStore = create<CartState>()(
       discount: 0,
 
       addItem: (item) => {
+        if (!checkAuthOrRedirect()) {
+          return;
+        }
+
         set((state) => {
           const existing = state.items.find(
             (i) => i.productId === item.productId && i.variantId === item.variantId

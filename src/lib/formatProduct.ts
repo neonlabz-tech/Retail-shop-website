@@ -1,5 +1,6 @@
 import type { Product } from '@/types/product';
 import { parseWeightInGrams } from '@/utils/weight';
+import { FALLBACK_IMAGE_SRC } from '@/lib/imageFallback';
 
 const CATEGORY_ID_MAP: Record<string, string> = {
   '6ad5f26d8c37efc3ddcb1a03': 'Toys & Games',
@@ -43,17 +44,34 @@ function resolveCategory(doc: any): string {
 }
 
 export function formatMongoProduct(doc: any): Product {
-  const rawImages: string[] = Array.isArray(doc.images) ? doc.images : [];
-  const images = rawImages.map((src: string, index: number) => ({
-    id: `img-${index}`,
-    src,
-    alt: doc.name || 'Product Image',
-  }));
+  const rawImages: unknown[] = Array.isArray(doc.images) ? doc.images : [];
+  const images = rawImages
+    .map((image, index) => {
+      const src =
+        typeof image === 'string'
+          ? image.trim()
+          : image && typeof image === 'object'
+            ? String(
+                (image as { src?: unknown; url?: unknown; secure_url?: unknown }).src ||
+                  (image as { url?: unknown }).url ||
+                  (image as { secure_url?: unknown }).secure_url ||
+                  ''
+              ).trim()
+            : '';
+      return src
+        ? {
+            id: `img-${index}`,
+            src,
+            alt: doc.name || 'Product Image',
+          }
+        : null;
+    })
+    .filter((image): image is NonNullable<typeof image> => image !== null);
 
   if (images.length === 0) {
     images.push({
       id: 'img-placeholder',
-      src: '/placeholder.png',
+      src: FALLBACK_IMAGE_SRC,
       alt: doc.name || 'Product Image',
     });
   }
@@ -71,7 +89,7 @@ export function formatMongoProduct(doc: any): Product {
     size: '',
     price: finalPrice,
     compareAtPrice,
-    image: images[0]?.src || '/placeholder.png',
+    image: images[0]?.src || FALLBACK_IMAGE_SRC,
     available: inStock,
     sku: doc.sku || '',
   };

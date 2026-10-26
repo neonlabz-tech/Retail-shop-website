@@ -3,8 +3,10 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useWishlistStore } from '@/store/wishlistStore';
 import { useCartStore } from '@/store/cartStore';
+import { checkAuthOrRedirect } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
 import { useCompareStore } from '@/store/compareStore';
 import { formatPrice } from '@/utils/formatPrice';
@@ -80,6 +82,7 @@ function wishlistItemToProduct(item: ReturnType<typeof useWishlistStore.getState
 }
 
 export function WishlistPageContent({ storefront }: { storefront?: Storefront } = {}) {
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [allItems, setAllItems] = useState<ReturnType<typeof useWishlistStore.getState>['items']>([]);
 
@@ -104,6 +107,7 @@ export function WishlistPageContent({ storefront }: { storefront?: Storefront } 
   const { toggleItem: toggleCompare } = useCompareStore();
 
   const handleQuickAdd = (item: typeof items[0]) => {
+    if (!checkAuthOrRedirect(router)) return;
     addToCart({
       productId: item.productId, variantId: `${item.productId}-default`,
       name: item.name, slug: item.slug, image: item.image,

@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { PageSkeleton } from '@/components/ui/PageSkeleton';
+import { Skeleton } from '@/components/ui/Skeleton';
 
 export function PageLoader() {
   const ref = useRef<HTMLDivElement>(null);
@@ -53,17 +55,17 @@ export function PageLoader() {
         transition: 'opacity 500ms cubic-bezier(0.25, 0.46, 0.45, 0.94)',
       }}
     >
-      <style>{`@keyframes pl-spin { to { transform: rotate(360deg); } }`}</style>
-      <div
-        style={{
-          width: '44px',
-          height: '44px',
-          borderRadius: '50%',
-          border: '3px solid rgba(0, 0, 0, 0.08)',
-          borderTopColor: '#F15B41',
-          animation: 'pl-spin 0.75s linear infinite',
-        }}
-      />
+      <div className="h-full w-full overflow-y-auto bg-white">
+        <div className="flex h-[7.2rem] items-center border-b border-border px-[1.5rem] md:px-[4rem]">
+          <Skeleton className="h-[2.4rem] w-[12rem]" />
+          <div className="ml-auto flex gap-[1.2rem]">
+            <Skeleton className="h-[1.6rem] w-[5rem]" />
+            <Skeleton className="h-[1.6rem] w-[5rem]" />
+            <Skeleton className="h-[1.6rem] w-[5rem]" />
+          </div>
+        </div>
+        <PageSkeleton />
+      </div>
     </div>
   );
 }

@@ -148,12 +148,14 @@ export function AccountDropdown({
                 <Link
                   href="/profile"
                   onClick={() => setIsOpen(false)}
-                  className="flex items-center gap-[1rem] px-[1.6rem] py-[1rem] text-[1.4rem] text-gray-700 hover:text-gray-900 hover:bg-gray-100 transition-colors duration-150 no-underline"
+                  className="flex items-center justify-between px-[1.6rem] py-[1rem] text-[1.4rem] text-gray-700 hover:text-gray-900 hover:bg-gray-100 transition-colors duration-150 no-underline"
                 >
-                  <span className="text-gray-500 flex shrink-0">
-                    <IconProfile />
-                  </span>
-                  <span>Profile</span>
+                  <div className="flex items-center gap-[1rem]">
+                    <span className="text-gray-500 flex shrink-0">
+                      <IconProfile />
+                    </span>
+                    <span>Profile & Orders</span>
+                  </div>
                 </Link>
 
                 {/* 2. Logout */}

@@ -2,11 +2,103 @@ import { NextRequest, NextResponse } from 'next/server';
 import mongoose from 'mongoose';
 import { connectDB } from '@/lib/db';
 import { User, ICustomerAddress } from '@/models/User';
-import { Order } from '@/models/Order';
+import { Order, IOrderItem } from '@/models/Order';
+import { Notification } from '@/models/Notification';
 import Product from '@/models/Product';
 import { verifyToken, AUTH_COOKIE_NAME } from '@/lib/auth';
 import { generateNextOrderNumber } from '@/lib/orderNumber';
 import { calculateShippingFee, parseWeightInGrams } from '@/utils/weight';
+import { getStorefrontOfProductId, getStorefrontOfSlug, productHrefBaseFor } from '@/utils/storefront';
+import { FALLBACK_IMAGE_SRC, normalizeImageSrc } from '@/lib/imageFallback';
+
+async function resolveOrderItemImage(item: IOrderItem): Promise<string> {
+  const embeddedProduct =
+    item.product && typeof item.product === 'object' ? item.product : null;
+  const productId =
+    item.productId ||
+    (item.product ? String(embeddedProduct?._id || item.product) : '');
+  let product = null;
+
+  if (productId && mongoose.Types.ObjectId.isValid(productId)) {
+    product = await Product.findById(productId).select('images').lean();
+  }
+  if (!product && item.sku) {
+    product = await Product.findOne({ sku: item.sku }).select('images').lean();
+  }
+  if (!product && item.name) {
+    const escapedName = item.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    product = await Product.findOne({
+      name: new RegExp(`^${escapedName}$`, 'i'),
+    }).select('images').lean();
+  }
+
+  return (
+    normalizeImageSrc(product?.images?.[0]) ||
+    normalizeImageSrc(embeddedProduct?.images?.[0]) ||
+    normalizeImageSrc(item.image) ||
+    FALLBACK_IMAGE_SRC
+  );
+}
+
+async function addOrderItemImages<T extends { items?: IOrderItem[] }>(order: T) {
+  return {
+    ...order,
+    items: await Promise.all(
+      (order.items || []).map(async (item) => ({
+        ...item,
+        image: await resolveOrderItemImage(item),
+      }))
+    ),
+  };
+}
+
+async function buildReviewNotificationItems(items: IOrderItem[], orderNumber: string) {
+  const reviewItems = await Promise.all(
+    items.map(async (item) => {
+      const embeddedProduct =
+        item.product && typeof item.product === 'object' ? item.product : null;
+      const productId =
+        item.productId ||
+        (item.product ? String(embeddedProduct?._id || item.product) : '');
+      let product = null;
+
+      if (productId && mongoose.Types.ObjectId.isValid(productId)) {
+        product = await Product.findById(productId).select('_id slug images').lean();
+      }
+      if (!product && item.sku) {
+        product = await Product.findOne({ sku: item.sku }).select('_id slug images').lean();
+      }
+      if (!product && item.name) {
+        const escapedName = item.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        product = await Product.findOne({
+          name: new RegExp(`^${escapedName}$`, 'i'),
+        }).select('_id slug images').lean();
+      }
+
+      const slug = item.slug || embeddedProduct?.slug || product?.slug || '';
+      const resolvedProductId = product?._id.toString() || productId;
+      const routeKey = slug || resolvedProductId || item.name;
+      const base = slug
+        ? productHrefBaseFor(getStorefrontOfSlug(slug))
+        : resolvedProductId
+          ? productHrefBaseFor(getStorefrontOfProductId(resolvedProductId))
+          : productHrefBaseFor('fashion');
+
+      return {
+        productId: resolvedProductId,
+        name: item.name,
+        slug,
+        image:
+          normalizeImageSrc(product?.images?.[0]) ||
+          normalizeImageSrc(embeddedProduct?.images?.[0]) ||
+          normalizeImageSrc(item.image) ||
+          FALLBACK_IMAGE_SRC,
+        reviewUrl: `${base}/${encodeURIComponent(routeKey)}?writeReview=true&orderNumber=${encodeURIComponent(orderNumber)}#reviews`,
+      };
+    })
+  );
+  return reviewItems.filter((item) => Boolean(item.name && item.reviewUrl));
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -31,7 +123,7 @@ export async function GET(request: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        order,
+        order: await addOrderItemImages(order),
       });
     }
 
@@ -77,10 +169,13 @@ export async function GET(request: NextRequest) {
     const orders = await Order.find({ $or: queryConditions })
       .sort({ createdAt: -1 })
       .lean();
+    const ordersWithImages = await Promise.all(
+      (orders || []).map((order) => addOrderItemImages(order))
+    );
 
     return NextResponse.json({
       success: true,
-      orders: orders || [],
+      orders: ordersWithImages,
     });
   } catch (error: unknown) {
     console.error('Fetch orders error:', error);
@@ -273,6 +368,7 @@ export async function POST(request: NextRequest) {
     const formattedItems = await Promise.all(
       items.map(async (item: any) => {
         let matchedProductDocId: mongoose.Types.ObjectId | undefined = undefined;
+        let matchedProductSlug = typeof item.slug === 'string' ? item.slug.trim() : '';
         let itemWeight = typeof item.weight === 'number' && item.weight > 0 ? item.weight : 0;
 
         try {
@@ -290,6 +386,7 @@ export async function POST(request: NextRequest) {
             const p = await Product.findOne({ $or: orCond }).lean();
             if (p) {
               matchedProductDocId = p._id as mongoose.Types.ObjectId;
+              matchedProductSlug = matchedProductSlug || p.slug || '';
               if (!itemWeight) {
                 itemWeight = parseWeightInGrams(p);
               }
@@ -304,6 +401,7 @@ export async function POST(request: NextRequest) {
           product: matchedProductDocId,
           productId: item.productId || (matchedProductDocId ? matchedProductDocId.toString() : ''),
           name: item.name || 'Product',
+          slug: matchedProductSlug,
           image: item.image || '',
           sku: item.sku || '',
           price: Number(item.price) || 0,
@@ -444,6 +542,24 @@ export async function POST(request: NextRequest) {
       console.error('Failed to deduct product stock for order:', stockError);
     }
 
+    try {
+      if (cleanEmail) {
+        await Notification.create({
+          customer: customer?._id || undefined,
+          customerEmail: cleanEmail,
+          orderId: order._id,
+          orderNumber: order.orderNumber,
+          type: 'order_update',
+          title: `Order #${order.orderNumber} Placed! 🎉`,
+          message: `Thank you for your order! We received your order #${order.orderNumber} and it is now being prepared.`,
+          items: [],
+          read: false,
+        });
+      }
+    } catch (notifErr) {
+      console.error('Failed to create order placed notification:', notifErr);
+    }
+
     return NextResponse.json({
       success: true,
       message: 'Order placed successfully',
@@ -468,6 +584,225 @@ export async function POST(request: NextRequest) {
     const message = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json(
       { success: false, error: message },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    await connectDB();
+
+    // ── Enforce: Customers cannot change order status ──
+    const tokenCookie =
+      request.cookies.get(AUTH_COOKIE_NAME)?.value || request.cookies.get('auth_token')?.value;
+    const authHeader = request.headers.get('authorization');
+    const tokenHeader = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
+    const token = tokenCookie || tokenHeader;
+
+    if (token) {
+      try {
+        const payload = await verifyToken(token);
+        if (payload?.userId) {
+          const requestingUser = await User.findById(payload.userId).lean();
+          if (requestingUser && requestingUser.role === 'customer') {
+            return NextResponse.json(
+              { success: false, error: 'Unauthorized: Customers are not permitted to change order status' },
+              { status: 403 }
+            );
+          }
+        }
+      } catch {
+        // Token invalid or expired
+      }
+    }
+
+    const body = await request.json();
+    const { orderNumber, orderId, status, note, paymentStatus } = body;
+
+    if (!orderNumber && !orderId) {
+      return NextResponse.json(
+        { success: false, error: 'Order number or order ID is required' },
+        { status: 400 }
+      );
+    }
+
+    const query: any = {};
+    if (orderId && mongoose.Types.ObjectId.isValid(orderId)) {
+      query._id = orderId;
+    } else if (orderNumber) {
+      const cleanNum = String(orderNumber).replace(/^#/, '').trim();
+      const escaped = cleanNum.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      query.orderNumber = { $regex: new RegExp(`^#?${escaped}$`, 'i') };
+    }
+
+    const order = await Order.findOne(query);
+    if (!order) {
+      return NextResponse.json(
+        { success: false, error: 'Order not found' },
+        { status: 404 }
+      );
+    }
+
+    const previousStatus = order.status;
+    const newStatus = status ? String(status).toLowerCase().trim() : order.status;
+
+    if (newStatus && newStatus !== previousStatus) {
+      order.status = newStatus;
+      order.statusHistory = order.statusHistory || [];
+      order.statusHistory.push({
+        status: newStatus,
+        changedAt: new Date(),
+        note: note ? String(note).trim() : `Order status changed from ${previousStatus} to ${newStatus}`,
+      });
+    }
+
+    if (paymentStatus) {
+      order.paymentStatus = String(paymentStatus).toLowerCase().trim();
+    }
+
+    await order.save();
+
+    // ── Create customer notification for status updates and reviews ──
+    let createdNotification = null;
+    let notificationError: string | null = null;
+    if (newStatus && (newStatus !== previousStatus || newStatus === 'delivered')) {
+      try {
+        const linkedCustomer = order.customer
+          ? await User.findById(order.customer).select('email').lean()
+          : null;
+        const snapshotEmail = order.customerSnapshot?.email?.toLowerCase().trim() || '';
+        const emailCustomer = !linkedCustomer && snapshotEmail
+          ? await User.findOne({ email: snapshotEmail }).select('_id email').lean()
+          : null;
+        const notificationCustomer = linkedCustomer?._id || emailCustomer?._id || order.customer;
+        const customerEmail =
+          linkedCustomer?.email?.toLowerCase().trim() ||
+          emailCustomer?.email?.toLowerCase().trim() ||
+          snapshotEmail ||
+          '';
+
+        if (customerEmail) {
+          if (newStatus === 'delivered') {
+            const existingNotif = await Notification.findOne({
+              orderNumber: order.orderNumber,
+              type: 'order_delivered',
+            });
+
+            const reviewableItems = await buildReviewNotificationItems(
+              order.items || [],
+              order.orderNumber
+            );
+            if (existingNotif) {
+              existingNotif.customer = notificationCustomer || existingNotif.customer;
+              existingNotif.customerEmail = customerEmail;
+              const previousItems = existingNotif.items || [];
+              existingNotif.items = reviewableItems.map((item) => ({
+                ...item,
+                reviewed: previousItems.find((previousItem) => {
+                  const matches = (left?: string, right?: string) =>
+                    Boolean(left && right && left.trim().toLowerCase() === right.trim().toLowerCase());
+                  return (
+                    matches(item.productId, previousItem.productId) ||
+                    matches(item.slug, previousItem.slug) ||
+                    matches(item.name, previousItem.name)
+                  );
+                })?.reviewed || false,
+              }));
+              existingNotif.orderId = order._id;
+              existingNotif.title = `Order #${order.orderNumber} Delivered! 📦`;
+              existingNotif.message =
+                'Your package has been successfully delivered! We hope you love your items. Please take a moment to review your product and let us know your thoughts.';
+              if (newStatus !== previousStatus && !existingNotif.dismissed) {
+                existingNotif.read = false;
+                existingNotif.isRead = false;
+                existingNotif.createdAt = new Date();
+              }
+              await existingNotif.save();
+              createdNotification = existingNotif;
+            } else {
+              createdNotification = await Notification.create({
+                customer: notificationCustomer || undefined,
+                customerEmail,
+                orderId: order._id,
+                orderNumber: order.orderNumber,
+                type: 'order_delivered',
+                title: `Order #${order.orderNumber} Delivered! 📦`,
+                message: `Your package has been successfully delivered! We hope you love your items. Please take a moment to review your product and let us know your thoughts.`,
+                items: reviewableItems,
+                read: false,
+              });
+            }
+          } else {
+            // Status update notification (Shipped, Processing, Confirmed, Cancelled)
+            let title = `Order #${order.orderNumber} Status Updated`;
+            let message = `Your order #${order.orderNumber} status is now ${newStatus}.`;
+
+            if (newStatus === 'shipped') {
+              title = `Order #${order.orderNumber} Shipped! 🚚`;
+              message = `Great news! Your package for order #${order.orderNumber} is on its way.`;
+            } else if (newStatus === 'processing') {
+              title = `Order #${order.orderNumber} Processing ⚙️`;
+              message = `Your order #${order.orderNumber} is confirmed and is currently being prepared for dispatch.`;
+            } else if (newStatus === 'confirmed') {
+              title = `Order #${order.orderNumber} Confirmed ✅`;
+              message = `Your order #${order.orderNumber} has been confirmed.`;
+            } else if (newStatus === 'out_for_delivery') {
+              title = `Order #${order.orderNumber} Out for Delivery 🛵`;
+              message = `Your order #${order.orderNumber} is out for delivery.`;
+            } else if (newStatus === 'cancelled') {
+              title = `Order #${order.orderNumber} Cancelled ❌`;
+              message = `Your order #${order.orderNumber} has been cancelled. Please contact support if you have any questions.`;
+            }
+
+            createdNotification = await Notification.findOneAndUpdate(
+              {
+                orderNumber: order.orderNumber,
+                type: 'order_update',
+                title,
+              },
+              {
+                $set: {
+                  customer: notificationCustomer || undefined,
+                  customerEmail,
+                  orderId: order._id,
+                  message,
+                },
+                $setOnInsert: {
+                  orderNumber: order.orderNumber,
+                  type: 'order_update',
+                  title,
+                  items: [],
+                  read: false,
+                  isRead: false,
+                  dismissed: false,
+                  createdAt: new Date(),
+                },
+              },
+              { new: true, upsert: true, setDefaultsOnInsert: true }
+            );
+          }
+        } else {
+          notificationError =
+            'Order status was updated, but no customer email is available for the notification.';
+        }
+      } catch (notifErr) {
+        console.error('Failed to create order notification:', notifErr);
+        notificationError = 'Order status was updated, but the customer notification could not be created. Retry the delivered status update to try again.';
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: `Order #${order.orderNumber} status updated to ${newStatus}`,
+      order,
+      notification: createdNotification,
+      ...(notificationError ? { warning: notificationError } : {}),
+    });
+  } catch (error: any) {
+    console.error('Update order error:', error);
+    return NextResponse.json(
+      { success: false, error: error?.message || 'Failed to update order' },
       { status: 500 }
     );
   }

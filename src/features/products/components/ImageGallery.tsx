@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Image from 'next/image';
 import { cn } from '@/utils/cn';
 import type { ProductImage } from '@/types/product';
+import { handleImageError } from '@/lib/imageFallback';
 
 interface ImageGalleryProps {
   images: ProductImage[];
@@ -22,6 +23,7 @@ export function ImageGallery({ images }: ImageGalleryProps) {
             src={mainImage.src}
             alt={mainImage.alt}
             fill
+            onError={handleImageError}
             className="object-cover"
             sizes="(max-width: 991px) 100vw, 50vw"
             priority
@@ -41,7 +43,7 @@ export function ImageGallery({ images }: ImageGalleryProps) {
                 selectedIndex === index ? 'border-dark' : 'border-transparent hover:border-border'
               )}
             >
-              <Image src={img.src} alt={img.alt} fill className="object-cover" sizes="80px" />
+              <Image src={img.src} alt={img.alt} fill onError={handleImageError} className="object-cover" sizes="80px" />
             </button>
           ))}
         </div>

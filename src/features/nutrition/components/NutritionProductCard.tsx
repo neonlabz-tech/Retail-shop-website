@@ -8,6 +8,7 @@ import { useUIStore } from '@/store/uiStore';
 import { useCompareStore } from '@/store/compareStore';
 import { useWishlistStore } from '@/store/wishlistStore';
 import type { Product } from '@/types/product';
+import { FALLBACK_IMAGE_SRC, handleImageError } from '@/lib/imageFallback';
 
 function IconHeart({ size = 18 }: { size?: number }) {
   return (
@@ -65,7 +66,7 @@ export function NutritionProductCard({
   const { toggleItem: toggleWishlist, isInWishlist } = useWishlistStore();
   const inCompare = isInCompare(product.id);
   const inWishlist = isInWishlist(product.id);
-  const defaultImg1 = product.images[0]?.src || '';
+  const defaultImg1 = product.images[0]?.src || FALLBACK_IMAGE_SRC;
   const defaultImg2 = product.images[1]?.src || defaultImg1;
   const productHref = `${hrefBase}/${product.slug}`;
 
@@ -82,8 +83,8 @@ export function NutritionProductCard({
       onMouseLeave={() => { setHovered(false); setHoveredColor(null); }}
     >
       <Link href={productHref} className="npc-image" style={{ height: imageHeight }}>
-        <Image src={defaultImg1} alt={product.name} fill style={{ objectFit: 'cover', transition: 'opacity 400ms ease', opacity: (hovered && !hoveredColor) ? 0 : 1 }} sizes="(max-width: 749px) 50vw, 25vw" />
-        <Image src={defaultImg2} alt={`${product.name} hover`} fill style={{ objectFit: 'cover', transition: 'opacity 400ms ease', opacity: hovered && !hoveredColor ? 1 : 0 }} sizes="(max-width: 749px) 50vw, 25vw" />
+        <Image src={defaultImg1} alt={product.name} fill onError={handleImageError} style={{ objectFit: 'cover', transition: 'opacity 400ms ease', opacity: (hovered && !hoveredColor) ? 0 : 1 }} sizes="(max-width: 749px) 50vw, 25vw" />
+        <Image src={defaultImg2} alt={`${product.name} hover`} fill onError={handleImageError} style={{ objectFit: 'cover', transition: 'opacity 400ms ease', opacity: hovered && !hoveredColor ? 1 : 0 }} sizes="(max-width: 749px) 50vw, 25vw" />
         {Object.entries(colorImages).map(([colorName, imgSrc]) => (
           <Image key={colorName} src={imgSrc} alt={`${product.name} ${colorName}`} fill style={{ objectFit: 'cover', transition: 'opacity 150ms ease', opacity: hoveredColor === colorName ? 1 : 0, zIndex: hoveredColor === colorName ? 2 : 1 }} sizes="(max-width: 749px) 50vw, 25vw" />
         ))}

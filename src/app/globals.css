@@ -635,7 +635,7 @@ body.scroll-locked {
 
   .footer-grid {
     grid-template-columns: 1fr !important;
-    gap: 30px !important;
+    gap: 0 !important;
   }
 
   .footer-bottom-grid {
@@ -1181,4 +1181,34 @@ body.scroll-locked {
 .pdp-sticky-price,
 .qv-price-current {
   color: #e01117 !important;
+}
+
+/* ============================================
+   GLOBAL SKELETON LOADER FOR ALL PICTURES
+   ============================================ */
+
+@keyframes image-skeleton-pulse-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton-shimmer,
+img:not([data-noskeleton="true"]):not(.no-skeleton):not([width="1"]):not([height="1"]) {
+  background: linear-gradient(
+    90deg,
+    #f3f4f6 0%,
+    #e5e7eb 25%,
+    #f9fafb 50%,
+    #e5e7eb 75%,
+    #f3f4f6 100%
+  ) !important;
+}
+
+.skeleton-shimmer {
+  background-size: 200% 100% !important;
+  animation: image-skeleton-pulse-shimmer 1.6s ease-in-out infinite !important;
 }

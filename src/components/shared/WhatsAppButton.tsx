@@ -34,7 +34,6 @@ export function WhatsAppButton() {
   // Custom dragged coordinates (null = default responsive bottom-right position)
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [bottomOffset, setBottomOffset] = useState(0);
 
   const containerRef = useRef<HTMLAnchorElement>(null);
   const dragStartRef = useRef<{
@@ -45,63 +44,6 @@ export function WhatsAppButton() {
     hasMoved: boolean;
   } | null>(null);
   const justDraggedRef = useRef(false);
-
-  // Auto-detect sticky bars (e.g. PDP sticky add to cart, CompareBar) and raise WhatsApp
-  useEffect(() => {
-    let animId: number;
-
-    const computeOffset = () => {
-      let offset = 0;
-
-      // 1. Sticky Add to Cart bar on product detail pages
-      const stickyBar = document.querySelector('.pdp-sticky-bar') as HTMLElement | null;
-      if (stickyBar) {
-        const isHidden = stickyBar.classList.contains('translate-y-full');
-        const style = window.getComputedStyle(stickyBar);
-        if (!isHidden && style.display !== 'none' && style.visibility !== 'hidden') {
-          const rect = stickyBar.getBoundingClientRect();
-          if (rect.height > 0 && rect.top < window.innerHeight) {
-            offset = Math.max(offset, rect.height);
-          }
-        }
-      }
-
-      // 2. Compare Bar
-      const compareBar = document.querySelector('.cb-bar') as HTMLElement | null;
-      if (compareBar) {
-        const style = window.getComputedStyle(compareBar);
-        if (style.display !== 'none' && style.visibility !== 'hidden') {
-          const rect = compareBar.getBoundingClientRect();
-          if (rect.height > 0 && rect.top < window.innerHeight) {
-            offset = Math.max(offset, rect.height);
-          }
-        }
-      }
-
-      setBottomOffset(offset);
-    };
-
-    const scheduleCheck = () => {
-      cancelAnimationFrame(animId);
-      animId = requestAnimationFrame(computeOffset);
-    };
-
-    window.addEventListener('scroll', scheduleCheck, { passive: true });
-    window.addEventListener('resize', scheduleCheck, { passive: true });
-
-    // Watch for DOM class changes (e.g. translate-y-0 added)
-    const observer = new MutationObserver(() => scheduleCheck());
-    observer.observe(document.body, { attributes: true, subtree: true, attributeFilter: ['class', 'style'] });
-
-    scheduleCheck();
-
-    return () => {
-      cancelAnimationFrame(animId);
-      window.removeEventListener('scroll', scheduleCheck);
-      window.removeEventListener('resize', scheduleCheck);
-      observer.disconnect();
-    };
-  }, []);
 
   // Handle window resizing if the user has already dragged the button
   useEffect(() => {
@@ -224,7 +166,6 @@ export function WhatsAppButton() {
         position: 'fixed',
         zIndex: 145,
         cursor: isDragging ? 'grabbing' : 'grab',
-        ['--wa-bottom-offset' as any]: `${bottomOffset}px`,
       };
 
   return (
@@ -263,9 +204,9 @@ export function WhatsAppButton() {
           touch-action: none;
         }
 
-        /* Default non-dragged placement on Desktop: sits at bottom-right, auto-lifts with bottomOffset */
+        /* Default non-dragged placement on Desktop */
         .wa-widget:not(.wa-widget-dragged) {
-          bottom: calc(28px + var(--wa-bottom-offset, 0px));
+          bottom: 28px;
           right: 28px;
           transition: bottom 300ms cubic-bezier(0.16, 1, 0.3, 1), transform 250ms ease, filter 250ms ease;
         }
@@ -340,10 +281,10 @@ export function WhatsAppButton() {
           box-shadow: 0 12px 30px rgba(37, 211, 102, 0.55), 0 4px 10px rgba(0, 0, 0, 0.2);
         }
 
-        /* Mobile ≤ 749px: default sits at bottom: 82px + offset (above MobileBottomNav) */
+        /* Mobile ≤ 749px: keep the widget above MobileBottomNav */
         @media (max-width: 749px) {
           .wa-widget:not(.wa-widget-dragged) {
-            bottom: calc(82px + var(--wa-bottom-offset, 0px));
+            bottom: 82px;
             right: 16px;
           }
           .wa-pill {

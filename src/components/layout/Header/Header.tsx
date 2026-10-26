@@ -229,7 +229,7 @@ export function Header() {
     <>
 
       <header
-        className={`main-header sticky top-0 z-[200] bg-white h-[90px] overflow-visible border-b border-[#e5e5e5] will-change-transform transition-transform duration-300 ease-in-out ${
+        className={`main-header sticky top-0 z-[200] bg-white h-[90px] max-[715px]:!h-[72px] overflow-visible border-b border-[#e5e5e5] min-[992px]:!sticky min-[992px]:!top-0 min-[992px]:!z-[200] min-[992px]:will-change-transform will-change-transform transition-transform duration-300 ease-in-out ${
           isVisible ? 'translate-y-0' : '-translate-y-full'
         } ${isScrolled ? 'shadow-[0_2px_12px_rgba(0,0,0,0.06)]' : ''}`}
       >
@@ -256,7 +256,7 @@ export function Header() {
             <DesktopNav />
           </div>
 
-          <div className="fashion-logo-mobile hidden max-[715px]:flex max-[715px]:justify-center max-[715px]:items-center">
+          <div className="fashion-logo-mobile hidden max-[715px]:flex max-[715px]:justify-center max-[715px]:items-center max-[715px]:[&_img]:!h-[50px]">
             <Logo />
           </div>
 

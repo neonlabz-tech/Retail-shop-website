@@ -7,9 +7,12 @@ import { useCartStore } from '@/store/cartStore';
 import { useWishlistStore } from '@/store/wishlistStore';
 import { getStorefrontFromPath, getStorefrontOfSlug } from '@/utils/storefront';
 import { AccountDropdown } from './AccountDropdown';
-import { IconSearch, IconUser, IconHeart, IconBag as IconShoppingBag } from '@/lib/icons';
+import { NotificationDropdown } from './NotificationDropdown';
+import { IconSearch, IconHeart, IconBag as IconShoppingBag } from '@/lib/icons';
 
 function CountBadge({ count, color = '#F15B41' }: { count: number; color?: string }) {
+  if (count <= 0) return null;
+
   return (
     <span
       className="absolute top-[-6px] right-[-8px] min-w-[18px] h-[18px] px-[4px] py-0 rounded-full text-white text-[10px] font-bold flex items-center justify-center leading-none"
@@ -52,6 +55,8 @@ export function HeaderActions() {
           <IconHeart />
           <CountBadge count={storefrontWishlistItems.length} color={badgeColor} />
         </Link>
+
+        <NotificationDropdown badgeColor={badgeColor} />
 
         <button onClick={openCartDrawer} className={iconBtnClass} aria-label="Open cart" onMouseEnter={hoverIn} onMouseLeave={hoverOut}>
           <IconShoppingBag />

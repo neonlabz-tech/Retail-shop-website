@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation } from 'swiper/modules';
@@ -14,6 +14,7 @@ import { useCartStore } from '@/store/cartStore';
 import { useUIStore } from '@/store/uiStore';
 import { useWishlistStore } from '@/store/wishlistStore';
 import { useCompareStore } from '@/store/compareStore';
+import { useAuthStore, checkAuthOrRedirect } from '@/store/authStore';
 import { useProduct } from '@/features/products/hooks/useProduct';
 import { useProducts } from '@/features/products/hooks/useProducts';
 import { formatPrice } from '@/utils/formatPrice';
@@ -523,14 +524,11 @@ export function ProductDetailContent({
   const [shareMenuOpen, setShareMenuOpen] = useState(false);
   const [wishlistLoading, setWishlistLoading] = useState(false);
   const [compareLoading, setCompareLoading] = useState(false);
-  const [stickyCartVisible, setStickyCartVisible] = useState(false);
-  const [footerVisible, setFooterVisible] = useState(false);
   const [activeGalleryIndex, setActiveGalleryIndex] = useState(0);
-  const addToCartRef = useRef<HTMLDivElement>(null);
-  const observerRef = useRef<IntersectionObserver | null>(null);
-  const footerObserverRef = useRef<IntersectionObserver | null>(null);
 
   const product = data?.product;
+  const searchParams = useSearchParams();
+  const { user } = useAuthStore();
   const [recentlyViewed, setRecentlyViewed] = useState<Product[]>([]);
   const [recentlySwiper, setRecentlySwiper] = useState<SwiperType | null>(null);
   const [reviewsList, setReviewsList] = useState<any[]>([]);
@@ -540,7 +538,109 @@ export function ProductDetailContent({
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [likedReviewIds, setLikedReviewIds] = useState<Record<string, boolean>>({});
   const [isBreadcrumbExpanded, setIsBreadcrumbExpanded] = useState(false);
+  const hasAutoOpenedReviewRef = useRef(false);
 
+  // ── Review Form States ──
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [newRating, setNewRating] = useState(5);
+  const [newHoverRating, setNewHoverRating] = useState(0);
+  const [newComment, setNewComment] = useState('');
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [reviewSuccessMsg, setReviewSuccessMsg] = useState('');
+  const [reviewErrorMsg, setReviewErrorMsg] = useState('');
+
+  // Auto-open review form only once if accessed via ?writeReview=true
+  useEffect(() => {
+    if (hasAutoOpenedReviewRef.current) return;
+    const isWriteReviewParam = searchParams?.get('writeReview') === 'true';
+
+    if (isWriteReviewParam) {
+      hasAutoOpenedReviewRef.current = true;
+      setShowReviewForm(true);
+      const timer = setTimeout(() => {
+        const el = document.getElementById('reviews');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 350);
+      return () => clearTimeout(timer);
+    }
+  }, [searchParams]);
+
+  const handleSubmitReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!product) return;
+
+    if (!newComment.trim()) {
+      setReviewErrorMsg('Please write your review feedback.');
+      return;
+    }
+
+    setIsSubmittingReview(true);
+    setReviewErrorMsg('');
+    setReviewSuccessMsg('');
+
+    try {
+      const res = await fetch('/api/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productId: product.id || '',
+          productSlug: product.slug || slug,
+          productName: product.name,
+          orderId: searchParams?.get('orderNumber') || '',
+          rating: newRating,
+          title: '',
+          comment: newComment.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success && data.review) {
+        window.dispatchEvent(new CustomEvent('notification-refresh'));
+        if (data.review.status === 'approved') {
+          setReviewsList((prev) => [data.review, ...prev]);
+          setReviewCount((prev) => prev + 1);
+          setStarCounts((prev) => ({
+            ...prev,
+            [newRating]: (prev[newRating] || 0) + 1,
+          }));
+          setReviewSuccessMsg(
+            'Thank you! Your review has been submitted successfully.'
+          );
+        } else {
+          setReviewSuccessMsg(
+            'Thank you! Your review has been submitted and will appear on the website once approved by an admin.'
+          );
+        }
+        // Permanently lock auto-open and hide the review form
+        hasAutoOpenedReviewRef.current = true;
+        setNewComment('');
+        setShowReviewForm(false);
+
+        // Remove ?writeReview=true and any hashes from URL
+        if (typeof window !== 'undefined') {
+          const cleanUrl = window.location.pathname;
+          window.history.replaceState(null, '', cleanUrl);
+        }
+
+        // Smooth scroll to top of reviews section
+        const el = document.getElementById('reviews');
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+        setTimeout(() => {
+          setReviewSuccessMsg('');
+        }, 5000);
+      } else {
+        setReviewErrorMsg(data.error || 'Failed to submit review. Please try again.');
+      }
+    } catch (err: any) {
+      console.error('Error submitting review:', err);
+      setReviewErrorMsg(err?.message || 'Network error submitting review.');
+    } finally {
+      setIsSubmittingReview(false);
+    }
+  };
   const handleLikeReview = async (reviewId: string) => {
     if (likedReviewIds[reviewId]) return;
     setLikedReviewIds((prev) => ({ ...prev, [reviewId]: true }));
@@ -610,34 +710,6 @@ export function ProductDetailContent({
     }
   }, [product]);
 
-  useEffect(() => {
-    const footer = document.querySelector('footer');
-    if (!footer) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => setFooterVisible(entry.isIntersecting),
-      { threshold: 0 }
-    );
-    observer.observe(footer);
-    footerObserverRef.current = observer;
-    return () => observer.disconnect();
-  }, []);
-
-  const addToCartCallbackRef = useCallback((node: HTMLDivElement | null) => {
-    if (observerRef.current) {
-      observerRef.current.disconnect();
-      observerRef.current = null;
-    }
-    if (node) {
-      addToCartRef.current = node;
-      const observer = new IntersectionObserver(
-        ([entry]) => setStickyCartVisible(!entry.isIntersecting),
-        { threshold: 0 }
-      );
-      observer.observe(node);
-      observerRef.current = observer;
-    }
-  }, []);
-
   if (isLoading || !product) {
     return (<div className="container-main py-[60px] px-0 text-center text-[16px] text-[#888]">Loading product...</div>);
   }
@@ -686,6 +758,7 @@ export function ProductDetailContent({
 
   const handleAddToCart = () => {
     if (!product) return;
+    if (!checkAuthOrRedirect(router)) return;
     const variant = getActiveVariant();
     const variantId = variant?.id || product.id || 'default';
     const image = variant?.image || product.images?.[0]?.src || '';
@@ -710,6 +783,7 @@ export function ProductDetailContent({
   };
 
   const handleBuyNow = () => {
+    if (!checkAuthOrRedirect(router)) return;
     const variant = product.variants?.find(v => v.color === activeColor && v.size === activeSize) || product.variants?.[0];
     const variantId = variant?.id || product.id || 'default';
     const image = variant?.image || product.images?.[0]?.src || '';
@@ -914,7 +988,7 @@ export function ProductDetailContent({
                 </div>
               )}
 
-              <div ref={addToCartCallbackRef} className="pdp-info-qty-block mb-[16px]">
+              <div className="pdp-info-qty-block mb-[16px]">
                 <p className="pdp-info-field-label text-[15px] font-semibold text-[#222] mb-[10px]">Quantity</p>
                 <div className="pdp-info-qty-row flex items-center gap-[14px]">
                   <div className="pdp-qty-stepper inline-flex border border-solid border-[#e5e5e5] rounded-[4px]">
@@ -972,22 +1046,6 @@ export function ProductDetailContent({
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.04C6.5 2.04 2 6.53 2 12.06C2 17.06 5.66 21.21 10.44 21.96V14.96H7.9V12.06H10.44V9.85C10.44 7.34 11.93 5.96 14.22 5.96C15.31 5.96 16.45 6.15 16.45 6.15V8.62H15.19C13.95 8.62 13.56 9.39 13.56 10.18V12.06H16.34L15.89 14.96H13.56V21.96C18.34 21.21 22 17.06 22 12.06C22 6.53 17.5 2.04 12 2.04Z" /></svg>
                   Facebook
-                </button>
-
-                <button
-                  onClick={() => { const url = encodeURIComponent(window.location.href); const text = encodeURIComponent(product.name); window.open(`https://twitter.com/intent/tweet?url=${url}&text=${text}`, '_blank', 'width=600,height=400'); }}
-                  className="pdp-share-btn inline-flex items-center gap-[6px] bg-transparent border-none cursor-pointer text-[#555] text-[14px] p-0 transition-colors duration-200 ease-in-out"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
-                  Twitter
-                </button>
-
-                <button
-                  onClick={() => { const url = encodeURIComponent(window.location.href); const media = encodeURIComponent(window.location.origin + (product.images[0]?.src || '')); const desc = encodeURIComponent(product.name); window.open(`https://pinterest.com/pin/create/button/?url=${url}&media=${media}&description=${desc}`, '_blank', 'width=600,height=400'); }}
-                  className="pdp-share-btn inline-flex items-center gap-[6px] bg-transparent border-none cursor-pointer text-[#555] text-[14px] p-0 transition-colors duration-200 ease-in-out"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M9.04 21.54C10 21.83 10.97 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2C6.48 2 2 6.48 2 12C2 15.72 3.97 18.97 6.91 20.73C6.81 19.71 6.19 17.15 6.19 17.15L7.85 10.34C7.85 10.34 7.41 9.47 7.41 8.18C7.41 6.15 8.59 4.63 10.06 4.63C11.3 4.63 11.9 5.56 11.9 6.68C11.9 7.94 11.11 9.84 10.69 11.59C10.34 13.06 11.44 14.26 12.89 14.26C15.52 14.26 17.13 10.91 17.13 7.32C17.13 4.46 15.15 2.42 12.08 2.42C8.5 2.42 6.31 5.09 6.31 8.03C6.31 9.13 6.63 9.85 7.16 10.41C7.39 10.67 7.43 10.78 7.35 11.08L7.06 12.23C6.97 12.58 6.72 12.68 6.4 12.54C4.48 11.7 3.54 9.63 3.54 7.74C3.54 4.03 6.52 0.15 12.42 0.15C17.15 0.15 20.28 3.66 20.28 7.42C20.28 12.28 17.46 15.94 13.42 15.94C11.93 15.94 10.53 15.14 10.06 14.23L9.21 17.53C8.93 18.6 8.27 19.94 7.78 20.78C8.81 21.09 9.9 21.26 11.03 21.26" /></svg>
-                  Pin it
                 </button>
 
                 <button
@@ -1111,7 +1169,7 @@ export function ProductDetailContent({
         </div>
       </div>
 
-      <div className="container-main pdp-reviews-section pt-[40px] pb-[60px]">
+      <div id="reviews" className="container-main pdp-reviews-section pt-[40px] pb-[60px]">
         <div className="border-b border-[#e5e7eb] pb-[16px] mb-[28px]">
           <h2 className="text-[clamp(22px,3vw,28px)] font-semibold text-[#222] m-0">
             Ratings &amp; Reviews of {product.name}
@@ -1178,11 +1236,149 @@ export function ProductDetailContent({
           </div>
         </div>
 
-        <div className="flex items-center justify-between border-b border-[#e5e7eb] pb-[14px] mb-[20px]">
+        <div className="flex items-center justify-between border-b border-[#e5e7eb] pb-[14px] mb-[20px] flex-wrap gap-[12px]">
           <h3 className="text-[17px] font-bold text-[#1f2937] m-0">
             Product Reviews ({reviewCount})
           </h3>
+          <button
+            type="button"
+            onClick={() => setShowReviewForm((prev) => !prev)}
+            className="inline-flex items-center gap-[8px] bg-[#111827] hover:bg-[#1f2937] text-white text-[13px] font-semibold px-[16px] py-[8px] rounded-[8px] transition-colors shadow-xs cursor-pointer"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+            </svg>
+            <span>{showReviewForm ? 'Close Review Form' : 'Write a Review'}</span>
+          </button>
         </div>
+
+        {/* Review Submission Success Banner */}
+        {reviewSuccessMsg && (
+          <div className="mb-[24px] p-[16px_20px] bg-[#ecfdf5] border border-[#a7f3d0] rounded-[10px] text-[14px] text-[#047857] font-medium flex items-center justify-between gap-[12px] shadow-xs">
+            <div className="flex items-center gap-[10px]">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="shrink-0 text-[#059669]">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              <span>{reviewSuccessMsg}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setReviewSuccessMsg('')}
+              className="text-[#047857] hover:text-[#065f46] text-[16px] font-bold p-[4px] cursor-pointer shrink-0"
+              aria-label="Dismiss message"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
+        {/* ── Write Review Interactive Form ── */}
+        {showReviewForm && (
+          <div className="bg-white border-2 border-[#e5e7eb] rounded-[14px] p-[20px] sm:p-[28px] mb-[32px] shadow-sm">
+            <div className="flex items-start justify-between gap-[16px] mb-[20px]">
+              <div>
+                <h4 className="text-[18px] font-bold text-[#111827] m-0">
+                  Share Your Experience with {product.name}
+                </h4>
+                <p className="text-[13.5px] text-[#6b7280] mt-[4px] m-0">
+                  Your feedback helps other customers and validates your verified purchase.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowReviewForm(false)}
+                className="text-[#9ca3af] hover:text-[#111827] p-[4px] cursor-pointer text-[16px]"
+                aria-label="Close review form"
+              >
+                ✕
+              </button>
+            </div>
+
+            {reviewErrorMsg && (
+              <div className="mb-[20px] p-[14px_18px] bg-[#fef2f2] border border-[#fecaca] rounded-[8px] text-[14px] text-[#b91c1c] font-medium flex items-center gap-[10px]">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="8" x2="12" y2="12" />
+                  <line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>
+                <span>{reviewErrorMsg}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSubmitReview} className="space-y-[18px]">
+              {/* Star Rating Selector */}
+              <div>
+                <label className="block text-[13px] font-bold text-[#374151] uppercase tracking-wider mb-[8px]">
+                  Your Overall Rating <span className="text-[#ef4444]">*</span>
+                </label>
+                <div className="flex items-center gap-[8px]">
+                  <div className="flex items-center gap-[4px]">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => setNewRating(star)}
+                        onMouseEnter={() => setNewHoverRating(star)}
+                        onMouseLeave={() => setNewHoverRating(0)}
+                        className="text-[28px] leading-none transition-transform hover:scale-110 focus:outline-hidden cursor-pointer p-0 bg-transparent border-none"
+                      >
+                        <span
+                          className={
+                            star <= (newHoverRating || newRating)
+                              ? 'text-[#f59e0b]'
+                              : 'text-[#d1d5db]'
+                          }
+                        >
+                          ★
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                  <span className="text-[14px] font-bold text-[#111827] ml-[6px]">
+                    {newRating === 5 && '5 Stars — Excellent!'}
+                    {newRating === 4 && '4 Stars — Very Good'}
+                    {newRating === 3 && '3 Stars — Average'}
+                    {newRating === 2 && '2 Stars — Below Average'}
+                    {newRating === 1 && '1 Star — Poor'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Review Textarea */}
+              <div>
+                <label className="block text-[13px] font-bold text-[#374151] mb-[6px]">
+                  Your Review <span className="text-[#ef4444]">*</span>
+                </label>
+                <textarea
+                  rows={4}
+                  required
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  placeholder="Write your review here... What did you like or dislike about this product?"
+                  className="w-full px-[14px] py-[10px] text-[14px] bg-[#f9fafb] border border-[#d1d5db] rounded-[8px] focus:bg-white focus:border-[#111827] focus:ring-1 focus:ring-[#111827] outline-hidden transition-all resize-y"
+                />
+              </div>
+
+              <div className="pt-[6px]">
+                <button
+                  type="submit"
+                  disabled={isSubmittingReview}
+                  className="inline-flex items-center gap-[8px] bg-[#111827] hover:bg-[#000] text-white text-[14px] font-bold px-[22px] py-[11px] rounded-[8px] transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  {isSubmittingReview ? (
+                    <>
+                      <div className="w-[14px] h-[14px] border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Submitting...</span>
+                    </>
+                  ) : (
+                    <span>Submit Review</span>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
 
         {reviewsList.length === 0 ? (
           <div className="py-[48px] px-[20px] text-center bg-[#f9fafb] rounded-[12px] border border-dashed border-[#d1d5db]">
@@ -1369,108 +1565,6 @@ export function ProductDetailContent({
             </div>
           );
         })()}
-      </div>
-
-      <div className="pdp-sticky-spacer" />
-
-      <div
-        className={`pdp-sticky-bar fixed left-0 right-0 z-[9998] bg-[#fff] border-t border-solid border-[#e5e5e5] shadow-[0_-2px_10px_rgba(0,0,0,0.06)] transition-transform duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${
-          stickyCartVisible && !footerVisible ? 'translate-y-0' : 'translate-y-full'
-        }`}
-      >
-        <div className="container-main pdp-sticky-inner">
-          <div className="pdp-sticky-product flex items-center gap-[clamp(10px,1.1vw,14px)] min-w-0">
-            <div className="w-[clamp(52px,6vw,80px)] h-[clamp(58px,7vw,90px)] overflow-hidden relative bg-[#f5f5f5] shrink-0 rounded-[4px] flex items-center justify-center">
-              {(product.images[activeGalleryIndex]?.src || product.images[0]?.src) ? (
-                <Image
-                  src={product.images[activeGalleryIndex]?.src || product.images[0]?.src || ''}
-                  alt={product.name}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 1200px) 70px, 80px"
-                />
-              ) : (
-                <span className="text-[11px] text-[#999]">No img</span>
-              )}
-            </div>
-            <span className="pdp-sticky-name text-[clamp(12px,1.2vw,14px)] font-semibold text-[#222] overflow-hidden text-ellipsis whitespace-nowrap">{product.name}</span>
-          </div>
-
-          {product.colors.length > 0 || product.sizes.length > 0 ? (
-            <select
-              className="pdp-sticky-variant py-[clamp(9px,1vw,12px)] pr-[clamp(24px,2.5vw,34px)] pl-[clamp(12px,1.3vw,16px)] text-[clamp(12px,1.1vw,13px)] border border-solid border-[#e0e0e0] rounded-[6px] text-[#222] bg-[#fff] cursor-pointer appearance-none bg-[url('data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%2210%22%20height=%226%22%20viewBox=%220%200%2010%206%22%3E%3Cpath%20fill=%22%23555%22%20d=%22M5%206L0%200h10z%22/%3E%3C/svg%3E')] bg-no-repeat bg-[position:right_14px_center] bg-[length:10px_6px]"
-              value={`${activeColor}${activeColor && activeSize ? ' / ' : ''}${activeSize}`}
-              onChange={(e) => {
-                const val = e.target.value;
-                if (val.includes(' / ')) {
-                  const [c, s] = val.split(' / ');
-                  setSelectedColor(c);
-                  setSelectedSize(s);
-                } else if (product.colors.some((c) => c.name === val)) {
-                  setSelectedColor(val);
-                } else if (product.sizes.includes(val)) {
-                  setSelectedSize(val);
-                }
-              }}
-            >
-              {product.colors.length > 0 && product.sizes.length > 0 ? (
-                product.colors.flatMap((c) =>
-                  product.sizes.map((s) => (
-                    <option key={`${c.name}-${s}`} value={`${c.name} / ${s}`}>
-                      {c.name} / {s} - {formatPrice(product.price)}
-                    </option>
-                  ))
-                )
-              ) : product.colors.length > 0 ? (
-                product.colors.map((c) => (
-                  <option key={c.name} value={c.name}>
-                    {c.name} - {formatPrice(product.price)}
-                  </option>
-                ))
-              ) : (
-                product.sizes.map((s) => (
-                  <option key={s} value={s}>
-                    {s} - {formatPrice(product.price)}
-                  </option>
-                ))
-              )}
-            </select>
-          ) : (
-            <div className="pdp-sticky-price flex items-baseline gap-[6px] text-[clamp(14px,1.3vw,16px)] font-bold text-[#222] py-[clamp(8px,1vw,10px)] px-[14px] bg-[#f8f8f8] rounded-[6px] border border-solid border-[#e5e5e5] whitespace-nowrap">
-              <span>{formatPrice(product.price)}</span>
-              {discount > 0 && (
-                <span className="text-[#F15B41] bg-[#fff0ed] text-[11px] font-bold px-[4px] py-[1px] rounded-[3px] leading-none">
-                  -{discount}%
-                </span>
-              )}
-              {product.compareAtPrice && (
-                <span className="text-[12px] text-[#999] line-through font-normal">
-                  {formatPrice(product.compareAtPrice)}
-                </span>
-              )}
-            </div>
-          )}
-
-          <div className="pdp-sticky-qty inline-flex items-center border border-solid border-[#e0e0e0] rounded-[6px] overflow-hidden shrink-0">
-            <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="w-[clamp(32px,3.4vw,40px)] h-[clamp(38px,4vw,46px)] flex items-center justify-center bg-transparent border-none cursor-pointer text-[clamp(15px,1.6vw,18px)] text-[#555]">−</button>
-            <span className="w-[clamp(30px,3vw,36px)] h-[clamp(38px,4vw,46px)] flex items-center justify-center text-[clamp(12px,1.2vw,14px)] font-medium border-l border-r border-solid border-[#e0e0e0] text-[#222]">{quantity}</span>
-            <button onClick={() => setQuantity(quantity + 1)} className="w-[clamp(32px,3.4vw,40px)] h-[clamp(38px,4vw,46px)] flex items-center justify-center bg-transparent border-none cursor-pointer text-[clamp(15px,1.6vw,18px)] text-[#555]">+</button>
-          </div>
-
-          <button
-            className={`pdp-sticky-atc text-[#fff] text-[clamp(12px,1.2vw,14px)] font-semibold border-none transition-colors duration-200 ease-in-out whitespace-nowrap ${
-              addingToCart ? 'bg-[#555] cursor-wait' : 'bg-[#222] hover:bg-[#F15B41] cursor-pointer'
-            }`}
-            onClick={handleAddToCart}
-            disabled={addingToCart}
-          >{addingToCart ? 'Adding...' : 'Add to cart'}</button>
-
-<button
-            type="button"
-            onClick={handleBuyNow}
-            className="pdp-sticky-buy bg-[#fff] hover:bg-[#222] text-[#222] hover:text-[#fff] text-[clamp(12px,1.2vw,14px)] font-semibold border-[1.5px] border-solid border-[#222] cursor-pointer transition-all duration-200 ease-in-out whitespace-nowrap"
-          >Buy it now</button>
-        </div>
       </div>
 
       <style>{`
@@ -1970,44 +2064,6 @@ export function ProductDetailContent({
         }
 
         
-        .pdp-sticky-bar {
-          bottom: 0;
-          height: clamp(92px, 10vw, 120px);
-          overflow: hidden;
-        }
-        .pdp-sticky-inner {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: clamp(12px, 1.6vw, 24px);
-          width: 100%;
-          height: 100%;
-          min-width: 0;
-          box-sizing: border-box;
-        }
-        .pdp-sticky-product { flex: 0 0 auto; min-width: 0; }
-        .pdp-sticky-name { max-width: clamp(110px, 14vw, 180px); }
-        .pdp-sticky-variant {
-          margin-left: clamp(8px, 3vw, 76px);
-          margin-right: clamp(8px, 3vw, 76px);
-          min-width: clamp(130px, 14vw, 170px);
-          max-width: 100%;
-          flex-shrink: 1;
-          box-sizing: border-box;
-        }
-        .pdp-sticky-qty { flex-shrink: 0; }
-        .pdp-sticky-atc {
-          padding: clamp(11px, 1.2vw, 14px) clamp(18px, 2.5vw, 30px);
-          flex-shrink: 0;
-        }
-        .pdp-sticky-buy {
-          padding: clamp(11px, 1.2vw, 14px) clamp(18px, 2.5vw, 30px);
-          flex-shrink: 0;
-        }
-        
-        .pdp-sticky-spacer { display: none; }
-
-        
         .pdp-reviews-section { padding-bottom: clamp(48px, 6vw, 80px); }
         .pdp-recently-section {
           margin-top: clamp(36px, 4vw, 52px);
@@ -2068,10 +2124,6 @@ export function ProductDetailContent({
         }
 
         @media (max-width: 749px) {
-          
-          .pdp-sticky-spacer { display: none; }
-          .pdp-sticky-bar { display: none; }
-
           
           .pdp-recently-grid {
             grid-template-columns: repeat(2, 1fr) !important;
