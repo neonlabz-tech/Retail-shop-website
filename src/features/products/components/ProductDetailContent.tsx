@@ -684,8 +684,12 @@ export function ProductDetailContent({
     );
   };
 
+  const activeVariant = getActiveVariant();
+  const isOutOfStock = product.availability === 'out-of-stock' || (typeof product.stock === 'number' && product.stock <= 0) || (activeVariant ? !activeVariant.available : false);
+  const maxStock = typeof product.stock === 'number' && product.stock > 0 ? product.stock : (isOutOfStock ? 0 : 999);
+
   const handleAddToCart = () => {
-    if (!product) return;
+    if (!product || isOutOfStock) return;
     const variant = getActiveVariant();
     const variantId = variant?.id || product.id || 'default';
     const image = variant?.image || product.images?.[0]?.src || '';
@@ -701,15 +705,17 @@ export function ProductDetailContent({
         size: activeSize,
         price: product.price,
         compareAtPrice: product.compareAtPrice,
-        quantity,
+        quantity: Math.min(maxStock, quantity),
         vendor: product.vendor,
         weight: product.weight || 0,
+        stock: product.stock,
       });
       setAddingToCart(false);
     }, 400);
   };
 
   const handleBuyNow = () => {
+    if (!product || isOutOfStock) return;
     const variant = product.variants?.find(v => v.color === activeColor && v.size === activeSize) || product.variants?.[0];
     const variantId = variant?.id || product.id || 'default';
     const image = variant?.image || product.images?.[0]?.src || '';
@@ -724,9 +730,10 @@ export function ProductDetailContent({
       size: activeSize,
       price: product.price,
       compareAtPrice: product.compareAtPrice,
-      quantity,
+      quantity: Math.min(maxStock, quantity),
       vendor: product.vendor,
       weight: product.weight || 0,
+      stock: product.stock,
     });
     closeDrawer();
     router.push('/checkout');
@@ -863,13 +870,28 @@ export function ProductDetailContent({
                   {formatPrice(product.price)}
                 </span>
                 {discount > 0 && (
-                  <span className="text-[#F15B41] text-[15px] font-bold tracking-tight">
-                    {discount}% off
+                  <span className="text-[#e01117] bg-[#fff0ed] text-[13px] font-bold px-[6px] py-[2px] rounded-[4px] leading-none">
+                    -{discount}%
                   </span>
                 )}
                 {product.compareAtPrice && (
                   <span className="pdp-info-compare-at text-[16px] text-[#999] line-through font-normal">
                     {formatPrice(product.compareAtPrice)}
+                  </span>
+                )}
+              </div>
+
+              {/* In-Stock / Out-of-Stock Indicator Badge */}
+              <div className="pdp-stock-badge flex items-center gap-[8px] mb-[18px]">
+                <span className={`inline-flex items-center gap-[6px] text-[13px] font-semibold px-[10px] py-[4px] rounded-full ${
+                  isOutOfStock ? 'bg-red-50 text-[#e01117] border border-red-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                }`}>
+                  <span className={`w-[7px] h-[7px] rounded-full ${isOutOfStock ? 'bg-[#e01117]' : 'bg-emerald-500'}`} />
+                  {isOutOfStock ? 'Out of Stock' : (typeof product.stock === 'number' && product.stock <= 10 ? `Only ${product.stock} left in stock` : 'In Stock')}
+                </span>
+                {!isOutOfStock && typeof product.stock === 'number' && product.stock <= 10 && (
+                  <span className="text-[12px] font-semibold text-[#e01117] animate-pulse">
+                    (Order soon before it runs out!)
                   </span>
                 )}
               </div>
@@ -917,30 +939,49 @@ export function ProductDetailContent({
               <div ref={addToCartCallbackRef} className="pdp-info-qty-block mb-[16px]">
                 <p className="pdp-info-field-label text-[15px] font-semibold text-[#222] mb-[10px]">Quantity</p>
                 <div className="pdp-info-qty-row flex items-center gap-[14px]">
-                  <div className="pdp-qty-stepper inline-flex border border-solid border-[#e5e5e5] rounded-[4px]">
-                    <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="pdp-qty-step-btn w-[40px] h-[44px] flex items-center justify-center bg-transparent border-none cursor-pointer text-[18px] text-[#222]">−</button>
+                  <div className={`pdp-qty-stepper inline-flex border border-solid border-[#e5e5e5] rounded-[4px] ${isOutOfStock ? 'opacity-40 pointer-events-none' : ''}`}>
+                    <button
+                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                      disabled={isOutOfStock || quantity <= 1}
+                      className="pdp-qty-step-btn w-[40px] h-[44px] flex items-center justify-center bg-transparent border-none cursor-pointer text-[18px] text-[#222] disabled:opacity-30 disabled:cursor-not-allowed"
+                    >−</button>
                     <span className="pdp-qty-value w-[40px] h-[44px] flex items-center justify-center text-[15px] font-medium border-l border-r border-solid border-[#e5e5e5]">{quantity}</span>
-                    <button onClick={() => setQuantity(quantity + 1)} className="pdp-qty-step-btn w-[40px] h-[44px] flex items-center justify-center bg-transparent border-none cursor-pointer text-[18px] text-[#222]">+</button>
+                    <button
+                      onClick={() => setQuantity(Math.min(maxStock, quantity + 1))}
+                      disabled={isOutOfStock || quantity >= maxStock}
+                      className="pdp-qty-step-btn w-[40px] h-[44px] flex items-center justify-center bg-transparent border-none cursor-pointer text-[18px] text-[#222] disabled:opacity-30 disabled:cursor-not-allowed"
+                    >+</button>
                   </div>
                   <button
                     onClick={handleAddToCart}
-                    disabled={addingToCart}
+                    disabled={addingToCart || isOutOfStock}
                     className={`pdp-add-to-cart-btn flex-1 flex items-center justify-center gap-[10px] py-[14px] px-0 text-[#fff] text-[16px] font-semibold border-none rounded-none transition-colors duration-[250ms] ease-in-out ${
-                      addingToCart ? 'bg-[#555] cursor-wait opacity-80' : 'bg-[#222] cursor-pointer opacity-100'
+                      isOutOfStock
+                        ? 'bg-[#94a3b8] cursor-not-allowed opacity-90'
+                        : addingToCart
+                        ? 'bg-[#555] cursor-wait opacity-80'
+                        : 'bg-[#222] cursor-pointer opacity-100 hover:bg-[#F15B41]'
                     }`}
-                    onMouseEnter={(e) => { if (!addingToCart) e.currentTarget.style.backgroundColor = '#F15B41'; }}
-                    onMouseLeave={(e) => { if (!addingToCart) e.currentTarget.style.backgroundColor = '#222'; }}
-                  >{addingToCart ? 'Adding...' : <><IconBag size={18} /> Add to cart</>}</button>
+                    onMouseEnter={(e) => { if (!addingToCart && !isOutOfStock) e.currentTarget.style.backgroundColor = '#F15B41'; }}
+                    onMouseLeave={(e) => { if (!addingToCart && !isOutOfStock) e.currentTarget.style.backgroundColor = '#222'; }}
+                  >{isOutOfStock ? 'Out of stock' : addingToCart ? 'Adding...' : <><IconBag size={18} /> Add to cart</>}</button>
                 </div>
+                {!isOutOfStock && typeof product.stock === 'number' && product.stock > 0 && quantity >= maxStock && (
+                  <p className="text-[12px] text-[#e01117] font-medium mt-[6px]">
+                    Maximum available quantity reached ({maxStock} units).
+                  </p>
+                )}
               </div>
 
-<button
-                type="button"
-                onClick={handleBuyNow}
-                className="pdp-buy-now-btn w-full py-[14px] px-0 bg-[#fff] text-[#222] text-[16px] font-semibold border-[1.5px] border-solid border-[#222] rounded-none cursor-pointer mb-[20px] transition-all duration-[250ms] ease-in-out"
-              >
-                Buy it now
-              </button>
+              {!isOutOfStock && (
+                <button
+                  type="button"
+                  onClick={handleBuyNow}
+                  className="pdp-buy-now-btn w-full py-[14px] px-0 bg-[#fff] text-[#222] text-[16px] font-semibold border-[1.5px] border-solid border-[#222] rounded-none cursor-pointer mb-[20px] transition-all duration-[250ms] ease-in-out hover:bg-[#222] hover:text-[#fff]"
+                >
+                  Buy it now
+                </button>
+              )}
 
               <div className="pdp-info-actions-row flex items-center gap-[24px] mb-[24px]">
                 <button
@@ -1451,25 +1492,39 @@ export function ProductDetailContent({
             </div>
           )}
 
-          <div className="pdp-sticky-qty inline-flex items-center border border-solid border-[#e0e0e0] rounded-[6px] overflow-hidden shrink-0">
-            <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="w-[clamp(32px,3.4vw,40px)] h-[clamp(38px,4vw,46px)] flex items-center justify-center bg-transparent border-none cursor-pointer text-[clamp(15px,1.6vw,18px)] text-[#555]">−</button>
+          <div className={`pdp-sticky-qty inline-flex items-center border border-solid border-[#e0e0e0] rounded-[6px] overflow-hidden shrink-0 ${isOutOfStock ? 'opacity-40 pointer-events-none' : ''}`}>
+            <button
+              onClick={() => setQuantity(Math.max(1, quantity - 1))}
+              disabled={isOutOfStock || quantity <= 1}
+              className="w-[clamp(32px,3.4vw,40px)] h-[clamp(38px,4vw,46px)] flex items-center justify-center bg-transparent border-none cursor-pointer text-[clamp(15px,1.6vw,18px)] text-[#555] disabled:opacity-30 disabled:cursor-not-allowed"
+            >−</button>
             <span className="w-[clamp(30px,3vw,36px)] h-[clamp(38px,4vw,46px)] flex items-center justify-center text-[clamp(12px,1.2vw,14px)] font-medium border-l border-r border-solid border-[#e0e0e0] text-[#222]">{quantity}</span>
-            <button onClick={() => setQuantity(quantity + 1)} className="w-[clamp(32px,3.4vw,40px)] h-[clamp(38px,4vw,46px)] flex items-center justify-center bg-transparent border-none cursor-pointer text-[clamp(15px,1.6vw,18px)] text-[#555]">+</button>
+            <button
+              onClick={() => setQuantity(Math.min(maxStock, quantity + 1))}
+              disabled={isOutOfStock || quantity >= maxStock}
+              className="w-[clamp(32px,3.4vw,40px)] h-[clamp(38px,4vw,46px)] flex items-center justify-center bg-transparent border-none cursor-pointer text-[clamp(15px,1.6vw,18px)] text-[#555] disabled:opacity-30 disabled:cursor-not-allowed"
+            >+</button>
           </div>
 
           <button
             className={`pdp-sticky-atc text-[#fff] text-[clamp(12px,1.2vw,14px)] font-semibold border-none transition-colors duration-200 ease-in-out whitespace-nowrap ${
-              addingToCart ? 'bg-[#555] cursor-wait' : 'bg-[#222] hover:bg-[#F15B41] cursor-pointer'
+              isOutOfStock
+                ? 'bg-[#94a3b8] cursor-not-allowed opacity-90'
+                : addingToCart
+                ? 'bg-[#555] cursor-wait'
+                : 'bg-[#222] hover:bg-[#F15B41] cursor-pointer'
             }`}
             onClick={handleAddToCart}
-            disabled={addingToCart}
-          >{addingToCart ? 'Adding...' : 'Add to cart'}</button>
+            disabled={addingToCart || isOutOfStock}
+          >{isOutOfStock ? 'Out of stock' : addingToCart ? 'Adding...' : 'Add to cart'}</button>
 
-<button
-            type="button"
-            onClick={handleBuyNow}
-            className="pdp-sticky-buy bg-[#fff] hover:bg-[#222] text-[#222] hover:text-[#fff] text-[clamp(12px,1.2vw,14px)] font-semibold border-[1.5px] border-solid border-[#222] cursor-pointer transition-all duration-200 ease-in-out whitespace-nowrap"
-          >Buy it now</button>
+          {!isOutOfStock && (
+            <button
+              type="button"
+              onClick={handleBuyNow}
+              className="pdp-sticky-buy bg-[#fff] hover:bg-[#222] text-[#222] hover:text-[#fff] text-[clamp(12px,1.2vw,14px)] font-semibold border-[1.5px] border-solid border-[#222] cursor-pointer transition-all duration-200 ease-in-out whitespace-nowrap"
+            >Buy it now</button>
+          )}
         </div>
       </div>
 

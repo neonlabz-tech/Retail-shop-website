@@ -414,6 +414,8 @@ export function SingleProductFeaturedProduct() {
   const discount = calculateDiscount(product.price, product.compareAtPrice);
   const inWishlist = isInWishlist(product.id);
   const inCompare = isInCompare(product.id);
+  const isOutOfStock = product.availability === 'out-of-stock' || (typeof product.stock === 'number' && product.stock <= 0);
+  const maxStock = typeof product.stock === 'number' && product.stock > 0 ? product.stock : (isOutOfStock ? 0 : 999);
 
   const handleWishlistClick = () => {
     setWishlistLoading(true);
@@ -429,6 +431,7 @@ export function SingleProductFeaturedProduct() {
   };
 
   const handleAddToCart = () => {
+    if (isOutOfStock) return;
     const variant = product.variants?.find(v => v.color === activeColor && v.size === activeSize) || product.variants?.[0];
     const variantId = variant?.id || product.id || 'default';
     const image = variant?.image || product.images?.[0]?.src || '';
@@ -445,14 +448,17 @@ export function SingleProductFeaturedProduct() {
         size: activeSize,
         price: product.price,
         compareAtPrice: product.compareAtPrice,
-        quantity,
+        quantity: Math.min(maxStock, quantity),
         vendor: product.vendor,
+        weight: product.weight || 0,
+        stock: product.stock,
       });
       setAddingToCart(false);
     }, 400);
   };
 
   const handleBuyNow = () => {
+    if (isOutOfStock) return;
     const variant = product.variants?.find(v => v.color === activeColor && v.size === activeSize) || product.variants?.[0];
     const variantId = variant?.id || product.id || 'default';
     const image = variant?.image || product.images?.[0]?.src || '';
@@ -467,8 +473,10 @@ export function SingleProductFeaturedProduct() {
       size: activeSize,
       price: product.price,
       compareAtPrice: product.compareAtPrice,
-      quantity,
+      quantity: Math.min(maxStock, quantity),
       vendor: product.vendor,
+      weight: product.weight || 0,
+      stock: product.stock,
     });
     closeDrawer();
     router.push('/checkout');
@@ -551,12 +559,20 @@ export function SingleProductFeaturedProduct() {
               <div ref={addToCartRef} className="pdp-info-qty-block" style={{ marginBottom: '16px', maxWidth: '440px' }}>
                 <p className="pdp-info-field-label" style={{ fontSize: '15px', fontWeight: 600, color: '#222', marginBottom: '10px' }}>Quantity</p>
                 <div className="pdp-info-qty-row" style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                  <div className="pdp-qty-stepper" style={{ display: 'inline-flex', border: '1px solid #e5e5e5', borderRadius: '6px' }}>
-                    <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="pdp-qty-step-btn"
-                      style={{ width: '40px', height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', color: '#222' }}>−</button>
+                  <div className="pdp-qty-stepper" style={{ display: 'inline-flex', border: '1px solid #e5e5e5', borderRadius: '6px', opacity: isOutOfStock ? 0.4 : 1, pointerEvents: isOutOfStock ? 'none' : 'auto' }}>
+                    <button
+                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                      disabled={isOutOfStock || quantity <= 1}
+                      className="pdp-qty-step-btn"
+                      style={{ width: '40px', height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: quantity <= 1 ? 'not-allowed' : 'pointer', opacity: quantity <= 1 ? 0.3 : 1, fontSize: '18px', color: '#222' }}
+                    >−</button>
                     <span className="pdp-qty-value" style={{ width: '40px', height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px', fontWeight: 500, borderLeft: '1px solid #e5e5e5', borderRight: '1px solid #e5e5e5' }}>{quantity}</span>
-                    <button onClick={() => setQuantity(quantity + 1)} className="pdp-qty-step-btn"
-                      style={{ width: '40px', height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', color: '#222' }}>+</button>
+                    <button
+                      onClick={() => setQuantity(Math.min(maxStock, quantity + 1))}
+                      disabled={isOutOfStock || quantity >= maxStock}
+                      className="pdp-qty-step-btn"
+                      style={{ width: '40px', height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: quantity >= maxStock ? 'not-allowed' : 'pointer', opacity: quantity >= maxStock ? 0.3 : 1, fontSize: '18px', color: '#222' }}
+                    >+</button>
                   </div>
                   <button onClick={handleAddToCart} disabled={addingToCart} className="pdp-add-to-cart-btn"
                     style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '14px 0', backgroundColor: addingToCart ? '#555' : '#222', color: '#fff', fontSize: '16px', fontWeight: 600, border: 'none', borderRadius: '6px', cursor: addingToCart ? 'wait' : 'pointer', transition: 'background-color 250ms ease', opacity: addingToCart ? 0.8 : 1 }}

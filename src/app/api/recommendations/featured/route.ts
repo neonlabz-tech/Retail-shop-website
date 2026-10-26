@@ -3,15 +3,25 @@ import mongoose from 'mongoose';
 import { connectDB } from '@/lib/db';
 import ProductModel from '@/models/Product';
 import { formatMongoProduct } from '@/lib/formatProduct';
+import { toysProducts } from '@/data/toys-products';
+import { craftAndDecoreProducts } from '@/data/craft-and-decore-products';
+import { groceryProducts } from '@/data/grocery-products';
+import type { Product } from '@/types/product';
+
+const STATIC_FALLBACK_PRODUCTS: Product[] = [
+  ...toysProducts,
+  ...craftAndDecoreProducts,
+  ...groceryProducts,
+];
 
 export async function GET(request: NextRequest) {
-  try {
-    const searchParams = request.nextUrl.searchParams;
-    const category = searchParams.get('category');
-    const subcategory = searchParams.get('subcategory');
-    const limit = Math.max(1, parseInt(searchParams.get('limit') || '8'));
-    const exclude = searchParams.get('exclude');
+  const searchParams = request.nextUrl.searchParams;
+  const category = searchParams.get('category');
+  const subcategory = searchParams.get('subcategory');
+  const limit = Math.max(1, parseInt(searchParams.get('limit') || '8'));
+  const exclude = searchParams.get('exclude');
 
+  try {
     await connectDB();
 
     const baseFilter: Record<string, any> = {
@@ -83,17 +93,24 @@ export async function GET(request: NextRequest) {
 
     const products = mongoDocs.map(formatMongoProduct);
 
-    return NextResponse.json({
-      success: true,
-      category: category || 'all',
-      count: products.length,
-      products,
-    });
+    if (products.length > 0) {
+      return NextResponse.json({
+        success: true,
+        category: category || 'all',
+        count: products.length,
+        products,
+      });
+    }
   } catch (error) {
-    console.error('Error in /api/recommendations/featured GET:', error);
-    return NextResponse.json(
-      { success: false, error: 'Internal Server Error' },
-      { status: 500 }
-    );
+    console.warn('MongoDB unavailable in /api/recommendations/featured GET, using fallback catalog:', (error as Error)?.message);
   }
+
+  const fallback = STATIC_FALLBACK_PRODUCTS.slice(0, limit);
+  return NextResponse.json({
+    success: true,
+    source: 'fallback',
+    category: category || 'all',
+    count: fallback.length,
+    products: fallback,
+  });
 }

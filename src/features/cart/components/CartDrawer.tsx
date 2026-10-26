@@ -247,7 +247,8 @@ export function CartDrawer() {
                       <div className="inline-flex items-center bg-neutral-100 rounded-md p-[2px] border border-neutral-200/70">
                         <button
                           onClick={() => updateQuantity(item.productId, item.variantId, Math.max(1, item.quantity - 1))}
-                          className="w-[24px] h-[24px] rounded bg-white shadow-2xs flex items-center justify-center text-neutral-700 hover:bg-neutral-50 active:scale-95 transition-all text-[1.4rem] font-light leading-none"
+                          disabled={item.quantity <= 1}
+                          className="w-[24px] h-[24px] rounded bg-white shadow-2xs flex items-center justify-center text-neutral-700 hover:bg-neutral-50 active:scale-95 transition-all text-[1.4rem] font-light leading-none disabled:opacity-30 disabled:cursor-not-allowed"
                           aria-label="Decrease quantity"
                         >
                           −
@@ -256,8 +257,13 @@ export function CartDrawer() {
                           {item.quantity}
                         </span>
                         <button
-                          onClick={() => updateQuantity(item.productId, item.variantId, item.quantity + 1)}
-                          className="w-[24px] h-[24px] rounded bg-white shadow-2xs flex items-center justify-center text-neutral-700 hover:bg-neutral-50 active:scale-95 transition-all text-[1.4rem] font-light leading-none"
+                          onClick={() => {
+                            const max = typeof item.stock === 'number' && item.stock > 0 ? item.stock : 99;
+                            if (item.quantity >= max) return;
+                            updateQuantity(item.productId, item.variantId, item.quantity + 1);
+                          }}
+                          disabled={typeof item.stock === 'number' && item.stock > 0 ? item.quantity >= item.stock : false}
+                          className="w-[24px] h-[24px] rounded bg-white shadow-2xs flex items-center justify-center text-neutral-700 hover:bg-neutral-50 active:scale-95 transition-all text-[1.4rem] font-light leading-none disabled:opacity-30 disabled:cursor-not-allowed"
                           aria-label="Increase quantity"
                         >
                           +
@@ -268,6 +274,12 @@ export function CartDrawer() {
                         {formatPrice(item.price * item.quantity)}
                       </span>
                     </div>
+
+                    {typeof item.stock === 'number' && item.stock > 0 && item.quantity >= item.stock && (
+                      <p className="text-[1.1rem] text-[#e01117] font-medium pt-[4px]">
+                        Max stock reached ({item.stock} available)
+                      </p>
+                    )}
                   </div>
                 </div>
               );

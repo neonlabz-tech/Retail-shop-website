@@ -229,6 +229,17 @@ export function CheckoutPageContent() {
       return;
     }
 
+    const overStockItem = items.find((i) => typeof i.stock === 'number' && i.stock > 0 && i.quantity > i.stock);
+    if (overStockItem) {
+      setOrderError(`The item "${overStockItem.name}" only has ${overStockItem.stock} in stock. Please adjust your cart quantity.`);
+      return;
+    }
+    const outOfStockItem = items.find((i) => typeof i.stock === 'number' && i.stock <= 0);
+    if (outOfStockItem) {
+      setOrderError(`The item "${outOfStockItem.name}" is out of stock. Please remove it from your cart.`);
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {

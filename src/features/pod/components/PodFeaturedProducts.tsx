@@ -15,9 +15,12 @@ function ProductCardSkeleton() {
 }
 
 export function PodFeaturedProducts() {
-  const { data, isLoading } = useProducts({ limit: 10 }, { endpoint: '/api/pod-products' });
+  const { data, isLoading } = useProducts({ limit: 12, availability: 'in-stock' }, { endpoint: '/api/pod-products' });
 
-  const products = data?.products.slice(0, 10) || [];
+  // Guarantee that only in-stock products appear on the homepage Featured section
+  const products = (data?.products || [])
+    .filter((p) => p.availability !== 'out-of-stock' && (typeof p.stock !== 'number' || p.stock > 0))
+    .slice(0, 10);
 
   return (
     <section>

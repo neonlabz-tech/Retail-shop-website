@@ -39,22 +39,27 @@ export const useCartStore = create<CartState>()(
 
       addItem: (item) => {
         set((state) => {
+          const maxStock = typeof item.stock === 'number' && item.stock > 0 ? item.stock : undefined;
           const existing = state.items.find(
             (i) => i.productId === item.productId && i.variantId === item.variantId
           );
 
           if (existing) {
+            const effectiveMax = maxStock !== undefined ? maxStock : (typeof existing.stock === 'number' && existing.stock > 0 ? existing.stock : undefined);
+            const rawQty = existing.quantity + item.quantity;
+            const newQty = effectiveMax !== undefined ? Math.min(effectiveMax, rawQty) : rawQty;
             return {
               items: state.items.map((i) =>
                 i.productId === item.productId && i.variantId === item.variantId
-                  ? { ...i, quantity: i.quantity + item.quantity }
+                  ? { ...i, stock: item.stock ?? i.stock, quantity: newQty }
                   : i
               ),
               isDrawerOpen: true,
             };
           }
 
-          return { items: [...state.items, item], isDrawerOpen: true };
+          const initialQty = maxStock !== undefined ? Math.min(maxStock, item.quantity) : item.quantity;
+          return { items: [...state.items, { ...item, quantity: initialQty }], isDrawerOpen: true };
         });
       },
 
@@ -69,11 +74,14 @@ export const useCartStore = create<CartState>()(
       updateQuantity: (productId, variantId, quantity) => {
         if (quantity < 1) return;
         set((state) => ({
-          items: state.items.map((i) =>
-            i.productId === productId && i.variantId === variantId
-              ? { ...i, quantity }
-              : i
-          ),
+          items: state.items.map((i) => {
+            if (i.productId === productId && i.variantId === variantId) {
+              const maxStock = typeof i.stock === 'number' && i.stock > 0 ? i.stock : undefined;
+              const finalQty = maxStock !== undefined ? Math.min(maxStock, quantity) : quantity;
+              return { ...i, quantity: finalQty };
+            }
+            return i;
+          }),
         }));
       },
 

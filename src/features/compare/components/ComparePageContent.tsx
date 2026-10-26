@@ -106,6 +106,8 @@ export function ComparePageContent({ storefront }: { storefront?: Storefront } =
       compareAtPrice: product.compareAtPrice,
       quantity: 1,
       vendor: product.vendor,
+      weight: product.weight || 0,
+      stock: product.stock,
     });
   };
 

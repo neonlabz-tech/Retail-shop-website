@@ -75,11 +75,18 @@ export function QuickViewModal() {
 
   const activeColor = selectedColor || product.colors?.[0]?.name || '';
   const activeSize = selectedSize || product.sizes?.[0] || '';
+  const activeVariant = product.variants?.find(
+    (v) => v.color === activeColor && v.size === activeSize
+  ) || product.variants?.[0];
+  const isOutOfStock = product.availability === 'out-of-stock' || (typeof product.stock === 'number' && product.stock <= 0) || (activeVariant ? !activeVariant.available : false);
+  const maxStock = typeof product.stock === 'number' && product.stock > 0 ? product.stock : (isOutOfStock ? 0 : 999);
+  const discount = product.compareAtPrice && product.compareAtPrice > product.price
+    ? Math.round(((product.compareAtPrice - product.price) / product.compareAtPrice) * 100)
+    : 0;
 
   const handleAddToCart = () => {
-    const variant = product.variants?.find(
-      (v) => v.color === activeColor && v.size === activeSize
-    ) || product.variants?.[0];
+    if (isOutOfStock) return;
+    const variant = activeVariant;
     const variantId = variant?.id || product.id || 'default';
     const image = variant?.image || product.images?.[0]?.src || '';
 
@@ -93,17 +100,17 @@ export function QuickViewModal() {
       size: activeSize,
       price: product.price,
       compareAtPrice: product.compareAtPrice,
-      quantity,
+      quantity: Math.min(maxStock, quantity),
       vendor: product.vendor,
       weight: product.weight || 0,
+      stock: product.stock,
     });
     closeQuickView();
   };
 
   const handleBuyNow = () => {
-    const variant = product.variants?.find(
-      (v) => v.color === activeColor && v.size === activeSize
-    ) || product.variants?.[0];
+    if (isOutOfStock) return;
+    const variant = activeVariant;
     const variantId = variant?.id || product.id || 'default';
     const image = variant?.image || product.images?.[0]?.src || '';
 
@@ -117,9 +124,10 @@ export function QuickViewModal() {
       size: activeSize,
       price: product.price,
       compareAtPrice: product.compareAtPrice,
-      quantity,
+      quantity: Math.min(maxStock, quantity),
       vendor: product.vendor,
       weight: product.weight || 0,
+      stock: product.stock,
     });
     closeQuickView();
     closeDrawer();
@@ -179,15 +187,37 @@ export function QuickViewModal() {
             {product.name}
           </h2>
 
-          {/* Price */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-            {product.compareAtPrice && (
-              <span className="qv-price-compare" style={{ fontSize: '16px', color: '#999', textDecoration: 'line-through' }}>
+          {/* Price: Offer price, %, Old price all in the same line */}
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
+            <span className="qv-price-current product-price-text text-[#e01117]" style={{ fontSize: '22px', fontWeight: 700, color: '#e01117' }}>
+              {formatPrice(product.price)}
+            </span>
+            {discount > 0 && (
+              <span style={{ color: '#e01117', backgroundColor: '#fff0ed', fontSize: '12px', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', lineHeight: 1 }}>
+                -{discount}%
+              </span>
+            )}
+            {product.compareAtPrice && product.compareAtPrice > product.price && (
+              <span className="qv-price-compare" style={{ fontSize: '15px', color: '#999', textDecoration: 'line-through' }}>
                 {formatPrice(product.compareAtPrice)}
               </span>
             )}
-            <span className="qv-price-current product-price-text text-[#e01117]" style={{ fontSize: '20px', fontWeight: 700, color: '#e01117' }}>
-              {formatPrice(product.price)}
+          </div>
+
+          {/* Stock status badge */}
+          <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: '6px',
+              fontSize: '12px', fontWeight: 600, padding: '3px 10px', borderRadius: '999px',
+              backgroundColor: isOutOfStock ? '#fef2f2' : '#ecfdf5',
+              color: isOutOfStock ? '#e01117' : '#047857',
+              border: `1px solid ${isOutOfStock ? '#fecaca' : '#a7f3d0'}`,
+            }}>
+              <span style={{
+                width: '6px', height: '6px', borderRadius: '50%',
+                backgroundColor: isOutOfStock ? '#e01117' : '#10b981',
+              }} />
+              {isOutOfStock ? 'Out of Stock' : (typeof product.stock === 'number' && product.stock <= 10 ? `Only ${product.stock} left in stock` : 'In Stock')}
             </span>
           </div>
 
@@ -247,11 +277,12 @@ export function QuickViewModal() {
           {/* Quantity */}
           <div style={{ marginBottom: '20px' }}>
             <p className="qv-selector-label" style={{ fontSize: '15px', fontWeight: 600, color: '#222', marginBottom: '10px' }}>Quantity</p>
-            <div style={{ display: 'inline-flex', alignItems: 'center', border: '1px solid #e5e5e5', borderRadius: '4px' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', border: '1px solid #e5e5e5', borderRadius: '4px', opacity: isOutOfStock ? 0.4 : 1, pointerEvents: isOutOfStock ? 'none' : 'auto' }}>
               <button
                 onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                disabled={isOutOfStock || quantity <= 1}
                 className="qv-qty-btn"
-                style={{ width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', color: '#222' }}
+                style={{ width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: quantity <= 1 ? 'not-allowed' : 'pointer', opacity: quantity <= 1 ? 0.3 : 1, fontSize: '18px', color: '#222' }}
               >−</button>
               <span
                 className="qv-qty-count"
@@ -260,45 +291,59 @@ export function QuickViewModal() {
                 {quantity}
               </span>
               <button
-                onClick={() => setQuantity(quantity + 1)}
+                onClick={() => setQuantity(Math.min(maxStock, quantity + 1))}
+                disabled={isOutOfStock || quantity >= maxStock}
                 className="qv-qty-btn"
-                style={{ width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', color: '#222' }}
+                style={{ width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: quantity >= maxStock ? 'not-allowed' : 'pointer', opacity: quantity >= maxStock ? 0.3 : 1, fontSize: '18px', color: '#222' }}
               >+</button>
             </div>
+            {!isOutOfStock && typeof product.stock === 'number' && product.stock > 0 && quantity >= maxStock && (
+              <p style={{ fontSize: '12px', color: '#e01117', fontWeight: 500, marginTop: '6px' }}>
+                Maximum available quantity reached ({maxStock} units).
+              </p>
+            )}
           </div>
 
           {/* Add to Cart */}
           <button
             onClick={handleAddToCart}
+            disabled={isOutOfStock}
             className="qv-add-to-cart"
             style={{
               width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              gap: '10px', padding: '16px 0', backgroundColor: '#222', color: '#fff',
+              gap: '10px', padding: '16px 0',
+              backgroundColor: isOutOfStock ? '#94a3b8' : '#222',
+              color: '#fff',
               fontSize: '16px', fontWeight: 600, border: 'none', borderRadius: '40px',
-              cursor: 'pointer', marginBottom: '12px', transition: 'background-color 250ms ease',
+              cursor: isOutOfStock ? 'not-allowed' : 'pointer',
+              marginBottom: isOutOfStock ? '20px' : '12px',
+              transition: 'background-color 250ms ease',
+              opacity: isOutOfStock ? 0.9 : 1,
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F15B41'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#222'; }}
+            onMouseEnter={(e) => { if (!isOutOfStock) e.currentTarget.style.backgroundColor = '#F15B41'; }}
+            onMouseLeave={(e) => { if (!isOutOfStock) e.currentTarget.style.backgroundColor = '#222'; }}
           >
-            <IconBag size={18} />
-            Add to cart
+            {!isOutOfStock && <IconBag size={18} />}
+            {isOutOfStock ? 'Out of stock' : 'Add to cart'}
           </button>
 
           {/* Buy it now */}
-          <button
-            type="button"
-            onClick={handleBuyNow}
-            className="qv-buy-now"
-            style={{
-              width: '100%', padding: '16px 0', backgroundColor: '#fff', color: '#222',
-              fontSize: '16px', fontWeight: 600, border: '1.5px solid #222', borderRadius: '40px',
-              cursor: 'pointer', marginBottom: '20px', transition: 'all 250ms ease',
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#222'; e.currentTarget.style.color = '#fff'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#fff'; e.currentTarget.style.color = '#222'; }}
-          >
-            Buy it now
-          </button>
+          {!isOutOfStock && (
+            <button
+              type="button"
+              onClick={handleBuyNow}
+              className="qv-buy-now"
+              style={{
+                width: '100%', padding: '16px 0', backgroundColor: '#fff', color: '#222',
+                fontSize: '16px', fontWeight: 600, border: '1.5px solid #222', borderRadius: '40px',
+                cursor: 'pointer', marginBottom: '20px', transition: 'all 250ms ease',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#222'; e.currentTarget.style.color = '#fff'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#fff'; e.currentTarget.style.color = '#222'; }}
+            >
+              Buy it now
+            </button>
+          )}
 
           {/* View full details */}
           <Link

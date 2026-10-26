@@ -120,9 +120,19 @@ export async function GET(request: NextRequest) {
   if (availability) {
     const avail = availability.toLowerCase();
     if (avail === 'in-stock' || avail === 'in_stock' || avail === 'true') {
-      filtered = filtered.filter((p) => p.availability === 'in-stock');
+      filtered = filtered.filter(
+        (p) =>
+          p.availability !== 'out-of-stock' &&
+          (typeof p.stock !== 'number' || p.stock > 0) &&
+          (!p.variants?.[0] || p.variants[0].available !== false)
+      );
     } else if (avail === 'out-of-stock' || avail === 'out_of_stock' || avail === 'false') {
-      filtered = filtered.filter((p) => p.availability === 'out-of-stock');
+      filtered = filtered.filter(
+        (p) =>
+          p.availability === 'out-of-stock' ||
+          (typeof p.stock === 'number' && p.stock <= 0) ||
+          (p.variants?.[0] && p.variants[0].available === false)
+      );
     }
   }
 

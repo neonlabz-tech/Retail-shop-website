@@ -12,7 +12,7 @@ import { SITE_NAME, SITE_DESCRIPTION, SITE_URL } from '@/lib/constants';
 import { WhatsAppButton } from '@/components/shared/WhatsAppButton';
 import { CompareBar } from '@/components/shared/CompareBar';
 import { PageLoader } from '@/components/shared/PageLoader';
-import { NewsletterPopup } from '@/components/shared/NewsletterPopup';
+// import { NewsletterPopup } from '@/components/shared/NewsletterPopup';
 
 const albertSans = Albert_Sans({
   subsets: ['latin'],
@@ -60,7 +60,7 @@ export default function RootLayout({
           <QuickViewModal />
           <CompareBar />
           <WhatsAppButton />
-          <NewsletterPopup />
+          {/* <NewsletterPopup /> */}
         </Providers>
       </body>
     </html>

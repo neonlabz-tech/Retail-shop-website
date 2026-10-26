@@ -429,6 +429,8 @@ export function LipstainFeaturedProductSection() {
         compareAtPrice: product.compareAtPrice,
         quantity,
         vendor: product.vendor,
+        weight: product.weight || 0,
+        stock: product.stock,
       });
       setAddingToCart(false);
     }, 400);
@@ -451,6 +453,8 @@ export function LipstainFeaturedProductSection() {
       compareAtPrice: product.compareAtPrice,
       quantity,
       vendor: product.vendor,
+      weight: product.weight || 0,
+      stock: product.stock,
     });
     closeDrawer();
     router.push('/checkout');

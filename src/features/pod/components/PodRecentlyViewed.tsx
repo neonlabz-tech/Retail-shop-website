@@ -24,23 +24,32 @@ export function PodRecentlyViewed() {
 
     async function loadRecentlyViewed() {
       try {
-        const res = await fetch(`/api/recommendations/recently-viewed?limit=5&_t=${Date.now()}`, {
+        const res = await fetch(`/api/recommendations/recently-viewed?limit=10&inStock=true&_t=${Date.now()}`, {
           cache: 'no-store',
         });
+        if (!res.ok) {
+          if (isMounted) setIsLoading(false);
+          return;
+        }
         const data = await res.json();
-        let list: Product[] = data?.success && Array.isArray(data.products) ? data.products : [];
+        let list: Product[] = (data?.success && Array.isArray(data.products) ? data.products : [])
+          .filter((p: Product) => p.availability !== 'out-of-stock' && (typeof p.stock !== 'number' || p.stock > 0));
 
         // Safety guarantee: If fewer than 5 products, top up from recommendations so the 5-column row is always full
         if (list.length < 5) {
           try {
-            const randRes = await fetch(`/api/recommendations/random?limit=5&_t=${Date.now()}`, {
+            const randRes = await fetch(`/api/recommendations/random?limit=10&inStock=true&_t=${Date.now()}`, {
               cache: 'no-store',
             });
-            const randData = await randRes.json();
-            if (randData?.success && Array.isArray(randData.products)) {
-              const existingIds = new Set(list.map((p) => p.id));
-              const extras = randData.products.filter((p: Product) => !existingIds.has(p.id));
-              list = [...list, ...extras].slice(0, 5);
+            if (randRes.ok) {
+              const randData = await randRes.json();
+              if (randData?.success && Array.isArray(randData.products)) {
+                const existingIds = new Set(list.map((p) => p.id));
+                const extras = randData.products
+                  .filter((p: Product) => !existingIds.has(p.id))
+                  .filter((p: Product) => p.availability !== 'out-of-stock' && (typeof p.stock !== 'number' || p.stock > 0));
+                list = [...list, ...extras].slice(0, 5);
+              }
             }
           } catch {
             // ignore fallback error
@@ -51,7 +60,7 @@ export function PodRecentlyViewed() {
           setProducts(list);
         }
       } catch (err) {
-        console.error('Error fetching recently viewed products:', err);
+        console.warn('Could not fetch recently viewed products:', err);
       } finally {
         if (isMounted) setIsLoading(false);
       }

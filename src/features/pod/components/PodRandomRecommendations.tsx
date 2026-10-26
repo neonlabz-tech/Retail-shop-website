@@ -19,29 +19,35 @@ export function PodRandomRecommendations() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  const fetchRandomProducts = () => {
+  const fetchRandomProducts = async () => {
     setIsLoading(true);
-    fetch('/api/recommendations/random?limit=5', { cache: 'no-store' })
-      .then((r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.json();
-      })
-      .then((data) => {
-        if (data.success && Array.isArray(data.products)) {
-          setProducts(data.products);
-        }
-      })
-      .catch((err) => {
-        console.error('Error fetching random recommendations:', err);
-      })
-      .finally(() => {
+    try {
+      const res = await fetch('/api/recommendations/random?limit=10&inStock=true', { cache: 'no-store' });
+      if (!res.ok) {
         setIsLoading(false);
-      });
+        return;
+      }
+      const data = await res.json();
+      if (data?.success && Array.isArray(data.products) && data.products.length > 0) {
+        const inStockOnly = data.products.filter(
+          (p: Product) => p.availability !== 'out-of-stock' && (typeof p.stock !== 'number' || p.stock > 0)
+        );
+        setProducts(inStockOnly.slice(0, 5));
+      }
+    } catch (err) {
+      console.warn('Could not load random recommendations:', err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {
     fetchRandomProducts();
   }, []);
+
+  if (!isLoading && products.length === 0) {
+    return null;
+  }
 
   return (
     <section className="pod-random-recommendations-section">

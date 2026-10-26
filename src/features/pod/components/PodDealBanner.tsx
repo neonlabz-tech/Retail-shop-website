@@ -73,8 +73,9 @@ function CountdownTimer() {
 }
 
 export function PodDealBanner() {
-  const { data } = useProducts({ limit: 12, sale: true }, { endpoint: '/api/pod-products' });
-  const allProducts = data?.products && data.products.length > 0 ? data.products : [];
+  const { data } = useProducts({ limit: 12, sale: true, availability: 'in-stock' }, { endpoint: '/api/pod-products' });
+  const allProducts = (data?.products && data.products.length > 0 ? data.products : [])
+    .filter((p) => p.availability !== 'out-of-stock' && (typeof p.stock !== 'number' || p.stock > 0));
 
   // Filter and prioritize actual original products on sale
   const saleProducts = allProducts.filter(

@@ -51,21 +51,9 @@ const ambientSlidesMeta = [
 // Active slim landscape banner slides
 const wideBannerSlides = [
   {
-    id: 'banner-luxury-dining',
-    title: 'Top Rated by Customers - Luxury Dining & Home Comfort',
-    image: '/pod/hero-slider/banner-luxury-dining.jpg',
-    href: '/products',
-  },
-  {
-    id: 'banner-festive-party',
-    title: 'Party & Entertainment - Festive Party & Fun Collection',
-    image: '/pod/hero-slider/banner-festive-party.jpg',
-    href: '/products',
-  },
-  {
-    id: 'banner-mega-deals',
-    title: 'Exclusive Promotion - Mega Deals & Weekly Discounts',
-    image: '/pod/hero-slider/banner-mega-deals.jpg',
+    id: 'banner-home-party-essentials',
+    title: 'Home & Party Essentials - Ladders, Storage Racks, Stools, Dinner Sets & More',
+    image: '/pod/hero-slider/banner-home-party-essentials.png',
     href: '/products',
   },
 ];
@@ -128,9 +116,10 @@ export function PodHero() {
                       src={slide.image}
                       alt={slide.title}
                       fill
-                      sizes="(max-width: 749px) 100vw, 1530px"
+                      sizes="100vw"
                       priority={i === 0}
-                      className="pdhero-banner-img object-cover object-center"
+                      unoptimized
+                      className="pdhero-banner-img object-contain object-center"
                     />
                   </Link>
                 </div>
@@ -138,36 +127,39 @@ export function PodHero() {
             ))}
           </Swiper>
 
-          {/* Navigation Arrows — Hidden by default, smoothly appear when mouse hovers over banner */}
-          <button
-            type="button"
-            onClick={() => swiper?.slidePrev()}
-            aria-label="Previous banner"
-            className="pdhero-nav pdhero-nav-prev"
-          >
-            <IconArrowLeftS size={24} />
-          </button>
-          <button
-            type="button"
-            onClick={() => swiper?.slideNext()}
-            aria-label="Next banner"
-            className="pdhero-nav pdhero-nav-next"
-          >
-            <IconArrowRightS size={24} />
-          </button>
-
-          {/* Pagination Dots (Active dot expands into a pill) */}
-          <div className="pdhero-dots">
-            {wideBannerSlides.map((_, i) => (
+          {/* Navigation Arrows & Pagination Dots — Shown when there is more than 1 banner */}
+          {wideBannerSlides.length > 1 && (
+            <>
               <button
-                key={i}
                 type="button"
-                onClick={() => swiper?.slideToLoop(i)}
-                aria-label={`Go to slide ${i + 1}`}
-                className={`pdhero-dot ${activeIndex === i ? 'active' : ''}`}
-              />
-            ))}
-          </div>
+                onClick={() => swiper?.slidePrev()}
+                aria-label="Previous banner"
+                className="pdhero-nav pdhero-nav-prev"
+              >
+                <IconArrowLeftS size={24} />
+              </button>
+              <button
+                type="button"
+                onClick={() => swiper?.slideNext()}
+                aria-label="Next banner"
+                className="pdhero-nav pdhero-nav-next"
+              >
+                <IconArrowRightS size={24} />
+              </button>
+
+              <div className="pdhero-dots">
+                {wideBannerSlides.map((_, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => swiper?.slideToLoop(i)}
+                    aria-label={`Go to slide ${i + 1}`}
+                    className={`pdhero-dot ${activeIndex === i ? 'active' : ''}`}
+                  />
+                ))}
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -183,25 +175,14 @@ export function PodHero() {
           width: 100%;
         }
 
-        /* Standard Daraz-style banner height matching your highlighted size */
+        /* Exact aspect-ratio matching the banner dimensions perfectly with zero crop */
         .pdhero-slide {
           position: relative;
           width: 100%;
-          height: 344px;
-          background-color: #0b1a38;
+          aspect-ratio: 2609 / 602;
+          height: auto;
+          background-color: #ffffff;
           overflow: hidden;
-        }
-
-        @media (min-width: 1200px) {
-          .pdhero-slide {
-            height: 344px;
-          }
-        }
-
-        @media (min-width: 750px) and (max-width: 1199px) {
-          .pdhero-slide {
-            height: clamp(240px, 28vw, 320px);
-          }
         }
 
 
@@ -285,11 +266,11 @@ export function PodHero() {
           box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
         }
 
-        /* Mobile Responsive — Exact 1024 / 287 aspect-ratio prevents cropping */
+        /* Mobile Responsive — Exact aspect-ratio prevents cropping */
         @media (max-width: 749px) {
           .pdhero-slide {
             height: auto !important;
-            aspect-ratio: 1024 / 287 !important;
+            aspect-ratio: 2609 / 602 !important;
             border-radius: 10px;
           }
           .pdhero-nav {

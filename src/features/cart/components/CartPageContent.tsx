@@ -284,10 +284,18 @@ export function CartPageContent() {
                       <p className="cp-item-attr">Size:{item.size}</p>
                     )}
                     <div className="cp-item-foot">
-                      <QuantitySelector
-                        value={item.quantity}
-                        onChange={(qty) => updateQuantity(item.productId, item.variantId, qty)}
-                      />
+                      <div>
+                        <QuantitySelector
+                          value={item.quantity}
+                          max={typeof item.stock === 'number' && item.stock > 0 ? item.stock : 99}
+                          onChange={(qty) => updateQuantity(item.productId, item.variantId, qty)}
+                        />
+                        {typeof item.stock === 'number' && item.stock > 0 && item.quantity >= item.stock && (
+                          <p className="text-[12px] text-[#e01117] font-medium mt-[4px]">
+                            Max stock reached ({item.stock} available)
+                          </p>
+                        )}
+                      </div>
                       <span className="cp-item-price">{formatPrice(item.price * item.quantity)}</span>
                     </div>
                   </div>
