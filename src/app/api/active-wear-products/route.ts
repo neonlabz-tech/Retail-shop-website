@@ -3,6 +3,7 @@ import { activeWearProducts } from '@/data/active-wear-products';
 import type { Product } from '@/types/product';
 import type { FilterCounts } from '@/types/common';
 
+//filter counts
 function buildFilterCounts(products: Product[], key: 'category' | 'brand'): FilterCounts[] {
   const map = new Map<string, number>();
   products.forEach((p) => {
