@@ -89,6 +89,9 @@ function IconTikTok() {
 }
 
 export default function ContactPage() {
+  const mapQuery = encodeURIComponent(`${STORE_ADDRESS}, Sri Lanka`);
+  const storeMapUrl = `https://www.google.com/maps/search/?api=1&query=${mapQuery}`;
+  const storeMapEmbedUrl = `https://www.google.com/maps?q=${mapQuery}&output=embed`;
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -203,6 +206,36 @@ export default function ContactPage() {
               </div>
             </div>
           </div>
+            <section className="fa-map-section" aria-label="RKF Distributors location">
+              <div className="fa-map-heading">
+                <div>
+                  <h2 className="fa-map-title">Visit RKF Distributors</h2>
+                  <a
+                    href={storeMapUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="fa-map-address"
+                  >
+                    {STORE_ADDRESS}
+                  </a>
+                </div>
+                <a
+                  href={storeMapUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="fa-map-directions"
+                >
+                  Get directions
+                </a>
+              </div>
+              <iframe
+                title="Map to RKF Distributors in Kopay South, Jaffna"
+                src={storeMapEmbedUrl}
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                className="fa-map-frame"
+              />
+            </section>
         </div>
 
         {/* Thin Divider Line */}
@@ -462,6 +495,54 @@ export default function ContactPage() {
           border-color: #13382c;
           transform: translateY(-1px);
         }
+        .fa-map-section {
+          margin-top: 30px;
+          overflow: hidden;
+          border: 1px solid #E2DED8;
+          border-radius: 10px;
+          background: #FFFFFF;
+        }
+        .fa-map-heading {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+          padding: 16px 18px;
+        }
+        .fa-map-title {
+          margin: 0 0 4px;
+          color: #13382c;
+          font-size: 16px;
+          font-weight: 700;
+        }
+        .fa-map-address {
+          color: #718079;
+          font-size: 13px;
+          text-decoration: none;
+        }
+        .fa-map-address:hover {
+          color: #13382c;
+          text-decoration: underline;
+        }
+        .fa-map-directions {
+          flex-shrink: 0;
+          border-radius: 6px;
+          background: #13382c;
+          color: #FFFFFF;
+          padding: 9px 12px;
+          font-size: 12px;
+          font-weight: 600;
+          text-decoration: none;
+        }
+        .fa-map-directions:hover {
+          background: #0c241c;
+        }
+        .fa-map-frame {
+          display: block;
+          width: 100%;
+          height: 320px;
+          border: 0;
+        }
 
         /* ── Divider Line ── */
         .fa-contact-hr {
@@ -675,6 +756,13 @@ export default function ContactPage() {
           .fa-contact-info-grid {
             grid-template-columns: 1fr;
             gap: 22px;
+          }
+          .fa-map-heading {
+            align-items: flex-start;
+            flex-direction: column;
+          }
+          .fa-map-frame {
+            height: 260px;
           }
           .fa-form-grid {
             grid-template-columns: 1fr;

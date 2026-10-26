@@ -7,6 +7,7 @@ import { HeaderActions } from './HeaderActions';
 import { MobileNav } from './MobileNav';
 import { HeaderCategoriesButton } from './HeaderCategoriesButton';
 import { useUIStore } from '@/store/uiStore';
+import { useSmartHeader } from '@/hooks/useSmartHeader';
 
 function IconMenu() {
   return (
@@ -18,6 +19,7 @@ function IconMenu() {
 
 export function PodHeader() {
   const { openMobileMenu } = useUIStore();
+  const { isVisible, isScrolled } = useSmartHeader();
 
   return (
     <>
@@ -30,6 +32,10 @@ export function PodHeader() {
           backgroundColor: '#fff',
           height: '90px',
           overflow: 'visible',
+          transform: isVisible ? 'translateY(0)' : 'translateY(-100%)',
+          transition: 'transform 300ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 300ms ease',
+          boxShadow: isScrolled ? '0 2px 12px rgba(0, 0, 0, 0.06)' : 'none',
+          willChange: 'transform',
         }}
       >
         <div

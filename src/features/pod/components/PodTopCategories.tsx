@@ -11,8 +11,8 @@ import 'swiper/css';
 function IconArrowLeftS({ size = 20 }: { size?: number }) {
   return (<svg viewBox="0 0 24 24" fill="currentColor" width={size} height={size}><path d="M10.8284 12.0007L15.7782 16.9504L14.364 18.3646L8 12.0007L14.364 5.63672L15.7782 7.05093L10.8284 12.0007Z" /></svg>);
 }
-function IconArrowRightS({ size = 20 }: { size?: number }) {
-  return (<svg viewBox="0 0 24 24" fill="currentColor" width={size} height={size}><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z" /></svg>);
+function IconArrowRightS({ size = 20, className = '' }: { size?: number; className?: string }) {
+  return (<svg viewBox="0 0 24 24" fill="currentColor" width={size} height={size} className={className}><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z" /></svg>);
 }
 
 interface CategoryItem {
@@ -64,30 +64,30 @@ export function PodTopCategories() {
   return (
     <section className="pdcat-section">
       <div className="container-main">
-        <div className="flex items-center justify-between mb-[32px]">
-          <h2 className="text-[clamp(22px,3vw,28px)] font-semibold text-[#222]">Shop by categories</h2>
+        <div className="flex items-center justify-between gap-[12px] mb-[8px] min-[750px]:mb-[14px]">
+          <h2 className="text-[17px] min-[750px]:text-[28px] font-semibold text-[#222]">Shop by categories</h2>
           <Link
             href="/collections"
-            className="inline-flex items-center gap-[6px] text-[16px] font-medium text-[#222] underline underline-offset-[3px] whitespace-nowrap"
+            className="inline-flex items-center gap-[4px] min-[750px]:gap-[6px] text-[13px] min-[750px]:text-[16px] font-medium text-[#222] underline underline-offset-[3px] whitespace-nowrap shrink-0"
           >
             View All Categories
-            <IconArrowRightS size={22} />
+            <IconArrowRightS size={16} className="w-[16px] h-[16px] min-[750px]:w-[22px] min-[750px]:h-[22px]" />
           </Link>
         </div>
 
         <div className="pdcat-slider-outer">
-          <div className="overflow-hidden pt-[4px] pb-[8px]">
+          <div className="overflow-hidden py-[4px] px-[6px]">
             <Swiper
               modules={[Navigation]}
               onSwiper={(s) => { swiperRef.current = s; }}
-              slidesPerView={2}
+              slidesPerView={3}
               breakpoints={{
-                480: { slidesPerView: 2, spaceBetween: 16 },
-                750: { slidesPerView: 3, spaceBetween: 20 },
-                992: { slidesPerView: 4, spaceBetween: 20 },
+                480: { slidesPerView: 3, spaceBetween: 14 },
+                750: { slidesPerView: 4, spaceBetween: 18 },
+                992: { slidesPerView: 5, spaceBetween: 20 },
                 1200: { slidesPerView: 5, spaceBetween: 24 },
               }}
-              spaceBetween={14}
+              spaceBetween={10}
               loop
               speed={600}
               className="!overflow-visible"
@@ -115,10 +115,10 @@ export function PodTopCategories() {
             </Swiper>
           </div>
 
-          <button onClick={() => swiperRef.current?.slidePrev()} aria-label="Previous" className="pdcat-nav pdcat-nav-prev">
+          <button onClick={() => swiperRef.current?.slidePrev()} aria-label="Previous" className="pdcat-nav pdcat-nav-prev hidden min-[750px]:flex">
             <IconArrowLeftS size={20} />
           </button>
-          <button onClick={() => swiperRef.current?.slideNext()} aria-label="Next" className="pdcat-nav pdcat-nav-next">
+          <button onClick={() => swiperRef.current?.slideNext()} aria-label="Next" className="pdcat-nav pdcat-nav-next hidden min-[750px]:flex">
             <IconArrowRightS size={20} />
           </button>
         </div>
@@ -131,8 +131,13 @@ export function PodTopCategories() {
           align-items: center;
           text-align: center;
           text-decoration: none;
-          gap: 12px;
+          gap: 6px;
           width: 100%;
+        }
+        @media (min-width: 750px) {
+          .pd-cat-item {
+            gap: 10px;
+          }
         }
         .pd-cat-circle {
           position: relative;
@@ -179,7 +184,7 @@ export function PodTopCategories() {
           color: #183e84;
         }
 
-        
+        /* ── Slider outer ── */
         .pdcat-slider-outer {
           position: relative;
         }
@@ -211,16 +216,13 @@ export function PodTopCategories() {
         }
 
         @media (max-width: 749px) {
-          .pdcat-nav {
-            width: 28px;
-            height: 28px;
-          }
-          .pdcat-nav svg {
-            width: 15px;
-            height: 15px;
-          }
-          .pdcat-nav-prev { left: 2px; }
-          .pdcat-nav-next { right: 2px; }
+          .pd-cat-item { gap: 8px; }
+          .pd-cat-circle { padding: 10px; }
+          .pd-cat-label { font-size: 11.5px; line-height: 1.25; }
+          .pdcat-nav { display: none !important; }
+
+
+
         }
       `}</style>
     </section>

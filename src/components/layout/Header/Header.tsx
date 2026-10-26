@@ -42,11 +42,13 @@ import { ToysHeader } from './ToysHeader';
 import { SocksHeader } from './SocksHeader';
 import { PodHeader } from './PodHeader';
 import { useUIStore } from '@/store/uiStore';
+import { useSmartHeader } from '@/hooks/useSmartHeader';
 import { IconMenu } from '@/lib/icons';
 
 export function Header() {
   const pathname = usePathname();
   const { openMobileMenu } = useUIStore();
+  const { isVisible, isScrolled } = useSmartHeader();
 
   if (
     pathname?.startsWith('/home/nutrition-shop') ||
@@ -226,7 +228,11 @@ export function Header() {
   return (
     <>
 
-      <header className="main-header sticky top-0 z-[200] bg-white h-[90px] max-[715px]:!h-[72px] overflow-visible border-b border-[#e5e5e5] min-[992px]:!sticky min-[992px]:!top-0 min-[992px]:!z-[200] min-[992px]:will-change-transform">
+      <header
+        className={`main-header sticky top-0 z-[200] bg-white h-[90px] max-[715px]:!h-[72px] overflow-visible border-b border-[#e5e5e5] min-[992px]:!sticky min-[992px]:!top-0 min-[992px]:!z-[200] min-[992px]:will-change-transform will-change-transform transition-transform duration-300 ease-in-out ${
+          isVisible ? 'translate-y-0' : '-translate-y-full'
+        } ${isScrolled ? 'shadow-[0_2px_12px_rgba(0,0,0,0.06)]' : ''}`}
+      >
         <div className="container-main h-full grid grid-cols-[1fr_auto_1fr] items-center">
           <div className="flex items-center gap-[12px] justify-self-start">
             <button

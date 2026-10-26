@@ -537,6 +537,7 @@ export function ProductDetailContent({
   const [starCounts, setStarCounts] = useState<Record<number, number>>({ 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 });
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [likedReviewIds, setLikedReviewIds] = useState<Record<string, boolean>>({});
+  const [isBreadcrumbExpanded, setIsBreadcrumbExpanded] = useState(false);
   const hasAutoOpenedReviewRef = useRef(false);
 
   // ── Review Form States ──
@@ -640,7 +641,6 @@ export function ProductDetailContent({
       setIsSubmittingReview(false);
     }
   };
-
   const handleLikeReview = async (reviewId: string) => {
     if (likedReviewIds[reviewId]) return;
     setLikedReviewIds((prev) => ({ ...prev, [reviewId]: true }));
@@ -831,40 +831,81 @@ export function ProductDetailContent({
   return (
     <>
       <div className="container-main py-[16px]">
-        <nav aria-label="Breadcrumb" className="flex items-center gap-[8px] text-[14px] min-w-0 max-w-full flex-wrap">
+        <nav aria-label="Breadcrumb" className="flex items-center gap-[6px] min-[750px]:gap-[8px] text-[13px] min-[750px]:text-[14px] min-w-0 max-w-full flex-nowrap whitespace-nowrap overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <Link href="/" className="text-[#666] hover:text-[#222] underline underline-offset-[3px] shrink-0 transition-colors">
             Home
           </Link>
-          <span className="text-[#bbb] text-[11px] shrink-0">›</span>
-          <Link href="/products" className="text-[#666] hover:text-[#222] underline underline-offset-[3px] shrink-0 transition-colors">
-            Products
-          </Link>
-          {product.category && (
-            <>
-              <span className="text-[#bbb] text-[11px] shrink-0">›</span>
-              <Link
-                href={`/products?category=${encodeURIComponent(product.category)}`}
-                className="text-[#666] hover:text-[#222] underline underline-offset-[3px] shrink-0 transition-colors"
+          <span className="text-[#bbb] text-[11px] shrink-0 select-none">›</span>
+
+          {/* Middle collapsed dots on mobile: shown when category exists and path is not expanded */}
+          {product.category && !isBreadcrumbExpanded && (
+            <span className="inline-flex min-[750px]:hidden items-center gap-[6px] shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsBreadcrumbExpanded(true)}
+                aria-label="Show full path"
+                className="text-[#777] hover:text-[#222] px-[5px] py-0 rounded bg-[#f0f2f5] hover:bg-[#e4e6ea] text-[12px] font-bold tracking-widest transition-colors cursor-pointer"
               >
-                {product.category}
-              </Link>
-            </>
+                ...
+              </button>
+              <span className="text-[#bbb] text-[11px] shrink-0 select-none">›</span>
+            </span>
           )}
+
+          {/* Products link: Always visible on desktop; on mobile hidden behind "..." unless expanded */}
+          <span className={`${product.category && !isBreadcrumbExpanded ? 'hidden min-[750px]:inline-flex' : 'inline-flex'} items-center gap-[6px] min-[750px]:gap-[8px] shrink-0`}>
+            <Link href="/products" className="text-[#666] hover:text-[#222] underline underline-offset-[3px] shrink-0 transition-colors">
+              Products
+            </Link>
+            <span className="text-[#bbb] text-[11px] shrink-0 select-none">›</span>
+          </span>
+
+          {/* Category link:
+              - If subcategory exists: this main category is in the middle, so hidden on mobile unless expanded; always visible on desktop.
+              - If NO subcategory: this is the direct category, so visible on both mobile and desktop! */}
+          {product.category && (
+            product.subcategory && product.subcategory !== product.category ? (
+              <span className={`${!isBreadcrumbExpanded ? 'hidden min-[750px]:inline-flex' : 'inline-flex'} items-center gap-[6px] min-[750px]:gap-[8px] shrink-0`}>
+                <Link
+                  href={`/products?category=${encodeURIComponent(product.category)}`}
+                  className="text-[#666] hover:text-[#222] underline underline-offset-[3px] shrink-0 transition-colors"
+                >
+                  {product.category}
+                </Link>
+                <span className="text-[#bbb] text-[11px] shrink-0 select-none">›</span>
+              </span>
+            ) : (
+              <>
+                <Link
+                  href={`/products?category=${encodeURIComponent(product.category)}`}
+                  className="text-[#666] hover:text-[#222] underline underline-offset-[3px] shrink-0 transition-colors"
+                >
+                  {product.category}
+                </Link>
+                <span className="text-[#bbb] text-[11px] shrink-0 select-none">›</span>
+              </>
+            )
+          )}
+
+          {/* Subcategory link (If present: always visible on both mobile and desktop) */}
           {product.subcategory && product.subcategory !== product.category && (
             <>
-              <span className="text-[#bbb] text-[11px] shrink-0">›</span>
               <Link
                 href={`/products?category=${encodeURIComponent(product.category)}&subcategory=${encodeURIComponent(product.subcategory)}`}
                 className="text-[#666] hover:text-[#222] underline underline-offset-[3px] shrink-0 transition-colors"
               >
                 {product.subcategory}
               </Link>
+              <span className="text-[#bbb] text-[11px] shrink-0 select-none">›</span>
             </>
           )}
-          <span className="text-[#bbb] text-[11px] shrink-0">›</span>
+
+          {/* Product Name:
+              - Mobile: Truncated with ellipsis dots (max-w-[130px] ... min-[750px]:max-w-none)
+              - Desktop/PC: Unconstrained full title */}
           <span
             title={product.name}
-            className="text-[#222] font-medium whitespace-nowrap overflow-hidden text-ellipsis max-w-[clamp(180px,45vw,450px)] inline-block"
+            className="text-[#222] font-medium whitespace-nowrap overflow-hidden text-ellipsis inline-block shrink min-w-0 max-w-[130px] min-[380px]:max-w-[170px] min-[500px]:max-w-[240px] min-[750px]:max-w-none"
           >
             {product.name}
           </span>
@@ -892,7 +933,7 @@ export function ProductDetailContent({
               </div>
 
               <div className="pdp-info-price-row flex items-baseline gap-[10px] mb-[20px] flex-wrap">
-                <span className="pdp-info-price product-price-text text-[28px] font-bold text-[#222] leading-tight">
+                <span className="pdp-info-price product-price-text text-[28px] font-bold text-[#e01117] leading-tight" style={{ color: "#e01117" }}>
                   {formatPrice(product.price)}
                 </span>
                 {discount > 0 && (

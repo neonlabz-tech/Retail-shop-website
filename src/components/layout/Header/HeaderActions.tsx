@@ -3,11 +3,12 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useUIStore } from '@/store/uiStore';
+import { useCartStore } from '@/store/cartStore';
 import { useWishlistStore } from '@/store/wishlistStore';
 import { getStorefrontFromPath, getStorefrontOfSlug } from '@/utils/storefront';
 import { AccountDropdown } from './AccountDropdown';
 import { NotificationDropdown } from './NotificationDropdown';
-import { IconSearch, IconHeart } from '@/lib/icons';
+import { IconSearch, IconHeart, IconBag as IconShoppingBag } from '@/lib/icons';
 
 function CountBadge({ count, color = '#F15B41' }: { count: number; color?: string }) {
   if (count <= 0) return null;
@@ -30,10 +31,14 @@ function hoverOut(e: React.MouseEvent<HTMLElement>) { e.currentTarget.style.colo
 
 export function HeaderActions() {
   const { openSearch } = useUIStore();
+  const openCartDrawer = useCartStore((s) => s.openDrawer);
+  const cartItems = useCartStore((s) => s.items);
   const wishlistItems = useWishlistStore((s) => s.items);
 
   const storefront = getStorefrontFromPath(usePathname());
+  const storefrontCartItems = cartItems.filter((i) => getStorefrontOfSlug(i.slug) === storefront);
   const storefrontWishlistItems = wishlistItems.filter((i) => getStorefrontOfSlug(i.slug) === storefront);
+  const totalCartItems = storefrontCartItems.reduce((sum, item) => sum + item.quantity, 0);
 
   const badgeColor = storefront === 'plumbing-supplies' ? '#0a2540' : '#F15B41';
 
@@ -52,6 +57,11 @@ export function HeaderActions() {
         </Link>
 
         <NotificationDropdown badgeColor={badgeColor} />
+
+        <button onClick={openCartDrawer} className={iconBtnClass} aria-label="Open cart" onMouseEnter={hoverIn} onMouseLeave={hoverOut}>
+          <IconShoppingBag />
+          <CountBadge count={totalCartItems} color={badgeColor} />
+        </button>
       </div>
 
       <style>{`

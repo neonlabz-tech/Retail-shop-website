@@ -122,8 +122,8 @@ export function ProductCard({ product, className }: ProductCardProps) {
 
         {product.countdownEnd && (
           <div className="absolute bottom-[1rem] start-[1rem] z-10 flex gap-[0.4rem]">
-            <span className="bg-dark/80 text-white text-[1rem] px-[0.6rem] py-[0.3rem] rounded-[0.3rem]">324 Days</span>
-            <span className="bg-dark/80 text-white text-[1rem] px-[0.6rem] py-[0.3rem] rounded-[0.3rem]">8 Hrs</span>
+            <span className="bg-dark/80 text-white text-[1rem] px-[0.6rem] py-[0.3rem] rounded-[0.3rem]">Sale Active</span>
+
           </div>
         )}
 
@@ -168,7 +168,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
         </Link>
 
         <div className="flex items-baseline gap-[6px] mb-[0.6rem] flex-wrap">
-          <span className="text-[1.4rem] font-bold text-heading">
+          <span className="product-price-text text-[1.4rem] font-bold text-heading">
             {formatPrice(product.price)}
           </span>
           {discount > 0 && (

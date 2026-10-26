@@ -55,7 +55,20 @@ export function CountdownTimer({ backgroundColor = '#000' }: CountdownTimerProps
   const [time, setTime] = useState({ days: 0, hrs: 0, min: 0, sec: 0 });
 
   useEffect(() => {
-    const target = new Date('2027-10-04T12:00:00Z').getTime();
+    const getTargetTime = () => {
+      const now = new Date();
+      const target = new Date(now);
+      const day = now.getDay();
+      const daysUntilSunday = (7 - day) % 7;
+      target.setDate(now.getDate() + (daysUntilSunday === 0 ? 0 : daysUntilSunday));
+      target.setHours(23, 59, 59, 999);
+      if (target.getTime() <= now.getTime()) {
+        target.setDate(target.getDate() + 7);
+      }
+      return target.getTime();
+    };
+
+    const target = getTargetTime();
     const update = () => {
       const diff = Math.max(0, target - Date.now());
       setTime({
@@ -128,9 +141,7 @@ export function HomeProductCard({
   const [hoveredColor, setHoveredColor] = useState<string | null>(null);
 
   const { openQuickView } = useUIStore();
-  const { toggleItem: toggleCompare, isInCompare } = useCompareStore();
   const { toggleItem: toggleWishlist, isInWishlist } = useWishlistStore();
-  const inCompare = isInCompare(product.id);
   const inWishlist = isInWishlist(product.id);
   const defaultImg1 = product.images[0]?.src || FALLBACK_IMAGE_SRC;
   const defaultImg2 = product.images[1]?.src || defaultImg1;
@@ -148,30 +159,29 @@ export function HomeProductCard({
   }, {});
   const activeColorImage = hoveredColor ? colorImages[hoveredColor] : null;
 
-  const nameColor = themeColor ?? '#222';
-  const priceColor = themeColor ?? `var(--color-product-price, ${product.compareAtPrice ? '#F15B41' : '#222'})`;
+  const priceColor = themeColor ?? '#e01117';
   const chipColor = themeColor ?? '#F15B41';
   const tooltipBg = themeColor ?? '#222';
 
   return (
     <div
-      className={`fc-card relative w-full min-w-0 max-w-full${compact ? ' fc-card--compact' : ''}`}
+      className={`fc-card fc-unified-card group relative w-full h-full min-w-0 max-w-full bg-white rounded-[10px] border border-[#e5e7eb] overflow-hidden shadow-[0_2px_10px_rgba(0,0,0,0.05)] transition-all duration-300 ease-in-out hover:shadow-[0_12px_28px_rgba(0,0,0,0.12)] hover:border-[#cbd5e1] flex flex-col justify-between${compact ? ' fc-card--compact' : ''}`}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => { setHovered(false); setHoveredColor(null); }}
       style={{ ['--fc-tooltip-bg' as string]: tooltipBg }}
     >
       <Link
         href={productHref}
-        className={`fc-card-img-link block relative overflow-hidden bg-[#eef2f6] rounded-[8px] border border-solid border-[#ededf0] mb-[14px] shadow-[0_8px_16px_-2px_rgba(24,62,132,0.12),4px_6px_10px_-2px_rgba(24,62,132,0.04),-4px_6px_10px_-2px_rgba(24,62,132,0.04)]${imageHeight ? '' : ' aspect-square'}`}
+        className={`fc-card-img-link block relative overflow-hidden bg-white w-full border-b border-[#f1f5f9]${imageHeight ? '' : ' aspect-square'}`}
         style={imageHeight ? { height: imageHeight } : undefined}
       >
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none p-[8px]">
           <Image
             src={defaultImg1}
             alt={product.name}
             fill
             onError={handleImageError}
-            className={`object-contain object-center transition-[opacity,transform] duration-500 ease-out ${hovered ? 'scale-108' : 'scale-100'} ${activeColorImage ? 'opacity-0' : 'opacity-100'}`}
+            className={`object-contain object-center p-[8px] transition-[opacity,transform] duration-500 ease-out ${hovered ? 'scale-108' : 'scale-100'} ${activeColorImage ? 'opacity-0' : 'opacity-100'}`}
             sizes="(max-width: 749px) 50vw, 25vw"
           />
 
@@ -182,7 +192,7 @@ export function HomeProductCard({
               alt={`${product.name} ${colorName}`}
               fill
               onError={handleImageError}
-              className={`object-contain object-center transition-[opacity,transform] duration-500 ease-out ${hovered ? 'scale-108' : 'scale-100'} ${
+              className={`object-contain object-center p-[8px] transition-[opacity,transform] duration-500 ease-out ${hovered ? 'scale-108' : 'scale-100'} ${
                 hoveredColor === colorName ? 'opacity-100 z-[2]' : 'opacity-0 z-[1]'
               }`}
               sizes="(max-width: 749px) 50vw, 25vw"
@@ -192,8 +202,8 @@ export function HomeProductCard({
 
         {product.badge && (
           <span
-            className={`absolute top-[12px] left-[12px] text-[#fff] text-[12px] font-semibold py-[4px] px-[12px] rounded-[3px] z-[3] capitalize ${
-              product.badge === 'new' ? 'bg-[#222]' : 'bg-[#F15B41]'
+            className={`absolute top-[10px] left-[10px] text-[#fff] text-[11px] font-semibold py-[3px] px-[8px] rounded-[3px] z-[3] capitalize ${
+              product.badge === 'new' ? 'bg-[#222]' : 'bg-[#e01117]'
             }`}
           >
             {product.badge}
@@ -201,7 +211,7 @@ export function HomeProductCard({
         )}
 
         <div
-          className={`fc-actions-overlay absolute top-[12px] right-[12px] flex flex-col gap-[8px] z-[3] transition-[opacity,transform] duration-300 ease-in-out ${
+          className={`fc-actions-overlay absolute top-[10px] right-[10px] flex flex-col gap-[6px] z-[3] transition-[opacity,transform] duration-300 ease-in-out ${
             hovered ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-[10px]'
           }`}
         >
@@ -223,7 +233,7 @@ export function HomeProductCard({
 
         {hasCountdown && (
           <div
-            className={`absolute bottom-[14px] left-1/2 -translate-x-1/2 z-[3] transition-opacity duration-300 ease-in-out ${
+            className={`absolute bottom-[10px] left-1/2 -translate-x-1/2 z-[3] transition-opacity duration-300 ease-in-out ${
               hovered ? 'opacity-0 pointer-events-none' : 'opacity-100 pointer-events-auto'
             }`}
           >
@@ -240,71 +250,109 @@ export function HomeProductCard({
             <ScrollingText />
           </div>
         )}
-
       </Link>
 
-      <div className="text-center min-w-0 w-full overflow-hidden">
-        <div className="fc-product-title-wrap relative w-full min-w-0">
+      <div className="fc-card-body p-[10px] min-[750px]:p-[12px] flex flex-col flex-1 justify-between text-left bg-white">
+        <div className="fc-card-title-wrap h-[36px] min-[750px]:h-[38px] overflow-hidden mb-[6px]">
           <Link
             href={productHref}
             title={product.name}
-            className="fc-product-title-link line-clamp-1 text-[clamp(12.5px,1.25vw,13.5px)] font-medium no-underline transition-colors duration-150 ease-in-out bg-transparent overflow-hidden text-ellipsis break-all w-full py-0 px-[4px]"
-            style={{ color: nameColor }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = '#F15B41'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = nameColor; }}
+            className="fc-product-title-link text-[13px] min-[750px]:text-[14px] leading-[1.35] font-semibold text-[#1e293b] no-underline transition-colors duration-150 ease-in-out hover:text-[#e01117] block"
           >
             {product.name}
           </Link>
         </div>
-        <div className="mt-[6px] flex items-baseline justify-center gap-[6px] flex-wrap">
-          <span className="product-price-text text-[15px] font-bold" style={{ color: priceColor }}>
-            {formatPrice(product.price)}
-          </span>
-          {discount > 0 && (
-            <span className="text-[#F15B41] bg-[#fff0ed] text-[11px] font-bold px-[5px] py-[1px] rounded-[3px] leading-none">
-              -{discount}%
+
+        <div className="flex flex-col justify-end">
+          <div className="flex items-baseline gap-[6px]">
+            <span className="product-price-text text-[15px] min-[750px]:text-[16px] font-bold text-[#e01117] leading-tight" style={{ color: priceColor }}>
+              {formatPrice(product.price)}
             </span>
-          )}
-          {product.compareAtPrice && (
-            <span className="text-[13px] text-[#999] line-through font-normal">
-              {formatPrice(product.compareAtPrice)}
-            </span>
+          </div>
+          <div className="min-h-[18px] flex items-center gap-[6px] text-[12px] mt-[3px]">
+            {product.compareAtPrice && product.compareAtPrice > product.price ? (
+              <>
+                <span className="text-[#94a3b8] line-through font-normal">
+                  {formatPrice(product.compareAtPrice)}
+                </span>
+                {discount > 0 && (
+                  <span className="text-[#e01117] font-semibold">
+                    -{discount}%
+                  </span>
+                )}
+              </>
+            ) : null}
+          </div>
+
+          {product.colors.length > 0 && (
+            <div className="mt-[8px] flex items-center gap-[5px] relative">
+              {product.colors.slice(0, 3).map((c) => (
+                <span
+                  key={c.name}
+                  onMouseEnter={() => setHoveredColor(c.name)}
+                  onMouseLeave={() => setHoveredColor(null)}
+                  className={`w-[14px] h-[14px] rounded-full inline-block cursor-pointer transition-[border-color,transform] duration-200 ease-in-out relative border ${
+                    hoveredColor === c.name
+                      ? 'border-[2px] border-[#222] scale-[1.25]'
+                      : c.value === '#FFFFFF'
+                      ? 'border border-[#ddd] scale-100'
+                      : 'border border-transparent scale-100'
+                  }`}
+                  style={{ backgroundColor: c.value }}
+                />
+              ))}
+              {product.colors.length > 3 && <span className="text-[11px] font-medium text-[#64748b]">+{product.colors.length - 3}</span>}
+              {hoveredColor && (
+                <span
+                  className="absolute bottom-[calc(100%+6px)] left-0 text-[#fff] text-[11px] font-medium py-[3px] px-[8px] rounded-[4px] whitespace-nowrap pointer-events-none animate-[fadeIn_150ms_ease]"
+                  style={{ backgroundColor: tooltipBg }}
+                >
+                  {hoveredColor}
+                </span>
+              )}
+            </div>
           )}
         </div>
-        {product.colors.length > 0 && (
-          <div className="mt-[8px] flex items-center justify-center gap-[6px] relative">
-            {product.colors.slice(0, 3).map((c) => (
-              <span
-                key={c.name}
-                onMouseEnter={() => setHoveredColor(c.name)}
-                onMouseLeave={() => setHoveredColor(null)}
-                className={`w-[16px] h-[16px] rounded-full inline-block cursor-pointer transition-[border-color,transform] duration-200 ease-in-out relative border-solid ${
-                  hoveredColor === c.name
-                    ? 'border-[2px] border-[#222] scale-[1.2]'
-                    : c.value === '#FFFFFF'
-                    ? 'border border-[#ddd] scale-100'
-                    : 'border border-transparent scale-100'
-                }`}
-                style={{ backgroundColor: c.value }}
-              />
-            ))}
-            {product.colors.length > 3 && <span className="text-[13px] font-medium" style={{ color: chipColor }}>+{product.colors.length - 3}</span>}
-            {hoveredColor && (
-              <span
-                className="absolute bottom-[calc(100%+6px)] left-1/2 -translate-x-1/2 text-[#fff] text-[11px] font-medium py-[4px] px-[10px] rounded-[4px] whitespace-nowrap pointer-events-none animate-[fadeIn_150ms_ease]"
-                style={{ backgroundColor: tooltipBg }}
-              >
-                {hoveredColor}
-              </span>
-            )}
-          </div>
-        )}
       </div>
 
       <style>{`
+        .fc-card.fc-unified-card .fc-product-title-link {
+          display: -webkit-box !important;
+          -webkit-line-clamp: 2 !important;
+          -webkit-box-orient: vertical !important;
+          overflow: hidden !important;
+          text-overflow: ellipsis !important;
+          word-break: break-word !important;
+          line-height: 1.35 !important;
+          max-height: 2.7em !important;
+        }
+
+        .fc-card.fc-unified-card .fc-card-img-link {
+          background-color: #ffffff !important;
+          border: none !important;
+          border-bottom: 1px solid #f1f5f9 !important;
+          border-radius: 9px 9px 0 0 !important;
+          box-shadow: none !important;
+          margin-bottom: 0 !important;
+        }
+        .fc-card.fc-unified-card:hover .fc-card-img-link {
+          background-color: #ffffff !important;
+          border: none !important;
+          border-bottom: 1px solid #f1f5f9 !important;
+          box-shadow: none !important;
+        }
+        .fc-card.fc-unified-card .fc-card-img-link img {
+          object-fit: contain !important;
+          padding: 8px !important;
+          transition: transform 500ms cubic-bezier(0.2, 0, 0.2, 1) !important;
+        }
+        .fc-card.fc-unified-card:hover .fc-card-img-link img {
+          transform: scale(1.08) !important;
+        }
+
         .fc-action-btn {
-          width: 40px !important;
-          height: 40px !important;
+          width: 36px !important;
+          height: 36px !important;
           border-radius: 50% !important;
           border: none !important;
           display: flex !important;
@@ -319,7 +367,7 @@ export function HomeProductCard({
         .fc-action-btn-light {
           background-color: #fff !important;
           color: #333 !important;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.12) !important;
         }
         .fc-action-btn-light:hover { background-color: #222 !important; color: #fff !important; }
 
@@ -337,9 +385,9 @@ export function HomeProductCard({
           transform: translateY(-50%) translateX(6px) !important;
           background-color: var(--fc-tooltip-bg, #222) !important;
           color: #fff !important;
-          font-size: 12px !important;
+          font-size: 11px !important;
           font-weight: 500 !important;
-          padding: 6px 12px !important;
+          padding: 5px 10px !important;
           border-radius: 4px !important;
           white-space: nowrap !important;
           opacity: 0 !important;
@@ -351,157 +399,31 @@ export function HomeProductCard({
           transform: translateY(-50%) translateX(0) !important;
         }
 
-        .fc-product-title-tooltip {
-          position: absolute;
-          bottom: calc(100% + 6px);
-          left: 50%;
-          transform: translateX(-50%) translateY(4px);
-          background-color: #0b1c3d;
-          color: #fff;
-          font-size: 12px;
-          font-weight: 500;
-          line-height: 1.4;
-          padding: 6px 10px;
-          border-radius: 5px;
-          max-width: 240px;
-          width: max-content;
-          white-space: normal;
-          text-align: center;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.18);
-          opacity: 0;
-          pointer-events: none;
-          z-index: 20;
-          transition: opacity 180ms ease, transform 180ms ease;
-        }
-        .fc-product-title-wrap:hover .fc-product-title-tooltip {
-          opacity: 1;
-          transform: translateX(-50%) translateY(0);
-        }
-
-
-        
         .fc-mobile-actions {
           display: none;
         }
 
-        
-        @media (max-width: 991px) {
-          .fc-card--compact .fc-actions-overlay {
-            opacity: 1 !important;
-            transform: none !important;
-          }
-          .fc-card--compact .fc-quickview-wrap,
-          .fc-card--compact .fc-quickadd-wrap {
-            display: none !important;
-          }
-          .fc-card--compact .fc-mobile-actions {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            border-top: 1px solid #eee;
-            border-bottom: 1px solid #eee;
-            margin-top: 0;
-            margin-bottom: 14px;
-          }
-          .fc-card--compact .fc-mobile-action-btn {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: clamp(38px, 5.2vw, 44px);
-            background: #fff;
-            border: none;
-            color: #444;
-            cursor: pointer;
-            padding: 0;
-            transition: background-color 180ms ease, color 180ms ease;
-          }
-          .fc-card--compact .fc-mobile-action-btn + .fc-mobile-action-btn {
-            border-left: 1px solid #eee;
-          }
-          .fc-card--compact .fc-mobile-action-btn:hover {
-            background: #f5f5f5;
-          }
-          
-          .fc-card--compact > a:first-child img {
-            object-fit: contain !important;
-            background-color: #f5f5f5;
-          }
-        }
-
-        
         @media (max-width: 749px) {
-          .fc-card > a:first-child {
-            height: clamp(200px, 44vw, 340px) !important;
-            aspect-ratio: auto !important;
-            margin-bottom: 10px !important;
+          .fc-card.fc-unified-card > a:first-child {
+            height: auto !important;
+            aspect-ratio: 1 / 1 !important;
+            margin-bottom: 0 !important;
           }
-          .fc-card > a:first-child img {
-            object-fit: contain !important;
-            background-color: #f5f5f5;
+          .fc-card.fc-unified-card > a:first-child img {
+            background-color: #ffffff !important;
+            padding: 6px !important;
           }
           .fc-actions-overlay {
             opacity: 1 !important;
             transform: none !important;
           }
-          
-          .fc-quickview-wrap,
-          .fc-quickadd-wrap {
-            display: none !important;
+          .fc-action-btn {
+            width: 32px !important;
+            height: 32px !important;
           }
-          .fc-mobile-actions {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            border-top: 1px solid #eee;
-            border-bottom: 1px solid #eee;
-            margin-top: 0;
-            margin-bottom: 14px;
-          }
-          .fc-mobile-action-btn {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 44px;
-            background: #fff;
-            border: none;
-            color: #444;
-            cursor: pointer;
-            padding: 0;
-            transition: background-color 180ms ease, color 180ms ease;
-          }
-          .fc-mobile-action-btn + .fc-mobile-action-btn {
-            border-left: 1px solid #eee;
-          }
-          .fc-mobile-action-btn:active {
-            background: #f5f5f5;
-          }
-          .fc-action-btn:hover {
-            transform: none !important;
-          }
-          .fc-action-btn-light:hover {
-            background-color: #fff !important;
-            color: #333 !important;
-          }
-          .fc-action-btn-dark:hover {
-            background-color: #222 !important;
-            color: #fff !important;
-          }
-          .fc-tooltip-wrap:hover .fc-tooltip {
-            opacity: 0 !important;
-          }
-
-          
-          .fc-countdown {
-            gap: clamp(3px, 0.8vw, 5px) !important;
-          }
-          .fc-countdown-cell {
-            padding: clamp(4px, 1.2vw, 6px) clamp(6px, 1.8vw, 10px) !important;
-            min-width: clamp(30px, 8vw, 42px) !important;
-            border-radius: 4px !important;
-          }
-          .fc-countdown-val {
-            font-size: clamp(11px, 3vw, 16px) !important;
-          }
-          .fc-countdown-lbl {
-            font-size: clamp(8px, 2vw, 11px) !important;
+          .fc-action-btn svg {
+            width: 15px !important;
+            height: 15px !important;
           }
         }
       `}</style>

@@ -48,6 +48,7 @@ export async function GET(request: NextRequest) {
       ? parseFloat((searchParams.get('maxPrice') || searchParams.get('max_price'))!)
       : undefined;
     const isFeaturedParam = searchParams.get('featured') || searchParams.get('isFeatured');
+    const isSaleParam = searchParams.get('sale') === 'true' || searchParams.get('onSale') === 'true';
 
     try {
       const conn = await connectDB();
@@ -64,6 +65,12 @@ export async function GET(request: NextRequest) {
 
       if (isFeaturedParam === 'true') {
         filter.isFeatured = true;
+      }
+
+      if (isSaleParam) {
+        andConditions.push({
+          salePrice: { $gt: 0, $ne: null },
+        });
       }
 
       if (query) {

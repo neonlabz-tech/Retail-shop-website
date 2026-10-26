@@ -18,6 +18,8 @@ interface UseProductsParams {
   sort?: string;
   availability?: string;
   q?: string;
+  sale?: boolean | string;
+  onSale?: boolean | string;
 }
 
 interface UseProductsOptions {

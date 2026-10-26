@@ -50,6 +50,7 @@ export async function GET(request: NextRequest) {
   const sort = searchParams.get('sort') || 'featured';
   const availability = searchParams.get('availability') || searchParams.get('inStock');
   const query = (searchParams.get('q') || searchParams.get('search') || '').trim();
+  const isSaleParam = searchParams.get('sale') === 'true' || searchParams.get('onSale') === 'true';
 
   let allPodProducts: Product[] = [];
   try {
@@ -63,6 +64,10 @@ export async function GET(request: NextRequest) {
   }
 
   let filtered = [...allPodProducts];
+
+  if (isSaleParam) {
+    filtered = filtered.filter((p) => Boolean(p.compareAtPrice && p.compareAtPrice > p.price) || p.badge === 'sale');
+  }
 
   if (query) {
     const q = query.toLowerCase();
@@ -127,6 +132,14 @@ export async function GET(request: NextRequest) {
   const sizes = buildSizeCounts(allPodProducts);
 
   switch (sort) {
+    case 'sale':
+    case 'discount':
+      filtered.sort((a, b) => {
+        const discA = a.compareAtPrice && a.compareAtPrice > a.price ? (a.compareAtPrice - a.price) / a.compareAtPrice : 0;
+        const discB = b.compareAtPrice && b.compareAtPrice > b.price ? (b.compareAtPrice - b.price) / b.compareAtPrice : 0;
+        return discB - discA;
+      });
+      break;
     case 'featured':
       filtered.sort((a, b) => ((b.badge === 'new' || (b as any).isFeatured) ? 1 : 0) - ((a.badge === 'new' || (a as any).isFeatured) ? 1 : 0));
       break;

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
+import { STORE_ADDRESS } from '@/lib/constants';
 
 /* ── Social Icons ── */
 function IconFacebook() {
@@ -100,6 +101,7 @@ export function Footer() {
     { label: 'Home', href: '/' },
     { label: 'Categories', href: '/categories' },
     { label: 'Products', href: '/shop' },
+    { label: 'Contact Us', href: '/pages/contact' },
   ];
 
   const companyLinks = [
@@ -108,18 +110,14 @@ export function Footer() {
     { label: 'Cart', href: '/cart' },
     { label: 'About us', href: '/pages/about' },
   ];
-
-  const supportLinks = [
-    { label: 'Privacy Policy', href: '/pages/privacy-policy' },
-    { label: 'Terms of Service', href: '/pages/terms-of-service' },
-    { label: 'Shipping Policy', href: '/pages/shipping-policy' },
-    { label: 'Contact Us', href: '/pages/contact' },
-  ];
+  const mapQuery = encodeURIComponent(`${STORE_ADDRESS}, Sri Lanka`);
+  const mapUrl = `https://www.google.com/maps/search/?api=1&query=${mapQuery}`;
+  const mapEmbedUrl = `https://www.google.com/maps?q=${mapQuery}&output=embed`;
 
   return (
     <footer className="w-full bg-[#f9fafb] border-t border-[#f0f0f0] mt-auto">
-      {/* ═══ TOP: 4 Columns aligned with container-main ═══ */}
-      <div className="container-main py-[32px] lg:py-[40px]">
+      {/* ═══ TOP: Brand, links, and map columns ═══ */}
+      <div className="container-main footer-container py-[32px] lg:py-[40px]">
         <div className="footer-grid">
           {/* Column 1: RKF Brand */}
           <div className="ft-col ft-col-about">
@@ -212,31 +210,31 @@ export function Footer() {
             </div>
           </FooterColumn>
 
-          {/* Column 4: Support */}
-          <FooterColumn
-            id="support"
-            title="Support"
-            expanded={!!openCols.support}
-            onToggle={() => toggleCol('support')}
-          >
-            <div className="flex flex-col gap-[9px]">
-              {supportLinks.map((link) => (
-                <Link
-                  key={link.label}
-                  href={link.href}
-                  className="text-[14px] text-[#555555] hover:text-[#111827] transition-all duration-150 no-underline whitespace-nowrap hover:translate-x-0.5 inline-block"
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </div>
-          </FooterColumn>
+          <div className="ft-col ft-col-map">
+            <h2 className="ft-map-title">Find Us</h2>
+            <a
+              href={mapUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`Open map and directions to ${STORE_ADDRESS}`}
+              className="ft-map-link"
+            >
+              <iframe
+                title="Map to RKF Distributors in Kopay South, Jaffna"
+                src={mapEmbedUrl}
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                tabIndex={-1}
+                aria-hidden="true"
+              />
+            </a>
+          </div>
         </div>
       </div>
 
       {/* ═══ BOTTOM: Copyright Bar ═══ */}
       <div className="w-full bg-[#f9fafb] border-t border-[#f0f0f0] py-[14px]">
-        <div className="container-main">
+        <div className="container-main footer-container">
           <p className="text-[13px] text-[#6b7280] text-center m-0 leading-normal tracking-wide">
             &copy; 2026 <strong className="font-semibold text-[#111827]">RKF DISTRIBUTORS</strong> All rights reserved. | Developed by{' '}
             <strong className="font-semibold text-[#111827]">NeonLabz (Pvt) Ltd.</strong>
@@ -245,6 +243,25 @@ export function Footer() {
       </div>
 
       <style>{`
+        .container-main.footer-container {
+          padding-inline: calc(1.5rem + 18px);
+        }
+        @media (min-width: 750px) {
+          .container-main.footer-container {
+            padding-inline: calc(2rem + 18px);
+          }
+        }
+        @media (min-width: 992px) {
+          .container-main.footer-container {
+            padding-inline: calc(3rem + 18px);
+          }
+        }
+        @media (min-width: 1200px) {
+          .container-main.footer-container {
+            padding-inline: calc(4rem + 18px);
+          }
+        }
+
         /* ── Desktop (≥900px) — flex with space-between so columns sit gracefully across the bounded container ── */
         @media (min-width: 900px) {
           .footer-grid {
@@ -259,6 +276,29 @@ export function Footer() {
           }
           .ft-col-about {
             max-width: 320px;
+          }
+          .ft-col-map {
+            width: 220px;
+          }
+          .ft-map-title {
+            margin: 0 0 8px;
+            font-size: 16px;
+            font-weight: 700;
+            color: #111827;
+          }
+          .ft-map-link {
+            display: block;
+            overflow: hidden;
+            height: 130px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+          }
+          .ft-map-link iframe {
+            display: block;
+            width: 100%;
+            height: 100%;
+            border: 0;
+            pointer-events: none;
           }
           .ft-col-head {
             all: unset;
@@ -290,6 +330,29 @@ export function Footer() {
           }
           .ft-col-about {
             max-width: 100%;
+          }
+          .ft-col-map {
+            width: 100%;
+          }
+          .ft-map-title {
+            margin: 0 0 8px;
+            font-size: 16px;
+            font-weight: 700;
+            color: #111827;
+          }
+          .ft-map-link {
+            display: block;
+            overflow: hidden;
+            height: 160px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+          }
+          .ft-map-link iframe {
+            display: block;
+            width: 100%;
+            height: 100%;
+            border: 0;
+            pointer-events: none;
           }
           .ft-col-head {
             all: unset;
@@ -324,6 +387,29 @@ export function Footer() {
             max-width: 100%;
             padding-bottom: 20px;
             margin-bottom: 6px;
+          }
+          .ft-col-map {
+            padding: 16px 0;
+          }
+          .ft-map-title {
+            margin: 0 0 8px;
+            font-size: 16px;
+            font-weight: 700;
+            color: #111827;
+          }
+          .ft-map-link {
+            display: block;
+            overflow: hidden;
+            height: 180px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+          }
+          .ft-map-link iframe {
+            display: block;
+            width: 100%;
+            height: 100%;
+            border: 0;
+            pointer-events: none;
           }
           .ft-col:last-child {
             border-bottom: none;

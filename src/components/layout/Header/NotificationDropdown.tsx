@@ -34,12 +34,13 @@ interface NotificationResponse {
 }
 
 interface CachedNotificationRequest {
-  request?: Promise<NotificationResponse | null>;
+  request?: Promise<NotificationResponse>;
 }
 
 const notificationRequests = new Map<string, CachedNotificationRequest>();
+const NOTIFICATION_POLL_INTERVAL = 30_000;
 
-async function loadNotifications(email: string): Promise<NotificationResponse | null> {
+async function loadNotifications(email: string): Promise<NotificationResponse> {
   const cacheKey = email.trim().toLowerCase();
   const cached = notificationRequests.get(cacheKey);
   if (cached?.request) return cached.request;
@@ -48,9 +49,13 @@ async function loadNotifications(email: string): Promise<NotificationResponse | 
   const emailQuery = cacheKey ? `?email=${encodeURIComponent(cacheKey)}` : '';
   const request = (async () => {
     const response = await fetch(`/api/notifications${emailQuery}`, { cache: 'no-store' });
-    if (!response.ok) return null;
+    if (!response.ok) {
+      throw new Error(`Notifications request failed with HTTP ${response.status}`);
+    }
     const result = await response.json();
-    if (!result.success || !Array.isArray(result.notifications)) return null;
+    if (!result.success || !Array.isArray(result.notifications)) {
+      throw new Error('Notifications request returned an invalid response');
+    }
     return {
       notifications: result.notifications as NotificationData[],
       unreadCount: typeof result.unreadCount === 'number'
@@ -199,6 +204,7 @@ export function NotificationDropdown({
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationData[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [notificationError, setNotificationError] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   const hasFetchedNotificationsRef = useRef(false);
@@ -223,16 +229,34 @@ export function NotificationDropdown({
     return '';
   }, [user?.email]);
 
-  const fetchNotifications = useCallback(async (): Promise<boolean> => {
+  const isFetchingRef = useRef(false);
+  const lastFetchedTimeRef = useRef(0);
+  const hasInitialFetchedRef = useRef(false);
+  const lastEmailRef = useRef<string | undefined>(user?.email);
+
+  const fetchNotifications = useCallback(async (force = false): Promise<boolean> => {
+    if (isFetchingRef.current) return false;
+
+    // Throttle: don't fetch if fetched within last 15s unless forced
+    const now = Date.now();
+    if (!force && lastFetchedTimeRef.current > 0 && now - lastFetchedTimeRef.current < 15000) {
+      return false;
+    }
+
+    const email = getCustomerEmail();
+    isFetchingRef.current = true;
     try {
-      const data = await loadNotifications(getCustomerEmail());
-      if (data) {
-        setNotifications(data.notifications);
-        setUnreadCount(data.unreadCount);
-        return true;
-      }
-    } catch {
-      // Preserve the last successfully loaded notifications if refresh fails.
+      const data = await loadNotifications(email);
+      setNotifications(data.notifications);
+      setUnreadCount(data.unreadCount);
+      setNotificationError(false);
+      lastFetchedTimeRef.current = Date.now();
+      return true;
+    } catch (error) {
+      console.error('Fetch notifications error:', error);
+      setNotificationError(true);
+    } finally {
+      isFetchingRef.current = false;
     }
     return false;
   }, [getCustomerEmail]);
@@ -244,18 +268,93 @@ export function NotificationDropdown({
     }
   }, [user, checkAuth]);
 
-  // Load notifications only when the customer opens the bell.
+  // Initial fetch on mount & only when customer email actually changes
   useEffect(() => {
-    if (!isOpen) {
-      hasFetchedNotificationsRef.current = false;
-      return;
+    if (isLoading) return;
+    if (!hasInitialFetchedRef.current || lastEmailRef.current !== user?.email) {
+      if (hasInitialFetchedRef.current) {
+        lastFetchedTimeRef.current = 0;
+      }
+      hasInitialFetchedRef.current = true;
+      lastEmailRef.current = user?.email;
+      fetchNotifications(true);
     }
-    if (isLoading || hasFetchedNotificationsRef.current) return;
-    hasFetchedNotificationsRef.current = true;
-    void fetchNotifications().then((loaded) => {
-      if (!loaded) hasFetchedNotificationsRef.current = false;
-    });
-  }, [isOpen, isLoading, fetchNotifications]);
+  }, [isLoading, user?.email, fetchNotifications]);
+
+  useEffect(() => {
+    if (isLoading || !getCustomerEmail()) return;
+
+    const pollNotifications = () => {
+      if (document.visibilityState === 'visible') {
+        void fetchNotifications();
+      }
+    };
+    const intervalId = window.setInterval(pollNotifications, NOTIFICATION_POLL_INTERVAL);
+    document.addEventListener('visibilitychange', pollNotifications);
+
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', pollNotifications);
+    };
+  }, [getCustomerEmail, isLoading, fetchNotifications]);
+
+  const markAsRead = useCallback(async (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    try {
+      setNotifications((prev) =>
+        prev.map((n) => (n._id === id ? { ...n, read: true } : n))
+      );
+      setUnreadCount((prev) => Math.max(0, prev - 1));
+      await fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notificationId: id }),
+      });
+    } catch {
+      // Ignore
+    }
+  }, []);
+
+  const markAllAsRead = useCallback(async () => {
+    try {
+      const email = getCustomerEmail();
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+      setUnreadCount(0);
+      await fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ markAllRead: true, email }),
+      });
+    } catch {
+      // Ignore
+    }
+  }, [getCustomerEmail]);
+
+  // Fetch when user clicks to OPEN the bell, and automatically clear the unread badge once viewed
+  useEffect(() => {
+    if (isOpen) {
+      fetchNotifications();
+      // Auto-mark notifications as read after the customer views the dropdown
+      if (unreadCount > 0) {
+        const timer = setTimeout(() => {
+          markAllAsRead();
+        }, 1200);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [isOpen, unreadCount, fetchNotifications, markAllAsRead]);
+
+  // Listen to explicit refresh events (e.g. order placed or status changed)
+  useEffect(() => {
+    const handleCustomRefresh = () => {
+      fetchNotifications(true);
+    };
+
+    window.addEventListener('notifications:refresh', handleCustomRefresh);
+    return () => {
+      window.removeEventListener('notifications:refresh', handleCustomRefresh);
+    };
+  }, [fetchNotifications]);
 
   // Outside click & Escape key listener
   useEffect(() => {
@@ -277,38 +376,6 @@ export function NotificationDropdown({
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [isOpen]);
-
-  const markAsRead = async (id: string, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    try {
-      await fetch('/api/notifications', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notificationId: id }),
-      });
-      setNotifications((prev) =>
-        prev.map((n) => (n._id === id ? { ...n, read: true } : n))
-      );
-      setUnreadCount((prev) => Math.max(0, prev - 1));
-    } catch {
-      // Ignore
-    }
-  };
-
-  const markAllAsRead = async () => {
-    try {
-      const email = getCustomerEmail();
-      await fetch('/api/notifications', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ markAllRead: true, email }),
-      });
-      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-      setUnreadCount(0);
-    } catch {
-      // Ignore
-    }
-  };
 
   const dismissNotification = async (id: string) => {
     const notification = notifications.find((item) => item._id === id);
@@ -453,32 +520,42 @@ export function NotificationDropdown({
                   Sign In
                 </Link>
               </div>
-            ) : notifications.length === 0 ? (
-              /* Empty Notifications */
-              <div className="p-[36px_20px] text-center space-y-[10px]">
-                <div className="w-[48px] h-[48px] mx-auto rounded-full bg-[#ecfdf5] text-[#059669] flex items-center justify-center">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                </div>
-                <h4 className="text-[14px] font-bold text-[#111827] m-0">No new notifications</h4>
-                <p className="text-[12px] text-[#6b7280] max-w-[280px] mx-auto m-0 leading-normal">
-                  When your order status updates or products are delivered, you will receive real-time notifications here.
-                </p>
-              </div>
             ) : (
-              /* Notifications Stream */
-              notifications.map((notif) => {
-                const isDelivered = notif.type === 'order_delivered';
-                const badge = getNotificationBadge(notif);
-
-                return (
-                  <div
-                    key={notif._id}
-                    className={`p-[16px_18px] transition-colors relative ${
-                      notif.read ? 'bg-white hover:bg-[#fafafa]' : 'bg-[#f0fdf4]/40 hover:bg-[#f0fdf4]/70'
-                    }`}
+              <>
+                {notificationError && (
+                  <p
+                    role="alert"
+                    className="m-0 border-b border-[#fecaca] bg-[#fef2f2] px-[16px] py-[10px] text-[12px] text-[#b91c1c]"
                   >
+                    Notifications could not be loaded. Close and reopen this panel to retry.
+                  </p>
+                )}
+                {notifications.length === 0 ? (
+                  /* Empty Notifications */
+                  <div className="p-[36px_20px] text-center space-y-[10px]">
+                    <div className="w-[48px] h-[48px] mx-auto rounded-full bg-[#ecfdf5] text-[#059669] flex items-center justify-center">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    </div>
+                    <h4 className="text-[14px] font-bold text-[#111827] m-0">No new notifications</h4>
+                    <p className="text-[12px] text-[#6b7280] max-w-[280px] mx-auto m-0 leading-normal">
+                      When your order status updates or products are delivered, you will receive real-time notifications here.
+                    </p>
+                  </div>
+                ) : (
+                  /* Notifications Stream */
+                  notifications.map((notif) => {
+                    const isDelivered = notif.type === 'order_delivered';
+                    const badge = getNotificationBadge(notif);
+
+                    return (
+                      <div
+                        key={notif._id}
+                        className={`p-[16px_18px] transition-colors relative ${
+                          notif.read ? 'bg-white hover:bg-[#fafafa]' : 'bg-[#f0fdf4]/40 hover:bg-[#f0fdf4]/70'
+                        }`}
+                      >
                     {/* Header Row: Badge, Order # & Relative Time */}
                     <div className="flex items-center justify-between gap-[8px] mb-[6px]">
                       <div className="flex items-center gap-[6px] flex-wrap">
@@ -580,9 +657,11 @@ export function NotificationDropdown({
                         </Link>
                       </div>
                     )}
-                  </div>
-                );
-              })
+                      </div>
+                    );
+                  })
+                )}
+              </>
             )}
           </div>
 

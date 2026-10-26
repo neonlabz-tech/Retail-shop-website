@@ -10,6 +10,8 @@ import { verifyToken, AUTH_COOKIE_NAME } from '@/lib/auth';
 import { getStorefrontOfProductId, getStorefrontOfSlug, productHrefBaseFor } from '@/utils/storefront';
 import { FALLBACK_IMAGE_SRC, normalizeImageSrc } from '@/lib/imageFallback';
 
+const lastOrderSyncMap = new Map<string, number>();
+
 function getStatusNotification(status: string, orderNumber: string) {
   if (status === 'delivered') {
     return {
@@ -59,6 +61,16 @@ function getStatusNotification(status: string, orderNumber: string) {
     title: `Order #${orderNumber} Status Updated`,
     message: `Your order #${orderNumber} status is now ${status.replace(/_/g, ' ')}.`,
   };
+}
+
+function getStatusChangedAt(order: Pick<IOrder, 'status' | 'statusHistory' | 'updatedAt'>): Date {
+  const currentStatus = String(order.status || '').toLowerCase().trim();
+  const latestMatchingChange = [...(order.statusHistory || [])]
+    .reverse()
+    .find((change) => String(change.status || '').toLowerCase().trim() === currentStatus);
+  const changedAt = latestMatchingChange?.changedAt || order.updatedAt;
+  const date = new Date(changedAt);
+  return Number.isNaN(date.getTime()) ? new Date(0) : date;
 }
 
 async function buildReviewItems(order: Pick<IOrder, 'items' | 'orderNumber'>) {
@@ -158,125 +170,20 @@ export async function GET(request: NextRequest) {
     }
 
     if (!customerId && !customerEmail) {
-      return NextResponse.json({
-        success: true,
-        notifications: [],
-        unreadCount: 0,
-      });
+      return NextResponse.json(
+        { success: false, error: 'Customer identity is required to fetch notifications' },
+        { status: 401 }
+      );
     }
 
-    const orderConditions: Record<string, unknown>[] = [];
-    if (customerId) orderConditions.push({ customer: customerId });
-    if (customerEmail) {
-      orderConditions.push({
-        'customerSnapshot.email': new RegExp(
-          `^${customerEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`,
-          'i'
-        ),
-      });
-    }
-    const customerOrders = orderConditions.length
-      ? await Order.find({ $or: orderConditions }).lean()
-      : [];
-
-    for (const order of customerOrders) {
-      const status = String(order.status || '').toLowerCase().trim();
-      if (!status || status === 'pending') continue;
-
-      const notificationContent = getStatusNotification(status, order.orderNumber);
-      const existing = await Notification.findOne({
-        orderNumber: order.orderNumber,
-        type: notificationContent.type,
-        title: notificationContent.title,
-      });
-      const statusChange = [...(order.statusHistory || [])]
-        .reverse()
-        .find((history) => String(history.status || '').toLowerCase().trim() === status);
-      const orderCustomerEmail =
-        order.customerSnapshot?.email?.toLowerCase().trim() || customerEmail || '';
-      const notificationCustomer =
-        order.customer ||
-        (customerId && mongoose.Types.ObjectId.isValid(customerId)
-          ? new mongoose.Types.ObjectId(customerId)
-          : undefined);
-      const items = status === 'delivered' ? await buildReviewItems(order) : [];
-      if (existing) {
-        let shouldSave = false;
-        const statusChangedAt = statusChange?.changedAt
-          ? new Date(statusChange.changedAt)
-          : null;
-        if (
-          statusChangedAt &&
-          !Number.isNaN(statusChangedAt.getTime()) &&
-          statusChangedAt.getTime() > new Date(existing.createdAt).getTime()
-        ) {
-          existing.read = false;
-          existing.dismissed = false;
-          existing.createdAt = statusChangedAt;
-          shouldSave = true;
-        }
-        if (
-          orderCustomerEmail &&
-          (String(existing.customer || '') !== String(notificationCustomer || '') ||
-            existing.customerEmail.toLowerCase().trim() !== orderCustomerEmail)
-        ) {
-          existing.customer = notificationCustomer;
-          existing.customerEmail = orderCustomerEmail;
-          existing.orderId = order._id;
-          shouldSave = true;
-        }
-        if (status === 'delivered') {
-          const existingItems = existing.items || [];
-          const reviewItems = items.map((item) => ({
-            ...item,
-            reviewed: existingItems.find((previousItem) => {
-              const matches = (left?: string, right?: string) =>
-                Boolean(left && right && left.trim().toLowerCase() === right.trim().toLowerCase());
-              return (
-                matches(item.productId, previousItem.productId) ||
-                matches(item.slug, previousItem.slug) ||
-                (!item.productId &&
-                  !item.slug &&
-                  !previousItem.productId &&
-                  !previousItem.slug &&
-                  matches(item.name, previousItem.name))
-              );
-            })?.reviewed || false,
-          }));
-          if (
-            reviewItems.length !== existing.items.length ||
-            reviewItems.some(
-              (item, index) =>
-                item.reviewUrl !== existing.items[index]?.reviewUrl ||
-                item.image !== existing.items[index]?.image ||
-                item.reviewed !== existing.items[index]?.reviewed
-            )
-          ) {
-            existing.items = reviewItems;
-            existing.title = notificationContent.title;
-            existing.message = notificationContent.message;
-            shouldSave = true;
-          }
-        }
-        if (shouldSave) {
-          await existing.save();
-        }
-        continue;
-      }
-
-      await Notification.create({
-        customer: notificationCustomer,
-        customerEmail: orderCustomerEmail,
-        orderId: order._id,
-        orderNumber: order.orderNumber,
-        ...notificationContent,
-        items,
-        read: false,
-      });
-    }
-
+    // 1. Build customer notification query conditions
     const orConditions: any[] = [];
-    if (customerId) orConditions.push({ customer: customerId });
+    if (customerId) {
+      orConditions.push({ customer: customerId });
+      if (mongoose.Types.ObjectId.isValid(customerId)) {
+        orConditions.push({ customer: new mongoose.Types.ObjectId(customerId) });
+      }
+    }
 
     if (customerEmail) {
       const cleanEmail = customerEmail.toLowerCase().trim();
@@ -285,26 +192,152 @@ export async function GET(request: NextRequest) {
         customerEmail: new RegExp(`^${cleanEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'),
       });
 
-      // Also link any notifications tied to User's ObjectId if resolved by email
       if (!customerId) {
         try {
           const matchedUser = await User.findOne({
             email: new RegExp(`^${cleanEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'),
-          }).lean();
+          }).select('_id').lean();
           if (matchedUser?._id) {
             orConditions.push({ customer: matchedUser._id.toString() });
+            orConditions.push({ customer: matchedUser._id });
           }
         } catch {}
       }
     }
 
-    const storedNotifications = await Notification.find({
+    // 2. Query stored notifications first (Indexed, fast ~10ms)
+    let storedNotifications = await Notification.find({
       $or: orConditions,
       dismissed: { $ne: true },
     })
-      .sort({ read: 1, createdAt: -1 })
+      .sort({ createdAt: -1 })
       .limit(50)
       .lean();
+
+    // In-memory lookup map of existing notifications
+    const existingMap = new Map<string, any>();
+    const setLatestNotification = (key: string, notification: any) => {
+      const existing = existingMap.get(key);
+      if (
+        !existing ||
+        new Date(notification.createdAt).getTime() > new Date(existing.createdAt).getTime()
+      ) {
+        existingMap.set(key, notification);
+      }
+    };
+    for (const notif of storedNotifications) {
+      const ordNum = String(notif.orderNumber || '').trim().replace(/^#/, '').toLowerCase();
+      const title = String(notif.title || '').trim().toLowerCase();
+      if (ordNum && title) {
+        setLatestNotification(`${ordNum}:${title}`, notif);
+      }
+    }
+
+    // 3. Fast check recent orders for this customer (Indexed on email / customer)
+    const orderConditions: Record<string, unknown>[] = [];
+    if (customerId) {
+      orderConditions.push({ customer: customerId });
+      if (mongoose.Types.ObjectId.isValid(customerId)) {
+        orderConditions.push({ customer: new mongoose.Types.ObjectId(customerId) });
+      }
+    }
+    if (customerEmail) {
+      const cleanEmail = customerEmail.toLowerCase().trim();
+      orderConditions.push({
+        'customerSnapshot.email': new RegExp(`^${cleanEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'),
+      });
+    }
+
+    const customerOrders = orderConditions.length
+      ? await Order.find({ $or: orderConditions })
+          .where('status')
+          .nin(['', 'pending'])
+          .select('orderNumber status customer customerSnapshot items updatedAt statusHistory')
+          .sort({ updatedAt: -1 })
+          .lean()
+      : [];
+
+    const recentOrderIds = customerOrders.map((order) => order._id);
+    const recentOrderNumbers = customerOrders
+      .map((order) => String(order.orderNumber || '').trim().replace(/^#/, ''))
+      .filter(Boolean);
+    if (recentOrderIds.length > 0 || recentOrderNumbers.length > 0) {
+      const dismissedOrderConditions: Record<string, unknown>[] = [];
+      if (recentOrderIds.length > 0) {
+        dismissedOrderConditions.push({ orderId: { $in: recentOrderIds } });
+      }
+      if (recentOrderNumbers.length > 0) {
+        dismissedOrderConditions.push({
+          orderNumber: {
+            $in: recentOrderNumbers.flatMap((orderNumber) => [
+              orderNumber,
+              `#${orderNumber}`,
+            ]),
+          },
+        });
+      }
+      const dismissedNotifications = await Notification.find({
+        $and: [
+          { $or: orConditions },
+          { $or: dismissedOrderConditions },
+          { dismissed: true },
+        ],
+      })
+        .select('orderId orderNumber title dismissed createdAt')
+        .lean();
+
+      for (const notification of dismissedNotifications) {
+        const orderNumber = String(notification.orderNumber || '').trim().replace(/^#/, '').toLowerCase();
+        const title = String(notification.title || '').trim().toLowerCase();
+        if (orderNumber && title) {
+          setLatestNotification(`${orderNumber}:${title}`, notification);
+        }
+      }
+    }
+
+    // 4. Synchronize any status changes into notifications in memory and DB
+    for (const order of customerOrders) {
+      const status = String(order.status || '').toLowerCase().trim();
+      if (!status || status === 'pending') continue;
+
+      const cleanOrderNumber = String(order.orderNumber || '').trim().replace(/^#/, '');
+      const notificationContent = getStatusNotification(status, cleanOrderNumber);
+      const lookupKey = `${cleanOrderNumber.toLowerCase()}:${notificationContent.title.trim().toLowerCase()}`;
+      const statusChangedAt = getStatusChangedAt(order);
+      const existingNotification = existingMap.get(lookupKey);
+
+      if (
+        existingNotification &&
+        new Date(existingNotification.createdAt).getTime() >= statusChangedAt.getTime()
+      ) {
+        continue;
+      }
+
+      // New order status found in DB! Create customer notification
+      const items = status === 'delivered' ? await buildReviewItems(order) : [];
+      const orderCustomerEmail = order.customerSnapshot?.email?.toLowerCase().trim() || customerEmail || '';
+      const notificationCustomer =
+        order.customer ||
+        (customerId && mongoose.Types.ObjectId.isValid(customerId)
+          ? new mongoose.Types.ObjectId(customerId)
+          : undefined);
+
+      const created = await Notification.create({
+        customer: notificationCustomer,
+        customerEmail: orderCustomerEmail,
+        orderId: order._id,
+        orderNumber: cleanOrderNumber,
+        ...notificationContent,
+        items,
+        read: false,
+        isRead: false,
+        dismissed: false,
+      });
+
+      const createdObj = (created as any).toObject ? (created as any).toObject() : created;
+      setLatestNotification(lookupKey, createdObj);
+      storedNotifications.unshift(createdObj);
+    }
 
     const uniqueNotifications = new Map<string, (typeof storedNotifications)[number]>();
     const duplicateIds: (typeof storedNotifications)[number]['_id'][] = [];
@@ -323,7 +356,7 @@ export async function GET(request: NextRequest) {
       await Notification.deleteMany({ _id: { $in: duplicateIds } });
     }
     const notifications = [...uniqueNotifications.values()].sort(
-      (left, right) => right.createdAt.getTime() - left.createdAt.getTime()
+      (left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime()
     );
 
     const deliveredNotifications = notifications.filter(
@@ -370,8 +403,7 @@ export async function GET(request: NextRequest) {
       })),
     }));
 
-    const unreadCount = notifications.filter((n) => !n.read).length;
-
+    const unreadCount = notifications.filter((n) => !n.read && !(n as any).isRead).length;
     return NextResponse.json({
       success: true,
       notifications: notificationsWithReviewStatus,
@@ -420,10 +452,10 @@ export async function PATCH(request: NextRequest) {
             ],
             read: false,
           },
-          { $set: { read: true } }
+          { $set: { read: true, isRead: true } }
         );
       } else {
-        await Notification.updateMany({ read: false }, { $set: { read: true } });
+        await Notification.updateMany({ read: false }, { $set: { read: true, isRead: true } });
       }
 
       return NextResponse.json({ success: true, message: 'All notifications marked as read' });
@@ -485,23 +517,43 @@ export async function PATCH(request: NextRequest) {
           );
         }
 
-        const dismissed = await Notification.findOneAndUpdate(
-          { _id: notificationId, $or: ownerConditions },
-          { $set: { dismissed: true } },
-          { new: true }
-        );
-        if (!dismissed) {
+        const notification = await Notification.findOne({
+          _id: notificationId,
+          $or: ownerConditions,
+        })
+          .select('orderId orderNumber title')
+          .lean();
+        if (!notification) {
           return NextResponse.json(
             { success: false, error: 'Notification not found' },
             { status: 404 }
           );
         }
-        return NextResponse.json({ success: true });
+
+        const sameOrderConditions: Record<string, unknown>[] = [];
+        if (notification.orderId) sameOrderConditions.push({ orderId: notification.orderId });
+        if (notification.orderNumber) {
+          sameOrderConditions.push({ orderNumber: notification.orderNumber });
+        }
+        const dismissalResult = await Notification.updateMany(
+          {
+            $and: [
+              { $or: ownerConditions },
+              { $or: sameOrderConditions },
+              { title: notification.title },
+            ],
+          },
+          { $set: { dismissed: true, read: true, isRead: true } }
+        );
+        return NextResponse.json({
+          success: true,
+          dismissedCount: dismissalResult.modifiedCount,
+        });
       }
 
       const updated = await Notification.findByIdAndUpdate(
         notificationId,
-        { $set: { read: true } },
+        { $set: { read: true, isRead: true } },
         { new: true }
       );
       return NextResponse.json({ success: true, notification: updated });

@@ -64,18 +64,13 @@ export const FOOTER_LINKS = {
     { label: 'Home', href: '/' },
     { label: 'Categories', href: '/categories' },
     { label: 'Products', href: '/products' },
+    { label: 'Contact Us', href: '/pages/contact' },
   ],
   company: [
     { label: 'Wishlist', href: '/wishlist' },
     { label: 'My account', href: '/profile' },
     { label: 'Cart', href: '/cart' },
     { label: 'About us', href: '/pages/about' },
-  ],
-  support: [
-    { label: 'Privacy Policy', href: '/pages/privacy-policy' },
-    { label: 'Terms of Service', href: '/pages/terms-of-service' },
-    { label: 'Shipping Policy', href: '/pages/shipping-policy' },
-    { label: 'Contact Us', href: '/pages/contact' },
   ],
 } as const;
 

@@ -22,8 +22,8 @@ export function PodFeaturedProducts() {
   return (
     <section>
       <div className="container-main">
-        <div className="mb-[32px] text-left">
-          <h2 className="text-[clamp(22px,3vw,28px)] font-semibold text-[#222]">Featured Products</h2>
+        <div className="mb-[8px] min-[750px]:mb-[14px] text-left">
+          <h2 className="text-[17px] min-[750px]:text-[28px] font-semibold text-[#222]">Featured Products</h2>
         </div>
 
         <div className="pdfp-grid">
@@ -35,7 +35,7 @@ export function PodFeaturedProducts() {
           }
         </div>
 
-        <div className="text-center mt-[44px]">
+        <div className="text-center mt-[24px] min-[750px]:mt-[36px]">
           <Link href="/shop" className="pdfp-shop-now">Shop Now</Link>
         </div>
       </div>
@@ -45,8 +45,9 @@ export function PodFeaturedProducts() {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
           gap: 14px;
+          align-items: stretch;
         }
-        .pdfp-grid > * { min-width: 0; }
+        .pdfp-grid > * { min-width: 0; height: 100%; }
 
         @media (min-width: 750px) {
           .pdfp-grid { grid-template-columns: repeat(3, 1fr); gap: 16px; }
@@ -54,12 +55,6 @@ export function PodFeaturedProducts() {
 
         @media (min-width: 1024px) {
           .pdfp-grid { grid-template-columns: repeat(5, 1fr); gap: 16px; }
-        }
-
-        .pdfp-grid .fc-card > a:first-child {
-          width: 100%;
-          aspect-ratio: 1 / 1;
-          margin: 0 auto 14px;
         }
 
         .pdfp-shop-now {

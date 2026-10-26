@@ -713,9 +713,9 @@ export async function PATCH(request: NextRequest) {
               existingNotif.title = `Order #${order.orderNumber} Delivered! 📦`;
               existingNotif.message =
                 'Your package has been successfully delivered! We hope you love your items. Please take a moment to review your product and let us know your thoughts.';
-              if (newStatus !== previousStatus) {
+              if (newStatus !== previousStatus && !existingNotif.dismissed) {
                 existingNotif.read = false;
-                existingNotif.dismissed = false;
+                existingNotif.isRead = false;
                 existingNotif.createdAt = new Date();
               }
               await existingNotif.save();
@@ -767,15 +767,16 @@ export async function PATCH(request: NextRequest) {
                   customerEmail,
                   orderId: order._id,
                   message,
-                  read: false,
-                  dismissed: false,
-                  createdAt: new Date(),
                 },
                 $setOnInsert: {
                   orderNumber: order.orderNumber,
                   type: 'order_update',
                   title,
                   items: [],
+                  read: false,
+                  isRead: false,
+                  dismissed: false,
+                  createdAt: new Date(),
                 },
               },
               { new: true, upsert: true, setDefaultsOnInsert: true }

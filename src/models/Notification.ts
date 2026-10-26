@@ -19,6 +19,7 @@ export interface INotification extends Document {
   message: string;
   items: INotificationItem[];
   read: boolean;
+  isRead?: boolean;
   dismissed: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -51,6 +52,7 @@ const NotificationSchema = new Schema<INotification>(
     message: { type: String, required: true, trim: true },
     items: { type: [NotificationItemSchema], default: [] },
     read: { type: Boolean, default: false, index: true },
+    isRead: { type: Boolean, default: false },
     dismissed: { type: Boolean, default: false, index: true },
   },
   {
