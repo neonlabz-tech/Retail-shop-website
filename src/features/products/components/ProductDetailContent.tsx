@@ -524,7 +524,12 @@ export function ProductDetailContent({
   const [shareMenuOpen, setShareMenuOpen] = useState(false);
   const [wishlistLoading, setWishlistLoading] = useState(false);
   const [compareLoading, setCompareLoading] = useState(false);
+  const [stickyCartVisible, setStickyCartVisible] = useState(false);
+  const [footerVisible, setFooterVisible] = useState(false);
   const [activeGalleryIndex, setActiveGalleryIndex] = useState(0);
+  const addToCartRef = useRef<HTMLDivElement>(null);
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const footerObserverRef = useRef<IntersectionObserver | null>(null);
 
   const product = data?.product;
   const searchParams = useSearchParams();
@@ -709,6 +714,34 @@ export function ProductDetailContent({
         .catch(() => {});
     }
   }, [product]);
+
+  useEffect(() => {
+    const footer = document.querySelector('footer');
+    if (!footer) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setFooterVisible(entry.isIntersecting),
+      { threshold: 0 }
+    );
+    observer.observe(footer);
+    footerObserverRef.current = observer;
+    return () => observer.disconnect();
+  }, []);
+
+  const addToCartCallbackRef = useCallback((node: HTMLDivElement | null) => {
+    if (observerRef.current) {
+      observerRef.current.disconnect();
+      observerRef.current = null;
+    }
+    if (node) {
+      addToCartRef.current = node;
+      const observer = new IntersectionObserver(
+        ([entry]) => setStickyCartVisible(!entry.isIntersecting),
+        { threshold: 0 }
+      );
+      observer.observe(node);
+      observerRef.current = observer;
+    }
+  }, []);
 
   if (isLoading || !product) {
     return (<div className="container-main py-[60px] px-0 text-center text-[16px] text-[#888]">Loading product...</div>);
@@ -1010,7 +1043,7 @@ export function ProductDetailContent({
                 </div>
               )}
 
-              <div className="pdp-info-qty-block mb-[16px]">
+              <div ref={addToCartCallbackRef} className="pdp-info-qty-block mb-[16px]">
                 <p className="pdp-info-field-label text-[15px] font-semibold text-[#222] mb-[10px]">Quantity</p>
                 <div className="pdp-info-qty-row flex items-center gap-[14px]">
                   <div className={`pdp-qty-stepper inline-flex border border-solid border-[#e5e5e5] rounded-[4px] ${isOutOfStock ? 'opacity-40 pointer-events-none' : ''}`}>
