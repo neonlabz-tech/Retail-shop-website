@@ -12,6 +12,7 @@ import 'swiper/css';
 import 'swiper/css/navigation';
 import { useProducts } from '@/features/products/hooks/useProducts';
 import { useCartStore } from '@/store/cartStore';
+import { checkAuthOrRedirect } from '@/store/authStore';
 import { useWishlistStore } from '@/store/wishlistStore';
 import { useCompareStore } from '@/store/compareStore';
 import { useUIStore } from '@/store/uiStore';
@@ -432,6 +433,7 @@ export function SingleProductFeaturedProduct() {
 
   const handleAddToCart = () => {
     if (isOutOfStock) return;
+    if (!checkAuthOrRedirect(router)) return;
     const variant = product.variants?.find(v => v.color === activeColor && v.size === activeSize) || product.variants?.[0];
     const variantId = variant?.id || product.id || 'default';
     const image = variant?.image || product.images?.[0]?.src || '';
@@ -459,6 +461,7 @@ export function SingleProductFeaturedProduct() {
 
   const handleBuyNow = () => {
     if (isOutOfStock) return;
+    if (!checkAuthOrRedirect(router)) return;
     const variant = product.variants?.find(v => v.color === activeColor && v.size === activeSize) || product.variants?.[0];
     const variantId = variant?.id || product.id || 'default';
     const image = variant?.image || product.images?.[0]?.src || '';

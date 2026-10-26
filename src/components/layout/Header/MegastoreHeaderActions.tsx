@@ -7,6 +7,7 @@ import { useCompareStore } from '@/store/compareStore';
 import { useUIStore } from '@/store/uiStore';
 import { isMegastoreSlug, isMegastoreProductId } from '@/utils/storefront';
 import { AccountDropdown } from './AccountDropdown';
+import { NotificationDropdown } from './NotificationDropdown';
 
 function IconSearch({ size = 22 }: { size?: number }) {
   return (
@@ -41,6 +42,8 @@ function IconShoppingBag({ size = 22 }: { size?: number }) {
 }
 
 function CountBadge({ count }: { count: number }) {
+  if (count <= 0) return null;
+
   return (
     <span
       style={{
@@ -139,6 +142,7 @@ export function MegastoreHeaderActions() {
         <IconShoppingBag />
         <CountBadge count={totalCartItems} />
       </button>
+      <NotificationDropdown badgeColor="#f59e0b" hoverColor="#f59e0b" />
 
       {/* Hidden compare link to keep state binding without overcrowding the toolbar */}
       <span style={{ display: 'none' }} aria-hidden>

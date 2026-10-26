@@ -184,48 +184,21 @@ export function CartPageContent() {
     removeItem,
     updateQuantity,
     getSubtotal,
-    getFreeShippingRemaining,
-    orderNote,
-    setOrderNote,
     couponCode,
     discount,
-    applyCoupon,
-    removeCoupon,
   } = useCartStore();
 
-  const [promoCode, setPromoCode] = useState(couponCode);
-  const [couponMsg, setCouponMsg] = useState('');
-  const [isCouponError, setIsCouponError] = useState(false);
-  const [country, setCountry] = useState('LK');
-  const [postalCode, setPostalCode] = useState('');
-  const [shippingMsg, setShippingMsg] = useState('');
-  const [instructions, setInstructions] = useState(orderNote);
   const [giftWrap, setGiftWrap] = useState(false);
 
   const subtotal = getSubtotal();
-  const shippingRemaining = getFreeShippingRemaining();
   const giftTotal = giftWrap ? items.reduce((s, i) => s + i.quantity, 0) * GIFT_WRAP_PRICE : 0;
   const discountAmount = Math.min(subtotal, discount || 0);
   const total = Math.max(0, subtotal - discountAmount + giftTotal);
-  const shippingPct = Math.min(100, (subtotal / FREE_SHIPPING_THRESHOLD) * 100);
-
-  const handleApplyPromo = () => {
-    if (!promoCode.trim()) return;
-    const res = applyCoupon(promoCode);
-    setIsCouponError(!res.success);
-    setCouponMsg(res.message);
-  };
-
-  const handleInstructionsChange = (val: string) => {
-    const clean = val.slice(0, 500);
-    setInstructions(clean);
-    setOrderNote(clean);
-  };
 
   if (items.length === 0) {
     return (
       <>
-        <div className="container-main pt-[36px] pb-[80px]">
+        <div className="container-main pt-[20px] pb-[80px]">
           <h1 className="cp-page-title">Your Shopping Cart</h1>
 
           <div className="cp-empty-center">
@@ -238,7 +211,6 @@ export function CartPageContent() {
             </div>
           </div>
 
-          <TrustBadges />
           <GiftOptions checked={false} onChange={() => {}} />
         </div>
 
@@ -252,7 +224,7 @@ export function CartPageContent() {
 
   return (
     <>
-      <div className="container-main pt-[36px] pb-[80px]">
+      <div className="container-main pt-[20px] pb-[80px]">
         <h1 className="cp-page-title">Your Shopping Cart</h1>
 
         <div className="cp-layout">
@@ -309,99 +281,9 @@ export function CartPageContent() {
                 </div>
               ))}
             </div>
-
-            <TrustBadges />
           </div>
 
           <div className="cp-right">
-
-            <AccordionSection icon={<IcoPercent />} title="Promo Code">
-              {couponCode ? (
-                <div className="p-[14px] bg-[#ecfdf5] border border-[#a7f3d0] rounded-[6px] text-[13px] flex items-center justify-between text-[#065f46]">
-                  <span>Applied: <strong>{couponCode}</strong> ({formatPrice(discountAmount)} off)</span>
-                  <button
-                    onClick={() => {
-                      removeCoupon();
-                      setPromoCode('');
-                      setCouponMsg('');
-                    }}
-                    className="text-[12px] text-[#dc2626] font-semibold underline cursor-pointer"
-                  >
-                    Remove
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <div className="cp-promo-row">
-                    <input
-                      type="text"
-                      placeholder="Enter discount code"
-                      value={promoCode}
-                      onChange={(e) => setPromoCode(e.target.value)}
-                      className="cp-promo-input"
-                    />
-                    <button onClick={handleApplyPromo} className="cp-apply-btn">Apply</button>
-                  </div>
-                  {couponMsg && (
-                    <p className={`text-[12px] mt-[8px] font-medium ${isCouponError ? 'text-[#ef4444]' : 'text-[#10b981]'}`}>
-                      {couponMsg}
-                    </p>
-                  )}
-                  <p className="text-[11px] text-[#888] mt-[6px]">Tip: Try <strong>WELCOME10</strong> or <strong>RKF500</strong></p>
-                </>
-              )}
-            </AccordionSection>
-
-            <AccordionSection icon={<IcoTruck size={14} />} title="Estimate Shipping">
-              <div className="cp-ship-fields">
-                <label className="cp-field-label">Country/region</label>
-                <select
-                  value={country}
-                  onChange={(e) => setCountry(e.target.value)}
-                  className="cp-select"
-                >
-                  {SHIP_COUNTRIES.map((c) => (
-                    <option key={c.value} value={c.value}>{c.label}</option>
-                  ))}
-                </select>
-                <label className="cp-field-label">Postal/ZIP code</label>
-                <div className="cp-input-wrap">
-                  <input
-                    type="text"
-                    placeholder="Postal/ZIP code"
-                    value={postalCode}
-                    onChange={(e) => setPostalCode(e.target.value)}
-                    className="cp-text-input"
-                  />
-                  <span className="cp-input-icon"><IcoKeyboard /></span>
-                </div>
-                <button
-                  onClick={() => setShippingMsg(shippingRemaining === 0 ? 'FREE Islandwide Delivery qualified!' : 'Standard Islandwide Fast Delivery calculated at checkout.')}
-                  className="cp-calc-btn"
-                >
-                  Calculate Shipping
-                </button>
-                {shippingMsg && (
-                  <p className="text-[12px] text-[#0f172a] bg-[#f8fafc] border border-[#e2e8f0] p-[10px] rounded-[6px] mt-[8px]">
-                    {shippingMsg}
-                  </p>
-                )}
-              </div>
-            </AccordionSection>
-
-            <AccordionSection icon={<IcoDoc />} title="Order Special Instructions" defaultOpen={false}>
-              <div className="cp-notes-wrap">
-                <textarea
-                  value={instructions}
-                  onChange={(e) => handleInstructionsChange(e.target.value)}
-                  placeholder="Add a note to your order (delivery preferences, gift notes, etc.)"
-                  className="cp-notes-area"
-                  rows={4}
-                />
-                <p className="cp-char-count">{instructions.length}/500 characters</p>
-              </div>
-            </AccordionSection>
-
             <div className="cp-summary">
               <h3 className="cp-summary-title">Order Summary</h3>
 
@@ -451,7 +333,8 @@ const cpStyles = `
     font-size: 2.6rem;
     font-weight: 700;
     color: var(--color-heading);
-    margin-bottom: 8rem;
+    line-height: 1.2;
+    margin-bottom: 2rem;
   }
 
   /* ── empty state ── */
@@ -555,7 +438,7 @@ const cpStyles = `
     align-items: start;
   }
   /* 80px gap between left-column sections */
-  .cp-left { display: flex; flex-direction: column; gap: 8rem; }
+  .cp-left { display: flex; flex-direction: column; gap: 2.4rem; }
 
   /* right sidebar: bordered card + sticky */
   .cp-right {
@@ -818,8 +701,7 @@ const cpStyles = `
 
   /* ── order summary (bottom of right card) ── */
   .cp-summary {
-    padding: 2rem 2rem 2.2rem;
-    border-top: 1px solid #e5e5e5;
+    padding: 2.2rem 2rem;
   }
   .cp-summary-title {
     font-size: 1.7rem;
@@ -917,9 +799,21 @@ const cpStyles = `
 
   /* ── responsive ── */
   @media (max-width: 749px) {
+    .cp-page-title {
+      font-size: 2.2rem;
+      margin-bottom: 1.6rem;
+    }
     .cp-layout { grid-template-columns: 1fr; }
     .cp-trust { grid-template-columns: 1fr; }
-    .cp-left { gap: 4rem; }
+    .cp-left { gap: 2rem; }
+    .cp-item-foot {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.8rem;
+    }
+    .cp-item-price {
+      white-space: nowrap;
+    }
     .cp-right {
       position: static;
       max-height: none;

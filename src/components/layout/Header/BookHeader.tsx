@@ -152,7 +152,7 @@ function BookMobileIcons() {
       <button onClick={openSearch} aria-label="Search" className="bkh-mobile-icon-btn"><IconSearch size={24} /></button>
       <button onClick={openCartDrawer} aria-label="Open cart" className="bkh-mobile-icon-btn bkh-mobile-cart">
         <IconBag size={24} />
-        <span className="bkh-mobile-badge">{cartCount}</span>
+        {cartCount > 0 && <span className="bkh-mobile-badge">{cartCount}</span>}
       </button>
     </div>
   );

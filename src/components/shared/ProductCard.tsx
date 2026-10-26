@@ -7,12 +7,14 @@ import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/Badge';
 import { ColorSwatch } from '@/components/ui/ColorSwatch';
 import { useCartStore } from '@/store/cartStore';
+import { checkAuthOrRedirect } from '@/store/authStore';
 import { useWishlistStore } from '@/store/wishlistStore';
 import { useCompareStore } from '@/store/compareStore';
 import { useUIStore } from '@/store/uiStore';
 import { formatPrice } from '@/utils/formatPrice';
 import { cn } from '@/utils/cn';
 import type { Product } from '@/types/product';
+import { FALLBACK_IMAGE_SRC, handleImageError } from '@/lib/imageFallback';
 
 interface ProductCardProps {
   product: Product;
@@ -27,7 +29,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
   const { toggleItem: toggleCompare } = useCompareStore();
   const { openQuickView } = useUIStore();
 
-  const primaryImage = product.images[0]?.src || '/fashion/products/placeholder.jpg';
+  const primaryImage = product.images[0]?.src || FALLBACK_IMAGE_SRC;
   const secondaryImage = product.images[1]?.src || primaryImage;
   const inWishlist = isInWishlist(product.id);
   const isOutOfStock = product.availability === 'out-of-stock' || (typeof product.stock === 'number' && product.stock <= 0) || (product.variants?.[0] && product.variants[0].available === false);
@@ -38,6 +40,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     if (isOutOfStock) return;
+    if (!checkAuthOrRedirect(router)) return;
     const variant = product.variants?.[0];
     const variantId = variant?.id || product.id || 'default';
     const image = variant?.image || primaryImage;
@@ -113,6 +116,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
             src={primaryImage}
             alt={product.name}
             fill
+            onError={handleImageError}
             className={cn('object-contain object-center transition-all duration-500 ease-out', isHovered ? 'opacity-0 scale-108' : 'opacity-100 scale-100')}
             sizes="(max-width: 749px) 50vw, (max-width: 991px) 50vw, 33vw"
           />
@@ -120,6 +124,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
             src={secondaryImage}
             alt={`${product.name} alternate`}
             fill
+            onError={handleImageError}
             className={cn('object-contain object-center transition-all duration-500 ease-out', isHovered ? 'opacity-100 scale-108' : 'opacity-0 scale-100')}
             sizes="(max-width: 749px) 50vw, (max-width: 991px) 50vw, 33vw"
           />

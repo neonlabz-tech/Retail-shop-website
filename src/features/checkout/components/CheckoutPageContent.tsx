@@ -298,6 +298,12 @@ export function CheckoutPageContent() {
       // Clear the cart
       clearCart();
 
+      // Notify header and components that a new order has been placed
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('order-updated'));
+        window.dispatchEvent(new CustomEvent('order-placed'));
+      }
+
       setOrderSuccess({
         orderNumber: data.orderNumber,
         message: data.message || 'Your order has been placed successfully!',

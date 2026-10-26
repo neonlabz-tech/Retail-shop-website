@@ -6,6 +6,7 @@ import {
   setClientCookie,
   deleteClientCookie,
   USER_COOKIE_NAME,
+  AUTH_COOKIE_NAME,
   ONE_DAY_SECONDS,
 } from '@/lib/cookies';
 
@@ -123,3 +124,47 @@ export const useAuthStore = create<AuthState>()((set) => ({
     }
   },
 }));
+
+
+/**
+ * Synchronous check to verify if the user is authenticated either via
+ * Zustand store state or persistent client authentication cookies.
+ */
+export function isUserAuthenticated(): boolean {
+  if (typeof window === 'undefined') return false;
+  const { isAuthenticated, user } = useAuthStore.getState();
+  if (isAuthenticated && user) return true;
+  if (user) return true;
+  try {
+    const userCookie = getClientCookie(USER_COOKIE_NAME);
+    if (userCookie) {
+      const parsed = JSON.parse(userCookie);
+      if (parsed && (parsed.email || parsed.id)) return true;
+    }
+    const tokenCookie = getClientCookie(AUTH_COOKIE_NAME);
+    if (tokenCookie) return true;
+  } catch {}
+  return false;
+}
+
+/**
+ * Checks if the user is authenticated. If not, redirects them to /login with
+ * the return path preserved in the query string (?redirect=...).
+ * Returns true if authenticated, false if redirected.
+ */
+export function checkAuthOrRedirect(
+  router?: { push: (url: string) => void },
+  redirectTarget?: string
+): boolean {
+  if (isUserAuthenticated()) return true;
+  if (typeof window !== 'undefined') {
+    const target = redirectTarget || (window.location.pathname + window.location.search);
+    const loginUrl = `/login?redirect=${encodeURIComponent(target)}`;
+    if (router && typeof router.push === 'function') {
+      router.push(loginUrl);
+    } else {
+      window.location.href = loginUrl;
+    }
+  }
+  return false;
+}

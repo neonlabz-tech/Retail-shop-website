@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useUIStore } from '@/store/uiStore';
 import { useCartStore } from '@/store/cartStore';
+import { checkAuthOrRedirect } from '@/store/authStore';
 import { formatPrice } from '@/utils/formatPrice';
 import { getStorefrontOfSlug, productHrefBaseFor } from '@/utils/storefront';
 
@@ -86,6 +87,10 @@ export function QuickViewModal() {
 
   const handleAddToCart = () => {
     if (isOutOfStock) return;
+    if (!checkAuthOrRedirect(router)) {
+      closeQuickView();
+      return;
+    }
     const variant = activeVariant;
     const variantId = variant?.id || product.id || 'default';
     const image = variant?.image || product.images?.[0]?.src || '';
@@ -110,6 +115,10 @@ export function QuickViewModal() {
 
   const handleBuyNow = () => {
     if (isOutOfStock) return;
+    if (!checkAuthOrRedirect(router)) {
+      closeQuickView();
+      return;
+    }
     const variant = activeVariant;
     const variantId = variant?.id || product.id || 'default';
     const image = variant?.image || product.images?.[0]?.src || '';

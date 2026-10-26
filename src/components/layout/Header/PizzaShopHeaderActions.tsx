@@ -41,6 +41,8 @@ function IconShoppingBag({ size = 22 }: { size?: number }) {
 }
 
 function CountBadge({ count, bg = '#e84d1c' }: { count: number; bg?: string }) {
+  if (count <= 0) return null;
+
   return (
     <span
       style={{

@@ -6,10 +6,12 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { formatPrice } from '@/utils/formatPrice';
+import { FALLBACK_IMAGE_SRC, handleImageError } from '@/lib/imageFallback';
 
 interface OrderItem {
   productId?: string;
   name: string;
+  slug?: string;
   image?: string;
   sku?: string;
   price: number;
@@ -143,6 +145,8 @@ export function ProfilePageContent() {
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [copiedOrder, setCopiedOrder] = useState(false);
 
+  const [actionNotice, setActionNotice] = useState<string | null>(null);
+
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
@@ -203,6 +207,7 @@ export function ProfilePageContent() {
     }
   }, [isAuthenticated, fetchCustomerOrders]);
 
+
   const handleLogout = async () => {
     await logout();
     router.push('/login');
@@ -261,15 +266,6 @@ export function ProfilePageContent() {
           </div>
 
           <div className="flex items-center gap-[1rem] sm:gap-[1.2rem] flex-wrap">
-            <Link
-              href="/pages/contact"
-              className="inline-flex items-center gap-[0.7rem] px-[1.6rem] py-[1rem] rounded-[0.8rem] bg-white border border-slate-200 text-slate-700 text-[1.3rem] font-semibold hover:bg-slate-50 hover:text-slate-900 transition-colors shadow-2xs"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-              </svg>
-              <span>Help Center</span>
-            </Link>
             <Link
               href="/shop"
               className="inline-flex items-center gap-[0.7rem] px-[1.8rem] py-[1rem] rounded-[0.8rem] bg-slate-900 text-white text-[1.3rem] font-semibold hover:bg-slate-800 transition-colors shadow-sm"
@@ -474,6 +470,25 @@ export function ProfilePageContent() {
                ══════════════════════════════════════════════════════════════ */}
             {activeTab === 'overview' && (
               <div className="space-y-[2rem]">
+                {/* Action Notice Alert */}
+                {actionNotice && (
+                  <div className="p-[1.4rem_1.8rem] bg-emerald-50 border border-emerald-200 rounded-[1.2rem] text-[1.35rem] text-emerald-800 font-semibold flex items-center justify-between shadow-xs">
+                    <div className="flex items-center gap-[0.8rem]">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                      <span>{actionNotice}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setActionNotice(null)}
+                      className="text-emerald-600 hover:text-emerald-900 text-[1.4rem] p-[0.4rem] cursor-pointer"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
+
                 {/* 1. Account Identity & Credentials */}
                 <div className="bg-white border border-slate-200/80 rounded-[1.4rem] p-[2rem_1.8rem] sm:p-[2.8rem_3rem] shadow-[0_2px_12px_rgba(15,23,42,0.03)]">
                   <div className="flex items-center justify-between pb-[1.8rem] border-b border-slate-100 mb-[2rem]">
@@ -696,7 +711,7 @@ export function ProfilePageContent() {
                         </p>
                       </div>
 
-                      <div className="text-left sm:text-right pt-[1.2rem] sm:pt-0 border-t sm:border-t-0 border-slate-100">
+                      <div className="text-left sm:text-right pt-[1.2rem] sm:pt-0 border-t sm:border-t-0 border-slate-100 flex flex-col sm:items-end">
                         <span className="block text-[1.15rem] text-slate-500 uppercase tracking-[0.05em] font-semibold">Total Invoice</span>
                         <span className="block text-[2rem] sm:text-[2.4rem] font-bold text-slate-900 tracking-tight mt-[0.1rem]">
                           {formatPrice(selectedTrackOrder.total)}
@@ -704,6 +719,7 @@ export function ProfilePageContent() {
                         <span className="inline-block mt-[0.3rem] text-[1.15rem] text-slate-600 bg-slate-100 px-[0.8rem] py-[0.2rem] rounded-full">
                           {selectedTrackOrder.paymentMethod === 'bank_transfer' ? 'Bank Transfer' : 'Cash on Delivery'}
                         </span>
+
                       </div>
                     </div>
 
@@ -938,11 +954,12 @@ export function ProfilePageContent() {
                               <div className="w-[4.8rem] h-[4.8rem] rounded-[0.8rem] bg-slate-100 border border-slate-200/80 overflow-hidden flex-shrink-0 flex items-center justify-center relative">
                                 {item.image ? (
                                   <Image
-                                    src={item.image}
+                                    src={item.image || FALLBACK_IMAGE_SRC}
                                     alt={item.name}
                                     fill
                                     className="object-cover"
                                     sizes="48px"
+                                    onError={handleImageError}
                                   />
                                 ) : (
                                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2">
@@ -1096,11 +1113,12 @@ export function ProfilePageContent() {
                                     >
                                       {it.image ? (
                                         <Image
-                                          src={it.image}
+                                          src={it.image || FALLBACK_IMAGE_SRC}
                                           alt={it.name}
                                           fill
                                           className="object-cover"
                                           sizes="48px"
+                                          onError={handleImageError}
                                         />
                                       ) : (
                                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2">
@@ -1127,7 +1145,7 @@ export function ProfilePageContent() {
                               </div>
 
                               {/* Total & Action */}
-                              <div className="flex items-center gap-[1.4rem] sm:gap-[1.8rem] flex-wrap justify-between lg:justify-end pt-[1.2rem] lg:pt-0 border-t lg:border-t-0 border-slate-100">
+                              <div className="flex items-center gap-[1.2rem] sm:gap-[1.4rem] flex-wrap justify-between lg:justify-end pt-[1.2rem] lg:pt-0 border-t lg:border-t-0 border-slate-100">
                                 <div className="text-left lg:text-right">
                                   <span className="block text-[1.1rem] text-slate-400 uppercase tracking-wider font-semibold">Total Paid</span>
                                   <span className="text-[1.8rem] sm:text-[2rem] font-bold text-slate-900 tracking-tight">
@@ -1171,14 +1189,16 @@ export function ProfilePageContent() {
                                   </h5>
                                   <div className="border border-slate-200/80 rounded-[1rem] divide-y divide-slate-100 overflow-hidden bg-slate-50/40">
                                     {(order.items || []).map((item, i) => (
-                                      <div key={i} className="p-[1.2rem_1.6rem] flex items-center justify-between text-[1.3rem] sm:text-[1.35rem]">
+                                      <div key={i} className="p-[1.2rem_1.6rem] flex items-center justify-between text-[1.3rem] sm:text-[1.35rem] gap-[1rem] flex-wrap sm:flex-nowrap">
                                         <div className="flex items-center gap-[1.2rem] min-w-0">
                                           <span className="font-semibold text-slate-900 truncate">{item.name}</span>
                                           <span className="text-slate-500 flex-shrink-0 text-[1.2rem]">Qty: {item.quantity}</span>
                                         </div>
-                                        <span className="font-bold text-slate-900 flex-shrink-0 ml-[1rem]">
-                                          {formatPrice(item.subtotal || item.price * item.quantity)}
-                                        </span>
+                                        <div className="flex items-center gap-[1.2rem] flex-shrink-0 ml-auto sm:ml-[1rem]">
+                                          <span className="font-bold text-slate-900">
+                                            {formatPrice(item.subtotal || item.price * item.quantity)}
+                                          </span>
+                                        </div>
                                       </div>
                                     ))}
                                   </div>

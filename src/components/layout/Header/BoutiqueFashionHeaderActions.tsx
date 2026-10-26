@@ -40,6 +40,8 @@ function IconShoppingBag() {
 }
 
 function CountBadge({ count }: { count: number }) {
+  if (count <= 0) return null;
+
   return (
     <span style={{ position: 'absolute', top: '-6px', right: '-8px', minWidth: '18px', height: '18px', padding: '0 4px', borderRadius: '50%', backgroundColor: '#F15B41', color: '#fff', fontSize: '10px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>
       {count}

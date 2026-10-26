@@ -162,49 +162,6 @@ function homeHrefFor(storefront: Storefront): string {
   }
 }
 
-function accountHrefFor(storefront: Storefront): string {
-  switch (storefront) {
-    case 'grocery':
-      return '/grocery/wishlist';
-    case 'pet-food':
-      return '/pet-food/wishlist';
-    case 'nutrition':
-      return '/nutrition/wishlist';
-    case 'megastore':
-      return '/megastore/wishlist';
-    case 'car-accessories':
-      return '/car-accessories/wishlist';
-    case 'pizza':
-      return '/pizza/wishlist';
-    case 'plant-garden':
-      return '/plant-garden/wishlist';
-    case 'skin-care':
-      return '/wishlist';
-    case 'jewellery':
-      return '/wishlist';
-    case 'headphones':
-      return '/headphones/wishlist';
-    case 'sneaker':
-      return '/wishlist';
-    case 'furniture':
-      return '/wishlist';
-    case 'elegant-fashion':
-      return '/wishlist';
-    case 'lipstain':
-      return '/wishlist';
-    case 'smart-watches':
-      return '/wishlist';
-    case 'electronics-store-2':
-      return '/wishlist';
-    case 'single-product':
-      return '/wishlist';
-    case 'footwear':
-      return '/wishlist';
-    default:
-      return '/wishlist';
-  }
-}
-
 function accentFor(storefront: Storefront): string {
   switch (storefront) {
     case 'grocery':
@@ -353,7 +310,7 @@ export function MobileBottomNav() {
   const homeHref = homeHrefFor(storefront);
   const categoriesHref = categoriesHrefFor(storefront);
   const productsHref = productsHrefFor(storefront);
-  const accountHref = accountHrefFor(storefront);
+  const accountHref = '/profile';
 
   const openCart = useCartStore((s) => s.openDrawer);
   const cartItems = useCartStore((s) => s.items);
@@ -407,7 +364,7 @@ export function MobileBottomNav() {
         >
           <span className="mbn-icon-wrap">
             <IconCart />
-            <span className="mbn-badge">{cartCount}</span>
+            {cartCount > 0 && <span className="mbn-badge">{cartCount}</span>}
           </span>
           <span className="mbn-label">Cart</span>
         </button>

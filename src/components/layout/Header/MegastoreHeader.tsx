@@ -66,7 +66,7 @@ function MegastoreMobileIcons() {
         className="gh-mobile-icon-btn gh-mobile-cart-btn"
       >
         <IconShoppingBag />
-        <span className="gh-mobile-badge">{cartCount}</span>
+        {cartCount > 0 && <span className="gh-mobile-badge">{cartCount}</span>}
       </button>
     </div>
   );
