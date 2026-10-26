@@ -9,14 +9,20 @@ import type { Swiper as SwiperType } from 'swiper';
 
 import 'swiper/css';
 
-import { useProducts } from '@/features/products/hooks/useProducts';
-
 function IconArrowLeftS({ size = 22 }: { size?: number }) {
   return (<svg viewBox="0 0 24 24" fill="currentColor" width={size} height={size}><path d="M10.8284 12.0007L15.7782 16.9504L14.364 18.3646L8 12.0007L14.364 5.63672L15.7782 7.05093L10.8284 12.0007Z" /></svg>);
 }
 function IconArrowRightS({ size = 22 }: { size?: number }) {
   return (<svg viewBox="0 0 24 24" fill="currentColor" width={size} height={size}><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z" /></svg>);
 }
+
+/* =========================================================================
+   PREVIOUS 3-CARD HERO IMPLEMENTATION (COMMENTED OUT AS REQUESTED)
+   To restore the 3-card dynamic popular products slider, re-enable this block
+   and restore the activeSlides Swiper markup below.
+   =========================================================================
+
+import { useProducts } from '@/features/products/hooks/useProducts';
 
 const ambientSlidesMeta = [
   {
@@ -40,13 +46,38 @@ const ambientSlidesMeta = [
     tagline: 'Fast moving customer pick',
   },
 ];
+========================================================================= */
+
+// Active slim landscape banner slides
+const wideBannerSlides = [
+  {
+    id: 'banner-luxury-dining',
+    title: 'Top Rated by Customers - Luxury Dining & Home Comfort',
+    image: '/pod/hero-slider/banner-luxury-dining.jpg',
+    href: '/products',
+  },
+  {
+    id: 'banner-festive-party',
+    title: 'Party & Entertainment - Festive Party & Fun Collection',
+    image: '/pod/hero-slider/banner-festive-party.jpg',
+    href: '/products',
+  },
+  {
+    id: 'banner-mega-deals',
+    title: 'Exclusive Promotion - Mega Deals & Weekly Discounts',
+    image: '/pod/hero-slider/banner-mega-deals.jpg',
+    href: '/products',
+  },
+];
 
 export function PodHero() {
   const [swiper, setSwiper] = useState<SwiperType | null>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  /* =========================================================================
+  // PREVIOUS DYNAMIC FETCH (COMMENTED OUT):
   const { data, isLoading } = useProducts({ sort: 'popular', limit: 6 });
-
   const rawProducts = data?.products && data.products.length > 0 ? data.products : null;
-
   const activeSlides = rawProducts
     ? rawProducts
         .slice(0, Math.max(4, Math.min(rawProducts.length, 6)))
@@ -68,325 +99,213 @@ export function PodHero() {
         })
         .filter((s) => Boolean(s.image))
     : [];
+  ========================================================================= */
 
   return (
-    <section className="pdhero-section">
-
+    <section className="pdhero-section pt-[12px] min-[750px]:pt-[20px]">
       <div className="container-main">
-        <div className="pdhero-wrapper">
-          {isLoading || activeSlides.length === 0 ? (
-            <div className="pdhero-skeleton-grid">
-              {[0, 1, 2].map((idx) => (
-                <div key={idx} className="pdhero-skeleton-card">
-                  <div className="pdhero-skeleton-shimmer" />
-                  <div className="pdhero-skeleton-content">
-                    <div className="pdhero-skeleton-line short" />
-                    <div className="pdhero-skeleton-line title" />
-                    <div className="pdhero-skeleton-line btn" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <>
-              <Swiper
-                modules={[Autoplay]}
-                onSwiper={setSwiper}
-                slidesPerView={1}
-                spaceBetween={12}
-                breakpoints={{
-                  750: { slidesPerView: 2, spaceBetween: 12 },
-                  992: { slidesPerView: 3, spaceBetween: 14 },
-                }}
-                loop
-                speed={700}
-                autoplay={{ delay: 5000, disableOnInteraction: false }}
-              >
-            {activeSlides.map((slide, i) => (
+        <div className="pdhero-wrapper group relative">
+          <Swiper
+            modules={[Autoplay]}
+            onSwiper={setSwiper}
+            onSlideChange={(s) => setActiveIndex(s.realIndex)}
+            slidesPerView={1}
+            spaceBetween={0}
+            loop={wideBannerSlides.length > 1}
+            speed={700}
+            autoplay={{ delay: 5000, disableOnInteraction: false, pauseOnMouseEnter: true }}
+            className="pdhero-swiper w-full rounded-[14px] min-[750px]:rounded-[18px] overflow-hidden"
+          >
+            {wideBannerSlides.map((slide, i) => (
               <SwiperSlide key={slide.id}>
-                <div
-                  className="pdhero-slide"
-                  style={{ background: slide.bgGradient }}
-                >
-
-                  <div className="pdhero-stage">
-                    <Link
-                      href={slide.slug && slide.slug !== 'shop' ? `/products/${slide.slug}` : '/shop'}
-                      className="pdhero-stage-link"
-                    >
-                      <Image
-                        src={slide.image}
-                        alt={slide.name}
-                        fill
-                        sizes="(max-width: 749px) 100vw, (max-width: 991px) 50vw, 33vw"
-                        priority={i < 3}
-                        className="pdhero-img object-contain"
-                      />
-                    </Link>
-                  </div>
-
-                  <div className="pdhero-overlay" />
-
-                  <div className="pdhero-content">
-                    <span className="pdhero-tagline">{slide.tagline}</span>
-                    <h2 className="pdhero-title" title={slide.name}>
-                      {slide.name}
-                    </h2>
-                    <Link
-                      href={slide.slug && slide.slug !== 'shop' ? `/products/${slide.slug}` : '/shop'}
-                      className="pdhero-btn"
-                    >
-                      Shop Now
-                    </Link>
-                  </div>
+                <div className="pdhero-slide w-full relative overflow-hidden">
+                  <Link
+                    href={slide.href}
+                    className="block relative w-full h-full"
+                    aria-label={slide.title}
+                  >
+                    <Image
+                      src={slide.image}
+                      alt={slide.title}
+                      fill
+                      sizes="(max-width: 749px) 100vw, 1530px"
+                      priority={i === 0}
+                      className="pdhero-banner-img object-cover object-center"
+                    />
+                  </Link>
                 </div>
               </SwiperSlide>
             ))}
           </Swiper>
 
-              <button onClick={() => swiper?.slidePrev()} aria-label="Previous slide" className="pdhero-nav pdhero-nav-prev">
-                <IconArrowLeftS size={22} />
-              </button>
-              <button onClick={() => swiper?.slideNext()} aria-label="Next slide" className="pdhero-nav pdhero-nav-next">
-                <IconArrowRightS size={22} />
-              </button>
-            </>
-          )}
+          {/* Navigation Arrows — Hidden by default, smoothly appear when mouse hovers over banner */}
+          <button
+            type="button"
+            onClick={() => swiper?.slidePrev()}
+            aria-label="Previous banner"
+            className="pdhero-nav pdhero-nav-prev"
+          >
+            <IconArrowLeftS size={24} />
+          </button>
+          <button
+            type="button"
+            onClick={() => swiper?.slideNext()}
+            aria-label="Next banner"
+            className="pdhero-nav pdhero-nav-next"
+          >
+            <IconArrowRightS size={24} />
+          </button>
+
+          {/* Pagination Dots (Active dot expands into a pill) */}
+          <div className="pdhero-dots">
+            {wideBannerSlides.map((_, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => swiper?.slideToLoop(i)}
+                aria-label={`Go to slide ${i + 1}`}
+                className={`pdhero-dot ${activeIndex === i ? 'active' : ''}`}
+              />
+            ))}
+          </div>
         </div>
       </div>
 
       <style>{`
-        @keyframes pdheroShimmerAnim {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(100%); }
-        }
-        .pdhero-skeleton-grid {
-          display: grid;
-          grid-template-columns: 1fr;
-          gap: 12px;
-          width: 100%;
-        }
-        @media (min-width: 750px) {
-          .pdhero-skeleton-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
-        }
-        @media (min-width: 992px) {
-          .pdhero-skeleton-grid { grid-template-columns: repeat(3, 1fr); gap: 14px; }
-        }
-        .pdhero-skeleton-card {
-          position: relative;
-          width: 100%;
-          height: 680px;
-          min-height: 680px;
-          border-radius: 16px;
-          background: linear-gradient(150deg, #e8ebf0 0%, #dce1e9 50%, #d0d7e3 100%);
-          overflow: hidden;
-        }
-        .pdhero-skeleton-shimmer {
-          position: absolute;
-          inset: 0;
-          background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.45) 50%, transparent 100%);
-          animation: pdheroShimmerAnim 1.8s infinite;
-        }
-        .pdhero-skeleton-content {
-          position: absolute;
-          bottom: 0;
-          left: 0;
-          right: 0;
-          padding: 32px 24px;
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-          z-index: 2;
-        }
-        .pdhero-skeleton-line {
-          background: rgba(255, 255, 255, 0.55);
-          border-radius: 6px;
-        }
-        .pdhero-skeleton-line.short { width: 45%; height: 13px; }
-        .pdhero-skeleton-line.title { width: 85%; height: 26px; border-radius: 8px; }
-        .pdhero-skeleton-line.btn { width: 130px; height: 44px; border-radius: 30px; margin-top: 8px; }
-
         .pdhero-section {
           position: relative;
           width: 100%;
           overflow: hidden;
         }
+
         .pdhero-wrapper {
           position: relative;
           width: 100%;
         }
+
+        /* Standard Daraz-style banner height matching your highlighted size */
         .pdhero-slide {
           position: relative;
           width: 100%;
-          height: 680px !important;
-          min-height: 680px !important;
-          border-radius: 16px;
+          height: 344px;
+          background-color: #0b1a38;
           overflow: hidden;
-          display: flex;
-          flex-direction: column;
-          transition: transform 500ms ease;
         }
 
-        
-        .pdhero-badge-wrap {
-          position: absolute;
-          top: 22px;
-          left: 22px;
-          z-index: 5;
-        }
-        .pdhero-badge {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          background: rgba(255, 255, 255, 0.94);
-          backdrop-filter: blur(8px);
-          color: #111;
-          font-size: 11px;
-          font-weight: 700;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
-          padding: 6px 14px;
-          border-radius: 999px;
-          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
-          border: 1px solid rgba(255, 255, 255, 0.85);
+        @media (min-width: 1200px) {
+          .pdhero-slide {
+            height: 344px;
+          }
         }
 
-        
-        .pdhero-stage {
-          position: absolute;
-          inset: 0;
-          padding: 34px 24px 190px;
-          z-index: 2;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        .pdhero-stage-link {
-          position: relative !important;
-          display: block !important;
-          width: 100% !important;
-          height: 100% !important;
-        }
-        .pdhero-img {
-          transition: transform 650ms cubic-bezier(0.16, 1, 0.3, 1), filter 400ms ease !important;
-          filter: drop-shadow(0 18px 28px rgba(0, 0, 0, 0.12));
-        }
-        .pdhero-slide:hover .pdhero-img {
-          transform: scale(1.06) translateY(-4px);
+        @media (min-width: 750px) and (max-width: 1199px) {
+          .pdhero-slide {
+            height: clamp(240px, 28vw, 320px);
+          }
         }
 
-        
-        .pdhero-overlay {
-          position: absolute;
-          inset: 0;
-          background: linear-gradient(to bottom, rgba(11, 26, 56, 0) 54%, rgba(11, 26, 56, 0.45) 76%, rgba(11, 26, 56, 0.88) 100%);
-          z-index: 3;
-          pointer-events: none;
-        }
 
-        .pdhero-content {
-          position: absolute;
-          left: 0;
-          right: 0;
-          bottom: clamp(24px, 3.8vw, 36px);
-          z-index: 4;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 6px;
-          padding: 0 20px;
-          text-align: center;
-        }
-        .pdhero-tagline {
-          font-size: 11px;
-          font-weight: 700;
-          text-transform: uppercase;
-          letter-spacing: 0.12em;
-          color: rgba(255, 255, 255, 0.9);
-          text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
-        }
-        .pdhero-title {
-          color: #fff;
-          font-size: clamp(18px, 2vw, 24px);
-          font-weight: 700;
-          line-height: 1.25;
-          text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
-          max-width: 90%;
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
-          margin: 0;
-        }
-        .pdhero-price {
-          color: #fff;
-          font-size: 14px;
-          font-weight: 600;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          margin-bottom: 2px;
-          text-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
-        }
-        .pdhero-price-sale {
-          color: #ffd27a;
-          font-weight: 700;
-        }
-        .pdhero-price-orig {
-          text-decoration: line-through;
-          opacity: 0.7;
-          font-size: 12px;
-        }
-        .pdhero-btn {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          background-color: #fff;
-          color: #111;
-          font-size: 13.5px;
-          font-weight: 600;
-          padding: 10px 32px;
-          border-radius: 4px;
-          text-decoration: none;
-          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
-          transition: background-color 250ms ease, color 250ms ease, transform 250ms ease, box-shadow 250ms ease;
-        }
-        .pdhero-btn:hover {
-          background-color: #111;
-          color: #fff;
-          transform: translateY(-2px);
-          box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
-        }
-
+        /* Navigation Arrows: Hidden by default, revealed on mouse hover */
         .pdhero-nav {
           position: absolute;
           top: 50%;
-          transform: translateY(-50%);
-          z-index: 10;
-          width: 46px;
-          height: 46px;
+          z-index: 20;
+          width: 44px;
+          height: 44px;
           border-radius: 50%;
-          border: none;
-          background-color: #fff;
-          color: #222;
+          border: 1px solid rgba(255, 255, 255, 0.4);
+          background-color: rgba(255, 255, 255, 0.92);
+          color: #111;
           cursor: pointer;
           display: flex;
           align-items: center;
           justify-content: center;
-          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
-          transition: background-color 250ms ease, color 250ms ease, transform 250ms ease;
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+          opacity: 0;
+          pointer-events: none;
+          transition: opacity 300ms ease, transform 300ms ease, background-color 200ms ease, color 200ms ease;
         }
-        .pdhero-nav-prev { left: 16px; }
-        .pdhero-nav-next { right: 16px; }
-        .pdhero-nav:hover { background-color: #111; color: #fff; transform: translateY(-50%) scale(1.05); }
 
+        .pdhero-nav-prev {
+          left: 18px;
+          transform: translateY(-50%) translateX(-8px);
+        }
+
+        .pdhero-nav-next {
+          right: 18px;
+          transform: translateY(-50%) translateX(8px);
+        }
+
+        /* Reveal arrows on mouse hover */
+        .pdhero-wrapper:hover .pdhero-nav {
+          opacity: 1;
+          pointer-events: auto;
+          transform: translateY(-50%) translateX(0);
+        }
+
+        .pdhero-nav:hover {
+          background-color: #111;
+          color: #fff;
+          border-color: #111;
+          transform: translateY(-50%) scale(1.08) !important;
+        }
+
+        /* Pagination Dots */
+        .pdhero-dots {
+          position: absolute;
+          bottom: clamp(12px, 2.5vw, 22px);
+          left: 50%;
+          transform: translateX(-50%);
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          z-index: 20;
+          pointer-events: auto;
+        }
+
+        .pdhero-dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 999px;
+          background-color: rgba(255, 255, 255, 0.45);
+          border: none;
+          cursor: pointer;
+          transition: all 300ms cubic-bezier(0.16, 1, 0.3, 1);
+          padding: 0;
+          box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .pdhero-dot:hover {
+          background-color: rgba(255, 255, 255, 0.85);
+        }
+
+        .pdhero-dot.active {
+          width: 26px;
+          background-color: #ffffff;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+        }
+
+        /* Mobile Responsive — Exact 1024 / 287 aspect-ratio prevents cropping */
         @media (max-width: 749px) {
-          .pdhero-slide { height: 490px !important; min-height: 490px !important; }
-          .pdhero-stage { padding: 36px 16px 180px; }
-          .pdhero-nav { width: 28px; height: 28px; }
-          .pdhero-nav svg { width: 15px; height: 15px; }
-          .pdhero-nav-prev { left: 6px; }
-          .pdhero-nav-next { right: 6px; }
+          .pdhero-slide {
+            height: auto !important;
+            aspect-ratio: 1024 / 287 !important;
+            border-radius: 10px;
+          }
+          .pdhero-nav {
+            display: none !important;
+          }
+          .pdhero-dots {
+            bottom: 6px;
+            gap: 5px;
+          }
+          .pdhero-dot {
+            width: 5px;
+            height: 5px;
+          }
+          .pdhero-dot.active {
+            width: 16px;
+          }
         }
       `}</style>
     </section>

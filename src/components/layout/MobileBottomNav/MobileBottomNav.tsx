@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useCartStore } from '@/store/cartStore';
-import { useUIStore } from '@/store/uiStore';
 import {
   getStorefrontFromPath,
   isGrocerySlug,
@@ -26,7 +25,6 @@ import {
   isActiveWearSlug,
   isBackpackSlug,
   isBasketballSlug,
-  shopHrefFor,
   type Storefront,
 } from '@/utils/storefront';
 
@@ -40,10 +38,24 @@ function IconHome({ size = 22 }: { size?: number }) {
   );
 }
 
-function IconSearch({ size = 22 }: { size?: number }) {
+function IconCategory({ size = 22 }: { size?: number }) {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width={size} height={size}>
-      <path d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z" />
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      width={size}
+      height={size}
+    >
+      <circle cx="15" cy="9.5" r="5" />
+      <line x1="18.6" y1="13.1" x2="21.5" y2="16" />
+      <line x1="2.5" y1="7" x2="8" y2="7" />
+      <line x1="2.5" y1="12" x2="7" y2="12" />
+      <line x1="2.5" y1="17" x2="11" y2="17" />
     </svg>
   );
 }
@@ -294,6 +306,41 @@ function cartCountForStorefront(
   return relevant.reduce((sum, i) => sum + i.quantity, 0);
 }
 
+/* ── Helpers for Category & Products ── */
+
+function categoriesHrefFor(storefront: Storefront): string {
+  switch (storefront) {
+    case 'grocery': return '/grocery/categories';
+    case 'pet-food': return '/pet-food/categories';
+    case 'nutrition': return '/nutrition/categories';
+    case 'megastore': return '/megastore/categories';
+    case 'car-accessories': return '/car-accessories/categories';
+    case 'pizza': return '/pizza/categories';
+    case 'plant-garden': return '/plant-garden/categories';
+    case 'boutique-fashion': return '/boutique-fashion/categories';
+    case 'phone-case': return '/phone-case/categories';
+    case 'smart-watches': return '/smart-watches/categories';
+    default: return '/categories';
+  }
+}
+
+function productsHrefFor(storefront: Storefront): string {
+  switch (storefront) {
+    case 'grocery': return '/grocery/shop';
+    case 'pet-food': return '/pet-food/shop';
+    case 'nutrition': return '/nutrition/shop';
+    case 'megastore': return '/megastore/shop';
+    case 'car-accessories': return '/car-accessories/shop';
+    case 'pizza': return '/pizza/shop';
+    case 'plant-garden': return '/plant-garden/shop';
+    case 'headphones': return '/headphones/shop';
+    case 'boutique-fashion': return '/boutique-fashion/shop';
+    case 'phone-case': return '/phone-case/shop';
+    case 'smart-watches': return '/smart-watches/shop';
+    default: return '/products';
+  }
+}
+
 /* ── Component ── */
 
 export function MobileBottomNav() {
@@ -304,37 +351,54 @@ export function MobileBottomNav() {
   const storefront = getStorefrontFromPath(pathname);
   const accent = accentFor(storefront);
   const homeHref = homeHrefFor(storefront);
-  const shopHref = shopHrefFor(storefront);
+  const categoriesHref = categoriesHrefFor(storefront);
+  const productsHref = productsHrefFor(storefront);
   const accountHref = accountHrefFor(storefront);
 
   const openCart = useCartStore((s) => s.openDrawer);
   const cartItems = useCartStore((s) => s.items);
-  const openSearch = useUIStore((s) => s.openSearch);
   const cartCount = cartCountForStorefront(cartItems, storefront);
+
+  const isHomeActive = pathname === homeHref || (storefront === 'fashion' && pathname === '/');
+  const isCategoryActive = pathname === categoriesHref || pathname.includes('/categories') || pathname.includes('/collections');
+  const isProductsActive = pathname === productsHref || pathname === '/products' || pathname.startsWith('/products/');
+  const isAccountActive = pathname === accountHref;
 
   return (
     <nav className="mbn-bar" aria-label="Primary mobile navigation">
       <div className="container-main mbn-inner">
-        <Link href={homeHref} className="mbn-item" aria-label="Home">
-          <IconHome />
-          <span className="mbn-label">Home</span>
-        </Link>
-
-        <button
-          type="button"
-          className="mbn-item"
-          onClick={openSearch}
-          aria-label="Open search"
+        {/* 1. Category */}
+        <Link
+          href={categoriesHref}
+          className={`mbn-item ${isCategoryActive ? 'is-active' : ''}`}
+          aria-label="Category"
         >
-          <IconSearch />
-          <span className="mbn-label">Search</span>
-        </button>
-
-        <Link href={shopHref} className="mbn-item" aria-label="Shop">
-          <IconShop />
-          <span className="mbn-label">Shop</span>
+          <IconCategory />
+          <span className="mbn-label">Category</span>
         </Link>
 
+        {/* 2. Products */}
+        <Link
+          href={productsHref}
+          className={`mbn-item ${isProductsActive ? 'is-active' : ''}`}
+          aria-label="Products"
+        >
+          <IconShop />
+          <span className="mbn-label">Products</span>
+        </Link>
+
+        {/* 3. Home (Center Floating Button - no text) */}
+        <Link
+          href={homeHref}
+          className={`mbn-center-item ${isHomeActive ? 'is-active' : ''}`}
+          aria-label="Home"
+        >
+          <span className="mbn-center-circle">
+            <IconHome size={24} />
+          </span>
+        </Link>
+
+        {/* 4. Cart */}
         <button
           type="button"
           className="mbn-item"
@@ -345,12 +409,17 @@ export function MobileBottomNav() {
             <IconCart />
             <span className="mbn-badge">{cartCount}</span>
           </span>
-          <span className="mbn-label">cart</span>
+          <span className="mbn-label">Cart</span>
         </button>
 
-        <Link href={accountHref} className="mbn-item" aria-label="Account">
+        {/* 5. Account */}
+        <Link
+          href={accountHref}
+          className={`mbn-item ${isAccountActive ? 'is-active' : ''}`}
+          aria-label="Account"
+        >
           <IconAccount />
-          <span className="mbn-label">account</span>
+          <span className="mbn-label">Account</span>
         </Link>
       </div>
 
@@ -363,60 +432,128 @@ export function MobileBottomNav() {
           margin: 0 auto;
           width: 100%;
           max-width: var(--container-max);
-          height: 70px;
+          height: 66px;
           display: none;
-          background: #fff;
+          background: #ffffff;
           border-top: 1px solid #e4e6ea;
-          box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.04);
+          box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.05);
           z-index: 150;
-          overflow: hidden;
+          overflow: visible;
         }
-        :global(.mbn-inner) {
+
+        :global(.mbn-bar .mbn-inner) {
           height: 100%;
           display: flex;
           align-items: center;
           justify-content: space-between;
+          position: relative;
+          padding-left: 2px !important;
+          padding-right: 2px !important;
+          max-width: 100%;
+          box-sizing: border-box;
         }
-        .mbn-item {
-          flex: 1 1 0;
+
+        :global(.mbn-bar .mbn-item) {
+          flex: 1 1 0%;
+          width: 20%;
           min-width: 0;
           height: 100%;
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          gap: 6px;
+          gap: 4px;
           background: transparent;
           border: none;
           cursor: pointer;
           text-decoration: none;
-          color: ${accent};
-          padding: 0 2px;
-          transition: opacity 180ms ease, transform 180ms ease;
+          color: #64748b;
+          padding: 0 1px;
+          box-sizing: border-box;
+          transition: color 180ms ease, transform 180ms ease;
         }
-        .mbn-item:active { transform: translateY(1px); }
-        .mbn-label {
-          font-size: 13px;
+
+        :global(.mbn-bar .mbn-item:active) {
+          transform: translateY(1px);
+        }
+
+        :global(.mbn-bar .mbn-item.is-active) {
+          color: ${accent === '#222' ? '#0f172a' : accent};
+        }
+
+        :global(.mbn-bar .mbn-label) {
+          font-size: 11px;
           font-weight: 500;
           color: inherit;
-          line-height: 1;
+          line-height: 1.1;
           display: block;
           max-width: 100%;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
+          text-align: center;
         }
-        .mbn-icon-wrap {
+
+        :global(.mbn-bar .mbn-item.is-active .mbn-label) {
+          font-weight: 600;
+          color: ${accent === '#222' ? '#0f172a' : accent};
+        }
+
+        :global(.mbn-bar .mbn-icon-wrap) {
           position: relative;
           display: inline-flex;
           align-items: center;
           justify-content: center;
         }
-        .mbn-item :global(svg) {
+
+        :global(.mbn-bar .mbn-item svg) {
           display: block;
           flex-shrink: 0;
         }
-        .mbn-badge {
+
+        :global(.mbn-bar .mbn-center-item) {
+          flex: 1 1 0%;
+          width: 20%;
+          min-width: 0;
+          height: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          text-decoration: none;
+          position: relative;
+          cursor: pointer;
+          box-sizing: border-box;
+        }
+
+        :global(.mbn-bar .mbn-center-circle) {
+          position: absolute;
+          top: -18px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 56px;
+          height: 56px;
+          border-radius: 9999px;
+          background: ${accent === '#222' ? '#0f172a' : accent};
+          color: #ffffff;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: 4px solid #ffffff;
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18), 0 2px 4px rgba(0, 0, 0, 0.08);
+          transition: transform 180ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 180ms ease;
+          box-sizing: border-box;
+        }
+
+        :global(.mbn-bar .mbn-center-item:active .mbn-center-circle) {
+          transform: translateX(-50%) translateY(2px) scale(0.94);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.14);
+        }
+
+        :global(.mbn-bar .mbn-center-item.is-active .mbn-center-circle) {
+          box-shadow: 0 0 0 3px ${accent === '#222' ? 'rgba(15, 23, 42, 0.2)' : `${accent}40`}, 0 6px 20px rgba(0, 0, 0, 0.22);
+        }
+
+        :global(.mbn-bar .mbn-badge) {
           position: absolute;
           top: -6px;
           right: -10px;
@@ -424,7 +561,7 @@ export function MobileBottomNav() {
           height: 18px;
           padding: 0 5px;
           border-radius: 9999px;
-          background: ${accent};
+          background: ${accent === '#222' ? '#0f172a' : accent};
           color: #fff;
           font-size: 10px;
           font-weight: 700;
@@ -433,6 +570,7 @@ export function MobileBottomNav() {
           justify-content: center;
           line-height: 1;
           border: 2px solid #fff;
+          box-sizing: border-box;
         }
 
         /* Shown only at ≤ 749px */

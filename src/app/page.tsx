@@ -23,7 +23,7 @@ export const metadata: Metadata = {
 
 export default function HomePage() {
   return (
-    <div className="pod-home-sections">
+    <div className="pod-home-sections pt-[14px] max-[749px]:!pt-[8px]">
       <PodHero />
       <PodTopCategories />
       <PodFeaturedProducts />
@@ -36,14 +36,15 @@ export default function HomePage() {
 
       <style>{`
         .pod-home-sections {
+          padding-top: 14px !important;
           padding-bottom: 8px !important;
         }
         .pod-home-sections > * + * {
-          margin-top: 80px;
+          margin-top: 36px;
         }
         @media (max-width: 749px) {
-          .pod-home-sections { padding-bottom: 0px !important; }
-          .pod-home-sections > * + * { margin-top: 48px; }
+          .pod-home-sections { padding-top: 8px !important; padding-bottom: 0px !important; }
+          .pod-home-sections > * + * { margin-top: 20px; }
         }
       `}</style>
     </div>

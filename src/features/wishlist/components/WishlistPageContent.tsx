@@ -272,10 +272,28 @@ function WishlistCard({ item, index, onRemove, onQuickAdd, onQuickView, onCompar
         >
           {item.name}
         </Link>
-        <div className="mt-[6px] flex items-center justify-center gap-[8px]">
-          {item.compareAtPrice && <span className="text-[14px] text-[#999] line-through">{formatPrice(item.compareAtPrice)}</span>}
-          <span className={`text-[15px] font-semibold ${item.compareAtPrice ? 'text-[#F15B41]' : 'text-[#222]'}`}>{formatPrice(item.price)}</span>
-        </div>
+        {(() => {
+          const wlDiscount = item.compareAtPrice && item.compareAtPrice > item.price
+            ? Math.round(((item.compareAtPrice - item.price) / item.compareAtPrice) * 100)
+            : 0;
+          return (
+            <div className="mt-[6px] flex items-baseline justify-center gap-[6px] flex-wrap">
+              <span className="product-price-text text-[15px] font-bold text-[#222]">
+                {formatPrice(item.price)}
+              </span>
+              {wlDiscount > 0 && (
+                <span className="text-[#F15B41] bg-[#fff0ed] text-[11px] font-bold px-[4px] py-[1px] rounded-[3px] leading-none">
+                  -{wlDiscount}%
+                </span>
+              )}
+              {item.compareAtPrice && (
+                <span className="text-[13px] text-[#999] line-through font-normal">
+                  {formatPrice(item.compareAtPrice)}
+                </span>
+              )}
+            </div>
+          );
+        })()}
         {item.colors.length > 0 && (
           <div className="mt-[8px] flex items-center justify-center gap-[6px]">
             {item.colors.slice(0, 3).map((c) => (

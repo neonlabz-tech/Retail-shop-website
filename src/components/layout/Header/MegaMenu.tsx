@@ -236,16 +236,28 @@ function ProductSlider({ products: overrideProducts, hrefBase = '/products', t, 
               >
                 {product.name}
               </p>
-              <div className="flex items-center gap-[6px]">
-                {product.compareAtPrice && product.compareAtPrice > product.price && (
-                  <span className="text-[13px] line-through" style={{ color: t.sliderOldPriceColor }}>
-                    {formatPrice(product.compareAtPrice)}
-                  </span>
-                )}
-                <span className="text-[14px] font-bold text-[#F15B41]">
-                  {formatPrice(product.price)}
-                </span>
-              </div>
+              {(() => {
+                const mmDiscount = product.compareAtPrice && product.compareAtPrice > product.price
+                  ? Math.round(((product.compareAtPrice - product.price) / product.compareAtPrice) * 100)
+                  : 0;
+                return (
+                  <div className="flex items-baseline gap-[6px] flex-wrap">
+                    <span className="text-[14px] font-bold text-[#F15B41]">
+                      {formatPrice(product.price)}
+                    </span>
+                    {mmDiscount > 0 && (
+                      <span className="text-[#F15B41] bg-[#fff0ed] text-[10px] font-bold px-[4px] py-[1px] rounded-[3px] leading-none">
+                        -{mmDiscount}%
+                      </span>
+                    )}
+                    {product.compareAtPrice && product.compareAtPrice > product.price && (
+                      <span className="text-[12px] line-through font-normal" style={{ color: t.sliderOldPriceColor }}>
+                        {formatPrice(product.compareAtPrice)}
+                      </span>
+                    )}
+                  </div>
+                );
+              })()}
             </Link>
           );
         })}

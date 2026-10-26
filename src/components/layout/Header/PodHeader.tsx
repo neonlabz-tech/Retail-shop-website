@@ -6,8 +6,8 @@ import { DesktopNav } from './DesktopNav';
 import { HeaderActions } from './HeaderActions';
 import { MobileNav } from './MobileNav';
 import { HeaderCategoriesButton } from './HeaderCategoriesButton';
-import { HeaderLanguageCurrency } from './HeaderLanguageCurrency';
 import { useUIStore } from '@/store/uiStore';
+import { useSmartHeader } from '@/hooks/useSmartHeader';
 
 function IconMenu() {
   return (
@@ -19,10 +19,10 @@ function IconMenu() {
 
 export function PodHeader() {
   const { openMobileMenu } = useUIStore();
+  const { isVisible, isScrolled } = useSmartHeader();
 
   return (
     <>
-
       <header
         className="pd-main-header"
         style={{
@@ -32,6 +32,10 @@ export function PodHeader() {
           backgroundColor: '#fff',
           height: '90px',
           overflow: 'visible',
+          transform: isVisible ? 'translateY(0)' : 'translateY(-100%)',
+          transition: 'transform 300ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 300ms ease',
+          boxShadow: isScrolled ? '0 2px 12px rgba(0, 0, 0, 0.06)' : 'none',
+          willChange: 'transform',
         }}
       >
         <div
@@ -80,9 +84,6 @@ export function PodHeader() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '22px', justifySelf: 'end' }}>
-            <div className="pd-header-lang-desktop">
-              <HeaderLanguageCurrency />
-            </div>
             <HeaderActions />
           </div>
         </div>
@@ -93,10 +94,6 @@ export function PodHeader() {
       <style>{`
         .pd-main-header {
           border-bottom: 1px solid #e5e5e5;
-        }
-        .pd-header-lang-desktop {
-          display: flex;
-          align-items: center;
         }
         @media (min-width: 992px) {
           .pd-main-header {
@@ -111,9 +108,6 @@ export function PodHeader() {
           display: none;
         }
         @media (max-width: 991px) {
-          .pd-header-lang-desktop {
-            display: none !important;
-          }
           .pd-header-categories-desktop {
             display: none !important;
           }

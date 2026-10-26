@@ -18,9 +18,9 @@ export function HeaderLanguageCurrency({ textColor = '#222' }: { textColor?: str
         </span>
       </div>
 
-      <span className="text-[#d0d4dc]">|</span>
 
-      <span className="font-medium">English</span>
+
+
     </div>
   );
 }

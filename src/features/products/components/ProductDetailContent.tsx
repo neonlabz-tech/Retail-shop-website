@@ -31,11 +31,19 @@ function IconBag({ size = 18 }: { size?: number }) {
 function IconChevronDown({ size = 14 }: { size?: number }) {
   return (<svg viewBox="0 0 24 24" fill="currentColor" width={size} height={size}><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z" /></svg>);
 }
-function IconArrowLeft({ size = 16 }: { size?: number }) {
-  return (<svg viewBox="0 0 24 24" fill="currentColor" width={size} height={size}><path d="M10.8284 12.0007L15.7782 16.9504L14.364 18.3646L8 12.0007L14.364 5.63672L15.7782 7.05093L10.8284 12.0007Z" /></svg>);
+function IconArrowLeft({ size = 20 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" width={size} height={size}>
+      <polyline points="15 18 9 12 15 6" />
+    </svg>
+  );
 }
-function IconArrowRight({ size = 16 }: { size?: number }) {
-  return (<svg viewBox="0 0 24 24" fill="currentColor" width={size} height={size}><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z" /></svg>);
+function IconArrowRight({ size = 20 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" width={size} height={size}>
+      <polyline points="9 18 15 12 9 6" />
+    </svg>
+  );
 }
 
 function ProductGallery({ images, onActiveChange }: { images: { id: string; src: string; alt: string }[]; onActiveChange?: (index: number) => void }) {
@@ -180,6 +188,7 @@ function ProductGallery({ images, onActiveChange }: { images: { id: string; src:
                 prevEl: '.pdp-swiper-prev',
                 nextEl: '.pdp-swiper-next',
               }}
+              rewind={true}
               onSwiper={(swiper) => { swiperRef.current = swiper; }}
               onSlideChange={(swiper) => { setActiveIndex(swiper.activeIndex); onActiveChange?.(swiper.activeIndex); }}
               className="pdp-gallery-swiper w-full h-full"
@@ -199,11 +208,11 @@ function ProductGallery({ images, onActiveChange }: { images: { id: string; src:
 
           <button className="pdp-swiper-prev pdp-swiper-arrow" aria-label="Previous image"
             onMouseEnter={() => setZooming(false)} onMouseLeave={() => setZooming(true)}>
-            <IconArrowLeft size={16} />
+            <IconArrowLeft size={20} />
           </button>
           <button className="pdp-swiper-next pdp-swiper-arrow" aria-label="Next image"
             onMouseEnter={() => setZooming(false)} onMouseLeave={() => setZooming(true)}>
-            <IconArrowRight size={16} />
+            <IconArrowRight size={20} />
           </button>
 
           {zooming && (
@@ -424,10 +433,26 @@ function PairsWellWith({ products, productHrefBase = '/products' }: { products: 
                     <Link href={`${productHrefBase}/${p.slug}`} className="text-[15px] font-semibold text-[#222] no-underline block mb-[4px]">
                       {p.name}
                     </Link>
-                    <div className="flex items-center gap-[8px]">
-                      {p.compareAtPrice && <span className="text-[13px] text-[#999] line-through">{formatPrice(p.compareAtPrice)}</span>}
-                      <span className="text-[14px] font-medium text-[#222]">{formatPrice(p.price)}</span>
-                    </div>
+                    {(() => {
+                      const pDiscount = p.compareAtPrice && p.compareAtPrice > p.price
+                        ? Math.round(((p.compareAtPrice - p.price) / p.compareAtPrice) * 100)
+                        : 0;
+                      return (
+                        <div className="flex items-baseline gap-[6px] flex-wrap">
+                          <span className="text-[14px] font-bold text-[#222]">{formatPrice(p.price)}</span>
+                          {pDiscount > 0 && (
+                            <span className="text-[#F15B41] bg-[#fff0ed] text-[11px] font-bold px-[4px] py-[1px] rounded-[3px] leading-none">
+                              -{pDiscount}%
+                            </span>
+                          )}
+                          {p.compareAtPrice && (
+                            <span className="text-[12px] text-[#999] line-through font-normal">
+                              {formatPrice(p.compareAtPrice)}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                   <button
                     onClick={() => openQuickView(p)}
@@ -507,12 +532,14 @@ export function ProductDetailContent({
 
   const product = data?.product;
   const [recentlyViewed, setRecentlyViewed] = useState<Product[]>([]);
+  const [recentlySwiper, setRecentlySwiper] = useState<SwiperType | null>(null);
   const [reviewsList, setReviewsList] = useState<any[]>([]);
   const [reviewCount, setReviewCount] = useState(0);
   const [avgRating, setAvgRating] = useState(5);
   const [starCounts, setStarCounts] = useState<Record<number, number>>({ 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 });
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [likedReviewIds, setLikedReviewIds] = useState<Record<string, boolean>>({});
+  const [isBreadcrumbExpanded, setIsBreadcrumbExpanded] = useState(false);
 
   const handleLikeReview = async (reviewId: string) => {
     if (likedReviewIds[reviewId]) return;
@@ -571,12 +598,12 @@ export function ProductDetailContent({
         }).catch(() => {});
       }
 
-      fetch('/api/recommendations/recently-viewed?limit=5')
+      fetch('/api/recommendations/recently-viewed?limit=12', { cache: 'no-store' })
         .then((r) => r.json())
         .then((res) => {
           if (res.success && Array.isArray(res.products)) {
             const others = res.products.filter((p: Product) => p.id !== product.id);
-            setRecentlyViewed(others.slice(0, 4));
+            setRecentlyViewed(others);
           }
         })
         .catch(() => {});
@@ -705,47 +732,106 @@ export function ProductDetailContent({
     router.push('/checkout');
   };
 
+  const handleWhatsAppInquiry = () => {
+    if (!product) return;
+    const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
+    const messageLines = [
+      `Hello RKF!`,
+      `I am interested in this product and would like to ask a few questions:`,
+      ``,
+      `Product: ${product.name}`,
+      `Price: ${formatPrice(product.price)}`,
+      product.sku ? `SKU: ${product.sku}` : null,
+      activeColor ? `Color: ${activeColor}` : null,
+      activeSize ? `Size: ${activeSize}` : null,
+      currentUrl ? `Link: ${currentUrl}` : null,
+      ``,
+      `Could you please help me with more details?`,
+    ].filter(Boolean).join('\n');
 
+    window.open(`https://wa.me/94707992740?text=${encodeURIComponent(messageLines)}`, '_blank', 'noopener,noreferrer');
+  };
 
   const SHOW_EXTRA_SECTIONS = false;
 
   return (
     <>
       <div className="container-main py-[16px]">
-        <nav aria-label="Breadcrumb" className="flex items-center gap-[8px] text-[14px] min-w-0 max-w-full flex-wrap">
+        <nav aria-label="Breadcrumb" className="flex items-center gap-[6px] min-[750px]:gap-[8px] text-[13px] min-[750px]:text-[14px] min-w-0 max-w-full flex-nowrap whitespace-nowrap overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <Link href="/" className="text-[#666] hover:text-[#222] underline underline-offset-[3px] shrink-0 transition-colors">
             Home
           </Link>
-          <span className="text-[#bbb] text-[11px] shrink-0">›</span>
-          <Link href="/products" className="text-[#666] hover:text-[#222] underline underline-offset-[3px] shrink-0 transition-colors">
-            Products
-          </Link>
-          {product.category && (
-            <>
-              <span className="text-[#bbb] text-[11px] shrink-0">›</span>
-              <Link
-                href={`/products?category=${encodeURIComponent(product.category)}`}
-                className="text-[#666] hover:text-[#222] underline underline-offset-[3px] shrink-0 transition-colors"
+          <span className="text-[#bbb] text-[11px] shrink-0 select-none">›</span>
+
+          {/* Middle collapsed dots on mobile: shown when category exists and path is not expanded */}
+          {product.category && !isBreadcrumbExpanded && (
+            <span className="inline-flex min-[750px]:hidden items-center gap-[6px] shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsBreadcrumbExpanded(true)}
+                aria-label="Show full path"
+                className="text-[#777] hover:text-[#222] px-[5px] py-0 rounded bg-[#f0f2f5] hover:bg-[#e4e6ea] text-[12px] font-bold tracking-widest transition-colors cursor-pointer"
               >
-                {product.category}
-              </Link>
-            </>
+                ...
+              </button>
+              <span className="text-[#bbb] text-[11px] shrink-0 select-none">›</span>
+            </span>
           )}
+
+          {/* Products link: Always visible on desktop; on mobile hidden behind "..." unless expanded */}
+          <span className={`${product.category && !isBreadcrumbExpanded ? 'hidden min-[750px]:inline-flex' : 'inline-flex'} items-center gap-[6px] min-[750px]:gap-[8px] shrink-0`}>
+            <Link href="/products" className="text-[#666] hover:text-[#222] underline underline-offset-[3px] shrink-0 transition-colors">
+              Products
+            </Link>
+            <span className="text-[#bbb] text-[11px] shrink-0 select-none">›</span>
+          </span>
+
+          {/* Category link:
+              - If subcategory exists: this main category is in the middle, so hidden on mobile unless expanded; always visible on desktop.
+              - If NO subcategory: this is the direct category, so visible on both mobile and desktop! */}
+          {product.category && (
+            product.subcategory && product.subcategory !== product.category ? (
+              <span className={`${!isBreadcrumbExpanded ? 'hidden min-[750px]:inline-flex' : 'inline-flex'} items-center gap-[6px] min-[750px]:gap-[8px] shrink-0`}>
+                <Link
+                  href={`/products?category=${encodeURIComponent(product.category)}`}
+                  className="text-[#666] hover:text-[#222] underline underline-offset-[3px] shrink-0 transition-colors"
+                >
+                  {product.category}
+                </Link>
+                <span className="text-[#bbb] text-[11px] shrink-0 select-none">›</span>
+              </span>
+            ) : (
+              <>
+                <Link
+                  href={`/products?category=${encodeURIComponent(product.category)}`}
+                  className="text-[#666] hover:text-[#222] underline underline-offset-[3px] shrink-0 transition-colors"
+                >
+                  {product.category}
+                </Link>
+                <span className="text-[#bbb] text-[11px] shrink-0 select-none">›</span>
+              </>
+            )
+          )}
+
+          {/* Subcategory link (If present: always visible on both mobile and desktop) */}
           {product.subcategory && product.subcategory !== product.category && (
             <>
-              <span className="text-[#bbb] text-[11px] shrink-0">›</span>
               <Link
                 href={`/products?category=${encodeURIComponent(product.category)}&subcategory=${encodeURIComponent(product.subcategory)}`}
                 className="text-[#666] hover:text-[#222] underline underline-offset-[3px] shrink-0 transition-colors"
               >
                 {product.subcategory}
               </Link>
+              <span className="text-[#bbb] text-[11px] shrink-0 select-none">›</span>
             </>
           )}
-          <span className="text-[#bbb] text-[11px] shrink-0">›</span>
+
+          {/* Product Name:
+              - Mobile: Truncated with ellipsis dots (max-w-[130px] ... min-[750px]:max-w-none)
+              - Desktop/PC: Unconstrained full title */}
           <span
             title={product.name}
-            className="text-[#222] font-medium whitespace-nowrap overflow-hidden text-ellipsis max-w-[clamp(180px,45vw,450px)] inline-block"
+            className="text-[#222] font-medium whitespace-nowrap overflow-hidden text-ellipsis inline-block shrink min-w-0 max-w-[130px] min-[380px]:max-w-[170px] min-[500px]:max-w-[240px] min-[750px]:max-w-none"
           >
             {product.name}
           </span>
@@ -772,11 +858,20 @@ export function ProductDetailContent({
                 <span className="pdp-info-review-count text-[14px] text-[#888]">{reviewCount} {reviewCount === 1 ? 'Review' : 'Reviews'}</span>
               </div>
 
-              <div className="pdp-info-price-row flex items-center gap-[12px] mb-[20px]">
-                {product.compareAtPrice && <span className="pdp-info-compare-at text-[18px] text-[#999] line-through">{formatPrice(product.compareAtPrice)}</span>}
-                <span className="pdp-info-price product-price-text text-[24px] font-bold text-[#222]">{formatPrice(product.price)}</span>
-                {product.badge === 'sale' && <span className="bg-[#F15B41] text-[#fff] text-[12px] font-semibold py-[4px] px-[10px] rounded-[3px]">Sale</span>}
-                {discount > 0 && <span className="bg-[#222] text-[#fff] text-[12px] font-semibold py-[4px] px-[10px] rounded-[3px]">-{discount}%</span>}
+              <div className="pdp-info-price-row flex items-baseline gap-[10px] mb-[20px] flex-wrap">
+                <span className="pdp-info-price product-price-text text-[28px] font-bold text-[#e01117] leading-tight" style={{ color: "#e01117" }}>
+                  {formatPrice(product.price)}
+                </span>
+                {discount > 0 && (
+                  <span className="text-[#F15B41] text-[15px] font-bold tracking-tight">
+                    {discount}% off
+                  </span>
+                )}
+                {product.compareAtPrice && (
+                  <span className="pdp-info-compare-at text-[16px] text-[#999] line-through font-normal">
+                    {formatPrice(product.compareAtPrice)}
+                  </span>
+                )}
               </div>
 
               {product.colors.length > 0 && (
@@ -870,7 +965,7 @@ export function ProductDetailContent({
                 </button>
               </div>
 
-              <div className="pdp-share-row flex items-center gap-[20px] mb-[30px] relative">
+              <div className="pdp-share-row flex items-center gap-[20px] mb-[20px] relative">
                 <button
                   onClick={() => { const url = encodeURIComponent(window.location.href); window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank', 'width=600,height=400'); }}
                   className="pdp-share-btn inline-flex items-center gap-[6px] bg-transparent border-none cursor-pointer text-[#555] text-[14px] p-0 transition-colors duration-200 ease-in-out"
@@ -957,6 +1052,26 @@ export function ProductDetailContent({
                     </div>
                   </div>
                 )}
+              </div>
+
+              {/* WhatsApp Product Inquiry Action Link */}
+              <div className="mb-[24px]">
+                <button
+                  type="button"
+                  onClick={handleWhatsAppInquiry}
+                  className="group inline-flex items-center gap-[9px] bg-transparent hover:bg-[#f4fbf6] border border-solid border-[#e5e5e5] hover:border-[#25D366] py-[9px] px-[14px] rounded-[8px] cursor-pointer transition-all duration-200 text-left"
+                  aria-label="Have questions? Chat with us on WhatsApp"
+                >
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="#25D366" className="shrink-0 transition-transform duration-200 group-hover:scale-110" aria-hidden="true">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
+                  </svg>
+                  <span className="text-[14px] text-[#222] group-hover:text-[#128C7E] font-medium transition-colors">
+                    Have questions? Chat with us on WhatsApp
+                  </span>
+                  <span className="text-[14px] text-[#888] group-hover:text-[#128C7E] transition-all duration-200 group-hover:translate-x-[3px]">
+                    →
+                  </span>
+                </button>
               </div>
 
               {relatedProducts.length > 0 && <PairsWellWith products={relatedProducts} productHrefBase={productHrefBase} />}
@@ -1204,20 +1319,56 @@ export function ProductDetailContent({
 
       <div className="container-main pdp-recently-section">
         <h2 className="text-[clamp(22px,3vw,28px)] font-semibold text-[#222] text-left mb-[clamp(22px,2.4vw,30px)]">Recently viewed product</h2>
-        {(recentlyViewed.length > 0 || relatedData) && (
-          <div className="pdp-recently-grid grid grid-cols-4 gap-[clamp(14px,1.8vw,24px)]">
-            {(recentlyViewed.length > 0
-              ? recentlyViewed
-              : (relatedData?.products.filter(p => p.id !== product?.id).slice(0, 4) || [])
-            ).map((p, i) => (
-              cardVariant === 'grocery' ? (
-                <GroceryProductCard key={p.id} product={p} index={i} hrefBase={productHrefBase} />
-              ) : (
-                <HomeProductCard key={p.id} product={p} index={i} hrefBase={productHrefBase} />
-              )
-            ))}
-          </div>
-        )}
+        {(() => {
+          const recentList = recentlyViewed.length > 0
+            ? recentlyViewed
+            : (relatedData?.products.filter((p) => p.id !== product?.id) || []);
+          if (recentList.length === 0) return null;
+
+          return (
+            <div className="pdp-recently-slider-wrap relative">
+              <Swiper
+                modules={[Navigation]}
+                onSwiper={setRecentlySwiper}
+                slidesPerView={2}
+                breakpoints={{
+                  750: { slidesPerView: 3, spaceBetween: 20 },
+                  992: { slidesPerView: 4, spaceBetween: 24 },
+                }}
+                spaceBetween={16}
+                speed={600}
+                style={{ overflow: 'hidden' }}
+              >
+                {recentList.map((p, i) => (
+                  <SwiperSlide key={p.id}>
+                    {cardVariant === 'grocery' ? (
+                      <GroceryProductCard product={p} index={i} hrefBase={productHrefBase} />
+                    ) : (
+                      <HomeProductCard product={p} index={i} hrefBase={productHrefBase} />
+                    )}
+                  </SwiperSlide>
+                ))}
+              </Swiper>
+
+              <button
+                type="button"
+                onClick={() => recentlySwiper?.slidePrev()}
+                aria-label="Previous products"
+                className="pdp-recent-nav-prev"
+              >
+                <IconArrowLeft size={20} />
+              </button>
+              <button
+                type="button"
+                onClick={() => recentlySwiper?.slideNext()}
+                aria-label="Next products"
+                className="pdp-recent-nav-next"
+              >
+                <IconArrowRight size={20} />
+              </button>
+            </div>
+          );
+        })()}
       </div>
 
       <div className="pdp-sticky-spacer" />
@@ -1285,13 +1436,18 @@ export function ProductDetailContent({
               )}
             </select>
           ) : (
-            <div className="pdp-sticky-price flex items-center gap-[8px] text-[clamp(14px,1.3vw,16px)] font-bold text-[#222] py-[clamp(8px,1vw,10px)] px-[14px] bg-[#f8f8f8] rounded-[6px] border border-solid border-[#e5e5e5] whitespace-nowrap">
+            <div className="pdp-sticky-price flex items-baseline gap-[6px] text-[clamp(14px,1.3vw,16px)] font-bold text-[#222] py-[clamp(8px,1vw,10px)] px-[14px] bg-[#f8f8f8] rounded-[6px] border border-solid border-[#e5e5e5] whitespace-nowrap">
+              <span>{formatPrice(product.price)}</span>
+              {discount > 0 && (
+                <span className="text-[#F15B41] bg-[#fff0ed] text-[11px] font-bold px-[4px] py-[1px] rounded-[3px] leading-none">
+                  -{discount}%
+                </span>
+              )}
               {product.compareAtPrice && (
-                <span className="text-[13px] text-[#999] line-through font-normal">
+                <span className="text-[12px] text-[#999] line-through font-normal">
                   {formatPrice(product.compareAtPrice)}
                 </span>
               )}
-              <span>{formatPrice(product.price)}</span>
             </div>
           )}
 
@@ -1327,17 +1483,43 @@ export function ProductDetailContent({
         .pdp-thumb-vertical { scrollbar-width: none; }
 
         .pdp-swiper-arrow {
-          position: absolute; top: 50%; transform: translateY(-50%); z-index: 10;
-          width: 36px; height: 36px; border-radius: 0; border: 1px solid #e0e0e0;
-          background: #fff; color: #222; cursor: pointer; display: flex;
-          align-items: center; justify-content: center;
-          transition: background-color 200ms ease, color 200ms ease, opacity 200ms ease;
+          position: absolute;
+          top: 50%;
+          transform: translateY(-50%);
+          z-index: 20;
+          width: 44px;
+          height: 44px;
+          border-radius: 50% !important;
+          border: 1px solid rgba(0, 0, 0, 0.08) !important;
+          background: #ffffff !important;
+          color: #111827 !important;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16), 0 2px 6px rgba(0, 0, 0, 0.08) !important;
+          transition: background-color 200ms ease, color 200ms ease, transform 200ms ease, box-shadow 200ms ease, opacity 200ms ease;
         }
-        .pdp-swiper-arrow:hover { background: #222; color: #fff; border-color: #222; }
-        .pdp-swiper-arrow.swiper-button-disabled { opacity: 0.3; cursor: default; }
-        .pdp-swiper-arrow.swiper-button-disabled:hover { background: #fff; color: #222; border-color: #e0e0e0; }
-        .pdp-swiper-prev { left: 16px; }
-        .pdp-swiper-next { right: 16px; }
+        .pdp-swiper-arrow:hover {
+          background: #111827 !important;
+          color: #ffffff !important;
+          border-color: #111827 !important;
+          transform: translateY(-50%) scale(1.08) !important;
+          box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25) !important;
+        }
+        .pdp-swiper-arrow.swiper-button-disabled {
+          opacity: 0.4;
+          cursor: not-allowed;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+        }
+        .pdp-swiper-arrow.swiper-button-disabled:hover {
+          background: #ffffff !important;
+          color: #111827 !important;
+          border-color: rgba(0, 0, 0, 0.08) !important;
+          transform: translateY(-50%) scale(1) !important;
+        }
+        .pdp-swiper-prev { left: 14px; }
+        .pdp-swiper-next { right: 14px; }
 
         
         .swiper-button-next, .swiper-button-prev { display: none !important; }
@@ -1525,8 +1707,8 @@ export function ProductDetailContent({
 
           
           .pdp-product-gallery-col .pdp-swiper-arrow {
-            width: 32px;
-            height: 32px;
+            width: 38px;
+            height: 38px;
           }
 
           
@@ -1830,6 +2012,46 @@ export function ProductDetailContent({
         .pdp-recently-section {
           margin-top: clamp(36px, 4vw, 52px);
           padding-bottom: clamp(48px, 6vw, 80px);
+        }
+        .pdp-recently-slider-wrap {
+          position: relative;
+        }
+        .pdp-recent-nav-prev,
+        .pdp-recent-nav-next {
+          position: absolute;
+          top: 38%;
+          transform: translateY(-50%);
+          z-index: 10;
+          width: 44px;
+          height: 44px;
+          border-radius: 50%;
+          border: 1.5px solid #e0e0e0;
+          background-color: #fff;
+          color: #222;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+          transition: background-color 250ms ease, border-color 250ms ease, color 250ms ease, transform 200ms ease;
+        }
+        .pdp-recent-nav-prev {
+          left: 8px;
+        }
+        .pdp-recent-nav-next {
+          right: 8px;
+        }
+        .pdp-recent-nav-prev:hover,
+        .pdp-recent-nav-next:hover {
+          background-color: #000;
+          border-color: #000;
+          color: #fff;
+        }
+        @media (max-width: 749px) {
+          .pdp-recent-nav-prev,
+          .pdp-recent-nav-next {
+            display: none !important;
+          }
         }
 
         

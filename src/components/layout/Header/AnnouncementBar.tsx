@@ -160,9 +160,9 @@ export function AnnouncementBar({ backgroundColor = '#fff', announcements: annou
             </span>
           </div>
 
-          <span className="opacity-25 text-[12px]">|</span>
 
-          <span className="font-medium whitespace-nowrap">English</span>
+
+
         </div>
       </div>
     </div>

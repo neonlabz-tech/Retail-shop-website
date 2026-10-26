@@ -21,23 +21,43 @@ export function PodRecentlyViewed() {
 
   useEffect(() => {
     let isMounted = true;
-    fetch('/api/recommendations/recently-viewed?limit=4')
-      .then((r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.json();
-      })
-      .then((data) => {
-        if (!isMounted) return;
-        if (data.success && Array.isArray(data.products) && data.products.length > 0) {
-          setProducts(data.products);
+
+    async function loadRecentlyViewed() {
+      try {
+        const res = await fetch(`/api/recommendations/recently-viewed?limit=5&_t=${Date.now()}`, {
+          cache: 'no-store',
+        });
+        const data = await res.json();
+        let list: Product[] = data?.success && Array.isArray(data.products) ? data.products : [];
+
+        // Safety guarantee: If fewer than 5 products, top up from recommendations so the 5-column row is always full
+        if (list.length < 5) {
+          try {
+            const randRes = await fetch(`/api/recommendations/random?limit=5&_t=${Date.now()}`, {
+              cache: 'no-store',
+            });
+            const randData = await randRes.json();
+            if (randData?.success && Array.isArray(randData.products)) {
+              const existingIds = new Set(list.map((p) => p.id));
+              const extras = randData.products.filter((p: Product) => !existingIds.has(p.id));
+              list = [...list, ...extras].slice(0, 5);
+            }
+          } catch {
+            // ignore fallback error
+          }
         }
-      })
-      .catch((err) => {
+
+        if (isMounted && list.length > 0) {
+          setProducts(list);
+        }
+      } catch (err) {
         console.error('Error fetching recently viewed products:', err);
-      })
-      .finally(() => {
+      } finally {
         if (isMounted) setIsLoading(false);
-      });
+      }
+    }
+
+    loadRecentlyViewed();
 
     return () => {
       isMounted = false;
@@ -51,19 +71,16 @@ export function PodRecentlyViewed() {
   return (
     <section className="pod-recently-viewed-section">
       <div className="container-main">
-        <div className="mb-[32px] text-left">
-          <h2 className="text-[clamp(22px,3vw,28px)] font-semibold text-[#222]">
+        <div className="mb-[8px] min-[750px]:mb-[14px] text-left">
+          <h2 className="text-[17px] min-[750px]:text-[28px] font-semibold text-[#222]">
             Recently Viewed Products
           </h2>
-          <p className="text-[15px] text-[#666] mt-[6px]">
-            Products you recently browsed and checked out
-          </p>
         </div>
 
         <div className="pod-rv-grid">
           {isLoading
-            ? Array.from({ length: 4 }).map((_, i) => <ProductCardSkeleton key={i} />)
-            : products.map((product, i) => (
+            ? Array.from({ length: 5 }).map((_, i) => <ProductCardSkeleton key={i} />)
+            : products.slice(0, 5).map((product, i) => (
                 <HomeProductCard key={product.id} product={product} index={i} />
               ))}
         </div>
@@ -74,23 +91,16 @@ export function PodRecentlyViewed() {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
           gap: 14px;
+          align-items: stretch;
         }
-        .pod-rv-grid > * { min-width: 0; }
+        .pod-rv-grid > * { min-width: 0; height: 100%; }
 
         @media (min-width: 750px) {
-          .pod-rv-grid { grid-template-columns: repeat(4, 1fr); gap: 20px; }
+          .pod-rv-grid { grid-template-columns: repeat(3, 1fr); gap: 16px; }
         }
 
-        
-        .pod-rv-grid .fc-card > a:first-child {
-          width: 100%;
-          aspect-ratio: 1 / 1;
-          margin: 0 auto 14px;
-        }
-        .pod-rv-grid .fc-card > a:first-child img {
-          object-fit: cover !important;
-          background-color: #fff;
-          padding: 0 !important;
+        @media (min-width: 1024px) {
+          .pod-rv-grid { grid-template-columns: repeat(5, 1fr); gap: 16px; }
         }
       `}</style>
     </section>

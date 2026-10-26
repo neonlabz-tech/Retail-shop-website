@@ -282,10 +282,10 @@ export function GroceryAnnouncementBar({ backgroundColor = 'rgb(27, 128, 87)', t
           </div>
 
           {/* Separator */}
-          <span style={{ opacity: 0.35, fontSize: '12px' }}>|</span>
+
 
           {/* Language: English */}
-          <span style={{ fontWeight: 500, whiteSpace: 'nowrap' }}>English</span>
+
         </div>
       </div>
 

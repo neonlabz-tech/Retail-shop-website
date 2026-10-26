@@ -66,7 +66,7 @@ export function CollectionsPageContent() {
             className="collection-card no-underline text-inherit text-center"
           >
             <div
-              className="collection-card-img-wrap relative w-full aspect-square bg-[#fff] rounded-[8px] border border-[#f0f0f0] overflow-hidden flex items-center justify-center"
+              className="collection-card-img-wrap relative w-full aspect-square bg-[#eef2f6] rounded-[8px] border border-[#ededf0] overflow-hidden flex items-center justify-center shadow-[0_8px_16px_-2px_rgba(24,62,132,0.12),4px_6px_10px_-2px_rgba(24,62,132,0.04),-4px_6px_10px_-2px_rgba(24,62,132,0.04)] transition-[background-color,border-color,box-shadow] duration-300"
             >
               {category.image ? (
                 <Image
@@ -97,6 +97,17 @@ export function CollectionsPageContent() {
     </div >
 
       <style>{`
+        .collection-card .collection-card-img-wrap {
+          background-color: #eef2f6;
+          border-color: #ededf0;
+          box-shadow: 0 8px 16px -2px rgba(24, 62, 132, 0.12), 4px 6px 10px -2px rgba(24, 62, 132, 0.04), -4px 6px 10px -2px rgba(24, 62, 132, 0.04);
+          transition: background-color 300ms ease, border-color 300ms ease, box-shadow 300ms ease;
+        }
+        .collection-card:hover .collection-card-img-wrap {
+          background-color: #e5ebf2;
+          border-color: #e2e5ea;
+          box-shadow: 0 10px 20px -2px rgba(24, 62, 132, 0.18), 4px 6px 12px -2px rgba(24, 62, 132, 0.06), -4px 6px 12px -2px rgba(24, 62, 132, 0.06);
+        }
         .collection-card:hover .collection-card-img {
           transform: scale(1.08);
         }

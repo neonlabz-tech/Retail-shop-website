@@ -10,7 +10,6 @@ import { useWishlistStore } from '@/store/wishlistStore';
 import { getStorefrontFromPath, isGrocerySlug, isPetFoodSlug, isNutritionSlug, isMegastoreSlug, isPhoneCaseSlug, isSmartWatchesSlug, type Storefront } from '@/utils/storefront';
 import { ALL_CATEGORIES } from './AllCategoriesButton';
 import { MEGASTORE_CATEGORIES } from './MegastoreAllCategoriesButton';
-import { HeaderLanguageCurrency } from './HeaderLanguageCurrency';
 import { formatPrice } from '@/utils/formatPrice';
 
 import navigationFashion from '@/data/navigation.json';
@@ -279,7 +278,6 @@ export function MobileNav() {
   const toggleCol = (key: string) => setOpenCol((p) => ({ ...p, [key]: !p[key] }));
 
   const [dbCategories, setDbCategories] = useState<Array<{ id: string; name: string; slug: string; subcategories: string[] }>>([]);
-  const [dbProducts, setDbProducts] = useState<Array<{ id: string; name: string; slug: string; price: number; compareAtPrice?: number | null; image: string }>>([]);
 
   useEffect(() => {
     let isMounted = true;
@@ -304,31 +302,6 @@ export function MobileNav() {
       })
       .catch((err) => console.error('Error fetching categories for MobileNav:', err));
 
-    fetch('/api/products?limit=10')
-      .then((r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.json();
-      })
-      .then((data) => {
-        if (!isMounted) return;
-        if (data.products && Array.isArray(data.products) && data.products.length > 0) {
-          setDbProducts(
-            data.products.map((p: any) => {
-              const rawImg = p.images?.[0];
-              const imgSrc = (typeof rawImg === 'string' ? rawImg : rawImg?.src) || '';
-              return {
-                id: p.id || p._id || p.slug,
-                name: p.name,
-                slug: p.slug,
-                price: p.price,
-                compareAtPrice: p.compareAtPrice,
-                image: imgSrc,
-              };
-            })
-          );
-        }
-      })
-      .catch((err) => console.error('Error fetching products for MobileNav:', err));
 
     return () => {
       isMounted = false;
@@ -469,10 +442,11 @@ export function MobileNav() {
               const flatChildren = isAboutUs ? [] : (item.children ?? []);
               const categoryCards = isAboutUs || isCategoriesItem ? [] : (item.megaCategoryCards ?? []);
               const hasChildren =
-                columns.length > 0 ||
+                !isAboutUs &&
+                !isProductsItem &&
+                (columns.length > 0 ||
                 flatChildren.length > 0 ||
-                categoryCards.length > 0 ||
-                (isProductsItem && dbProducts.length > 0);
+                categoryCards.length > 0);
               const isTopOpen = !!openTop[item.id];
 
               return (
@@ -540,50 +514,6 @@ export function MobileNav() {
                           </div>
                         );
                       })}
-                      {isProductsItem && dbProducts.length > 0 && (
-                        <div>
-                          {dbProducts.map((prod) => (
-                            <Link
-                              key={prod.id}
-                              href={`/products/${prod.slug}`}
-                              onClick={() => {
-                                close();
-                                window.scrollTo({ top: 0, behavior: 'instant' });
-                              }}
-                              className="flex items-center gap-[12px] py-[10px] pr-[20px] pl-[32px] no-underline border-b border-[#f0f0f0]"
-                              style={{ color: accent.text }}
-                            >
-                              <div className="relative w-[44px] h-[44px] rounded-[6px] overflow-hidden bg-[#f7f7f7] shrink-0 border border-[#eee]">
-                                {prod.image ? (
-                                  <Image
-                                    src={prod.image}
-                                    alt={prod.name}
-                                    fill
-                                    className="object-cover"
-                                    sizes="44px"
-                                    unoptimized
-                                  />
-                                ) : null}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-[14px] font-medium text-[#222] mt-0 mx-0 mb-[2px] whitespace-nowrap overflow-hidden text-ellipsis">
-                                  {prod.name}
-                                </p>
-                                <span className="product-price-text text-[13px] font-bold text-[#F15B41]">
-                                  {formatPrice(prod.price)}
-                                </span>
-                              </div>
-                            </Link>
-                          ))}
-                          <Link
-                            href="/products"
-                            onClick={close}
-                            className="block py-[14px] px-[32px] text-[14px] font-semibold text-[#F15B41] no-underline border-b border-[#eee]"
-                          >
-                            View All Products →
-                          </Link>
-                        </div>
-                      )}
                       {flatChildren.map((c) => (
                         <Link
                           key={c.id}
@@ -650,10 +580,6 @@ export function MobileNav() {
             >
               Register
             </button>
-
-            <div className="pt-[16px] border-t border-[#eee] flex items-center justify-start">
-              <HeaderLanguageCurrency />
-            </div>
           </div>
         </>
       )}

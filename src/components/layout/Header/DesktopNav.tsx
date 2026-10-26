@@ -5,7 +5,6 @@ import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { MegaMenu } from './MegaMenu';
 import { DropdownMenu } from './DropdownMenu';
-import { CategoriesCascadingMenu } from './CategoriesCascadingMenu';
 import navigationData from '@/data/navigation.json';
 import navigationGlasses from '@/data/navigation-glasses.json';
 import navigationPlumbingSupplies from '@/data/navigation-plumbing-supplies.json';
@@ -20,7 +19,7 @@ import { getStorefrontFromPath } from '@/utils/storefront';
 import { singleProductProducts } from '@/data/single-product-products';
 import { activeWearProducts } from '@/data/active-wear-products';
 import type { SliderProduct } from './MegaMenu';
-import type { NavigationItem, MegaMenuColumn } from '@/types/common';
+import type { NavigationItem } from '@/types/common';
 
 const SP_SHOP_MEGA_IMAGE = '/single -product/shop-mega-menu/shop-mega-menu-1.webp';
 const SP_CATEGORY_IMAGE = (i: number) => `/single -product/categories-mega-menu/categories-mega-menu-${i + 1}.webp`;
@@ -121,40 +120,9 @@ function IconChevronDown() {
 
 export function DesktopNav() {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
-  const [dbCategoryColumns, setDbCategoryColumns] = useState<MegaMenuColumn[]>([]);
   const timeoutRef = useRef<ReturnType<typeof setTimeout>>(null);
   const pathname = usePathname();
 
-  useEffect(() => {
-    let isMounted = true;
-    fetch('/api/categories')
-      .then((r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.json();
-      })
-      .then((data) => {
-        if (!isMounted) return;
-        if (data.categories && Array.isArray(data.categories) && data.categories.length > 0) {
-          const cols: MegaMenuColumn[] = data.categories.slice(0, 4).map((cat: any) => ({
-            title: cat.name,
-            links: (cat.subcategories || []).map((sub: string, idx: number) => ({
-              id: `${cat.slug || cat.id}-${idx}`,
-              label: sub,
-              href: `/products?category=${encodeURIComponent(cat.name)}&subcategory=${encodeURIComponent(sub)}`,
-            })),
-          }));
-          setDbCategoryColumns(cols);
-        }
-      })
-      .catch((err) => {
-        console.error('Error fetching categories for Products mega menu:', err);
-      });
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  const productMegaColumns = dbCategoryColumns;
   const storefront = getStorefrontFromPath(pathname);
   const isSingleProduct = storefront === 'single-product';
   const isActiveWear = storefront === 'active-wear';
@@ -217,13 +185,18 @@ export function DesktopNav() {
 
         const isAboutUs = item.id === 'nav-pages';
         const itemLabel = isAboutUs ? 'About us' : item.label;
-        const itemHref = isAboutUs ? '/pages/about' : (item.id === 'nav-products' ? '/products' : item.href);
+        const isProducts = item.id === 'nav-products';
+        const itemHref = isAboutUs ? '/pages/about' : (isProducts ? '/products' : item.href);
 
         return (
           <div
             key={item.id}
             className="static"
-            onMouseEnter={() => handleMouseEnter(item.id)}
+            onMouseEnter={() => {
+              if (!isProducts && (item.type === 'dropdown' || item.type === 'megamenu')) {
+                handleMouseEnter(item.id);
+              }
+            }}
             onMouseLeave={handleMouseLeave}
           >
           <Link
@@ -239,7 +212,7 @@ export function DesktopNav() {
             }}
           >
             {itemLabel}
-            {!isAboutUs && item.id !== 'nav-categories' && (item.type === 'dropdown' || item.type === 'megamenu') && (
+            {!isAboutUs && !isProducts && item.id !== 'nav-categories' && (item.type === 'dropdown' || item.type === 'megamenu') && (
               <span
                 className={`inline-flex transition-transform duration-300 ease-in-out ${
                   activeMenu === item.id ? 'rotate-180' : 'rotate-0'
@@ -250,9 +223,9 @@ export function DesktopNav() {
             )}
           </Link>
 
-          {item.id !== 'nav-categories' && item.type === 'megamenu' && (item.megaMenu || item.megaCategoryCards) && activeMenu === item.id && (
+          {!isProducts && item.id !== 'nav-categories' && item.type === 'megamenu' && (item.megaMenu || item.megaCategoryCards) && activeMenu === item.id && (
             <MegaMenu
-              columns={item.id === 'nav-products' ? productMegaColumns : item.megaMenu}
+              columns={item.megaMenu}
               promoImage={item.megaImage}
               showProductSlider={item.megaProductSlider}
               categoryCards={item.megaCategoryCards}

@@ -36,11 +36,11 @@ export function PodNewArrivals() {
   return (
     <section className="pdna-section">
       <div className="container-main">
-        <div className="flex items-center justify-between mb-[32px]">
-          <h2 className="text-[clamp(22px,3vw,28px)] font-semibold text-[#222]">New Arrivals</h2>
+        <div className="flex items-center justify-between mb-[8px] min-[750px]:mb-[14px]">
+          <h2 className="text-[17px] min-[750px]:text-[28px] font-semibold text-[#222]">New Arrivals</h2>
           <Link
             href="/shop?sort=newest"
-            className="text-[14px] font-medium text-[#222] underline underline-offset-[3px] whitespace-nowrap"
+            className="text-[13px] min-[750px]:text-[14px] font-medium text-[#222] underline underline-offset-[3px] whitespace-nowrap"
           >
             View All →
           </Link>
@@ -58,9 +58,9 @@ export function PodNewArrivals() {
               slidesPerView={2}
               breakpoints={{
                 750: { slidesPerView: 3 },
-                992: { slidesPerView: 4 },
+                1024: { slidesPerView: 5 },
               }}
-              spaceBetween={20}
+              spaceBetween={16}
               loop
               speed={600}
               className="overflow-hidden"
@@ -87,22 +87,23 @@ export function PodNewArrivals() {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
           gap: 14px;
+          align-items: stretch;
         }
-        .pdna-grid > * { min-width: 0; }
+        .pdna-grid > * { min-width: 0; height: 100%; }
         @media (min-width: 750px) {
-          .pdna-grid { grid-template-columns: repeat(4, 1fr); gap: 20px; }
+          .pdna-grid { grid-template-columns: repeat(3, 1fr); gap: 16px; }
+        }
+        @media (min-width: 1024px) {
+          .pdna-grid { grid-template-columns: repeat(5, 1fr); gap: 16px; }
         }
 
-        
-        .pdna-section .fc-card > a:first-child {
-          width: 100%;
-          aspect-ratio: 1 / 1;
-          margin: 0 auto 14px;
+        .pdna-section .swiper-slide {
+          height: auto !important;
+          display: flex !important;
         }
-        .pdna-section .fc-card > a:first-child img {
-          object-fit: cover !important;
-          background-color: #fff;
-          padding: 0 !important;
+        .pdna-section .swiper-slide > * {
+          width: 100% !important;
+          height: 100% !important;
         }
 
         .pdna-nav-prev, .pdna-nav-next {

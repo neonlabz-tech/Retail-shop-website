@@ -5,6 +5,9 @@ import ProductModel from '@/models/Product';
 import RecentlyViewedModel from '@/models/RecentlyViewed';
 import { formatMongoProduct } from '@/lib/formatProduct';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 function resolveCustomerId(request: NextRequest): { customerId: string; isNew: boolean } {
   const param = request.nextUrl.searchParams.get('customerId') || request.nextUrl.searchParams.get('userId');
   if (param) return { customerId: param, isNew: false };
@@ -55,9 +58,21 @@ export async function GET(request: NextRequest) {
         }).lean();
 
         const docMap = new Map(foundDocs.map((d) => [d._id.toString(), d]));
-        const orderedDocs = productIds
+        let orderedDocs = productIds
           .map((id) => docMap.get(id))
           .filter(Boolean) as typeof foundDocs;
+
+        // If user hasn't browsed enough products to fill the requested limit (e.g. 5), backfill with other products
+        if (orderedDocs.length < limit) {
+          const excludeIds = orderedDocs.map((d) => d._id);
+          const extraDocs = await ProductModel.find({
+            _id: { $nin: excludeIds },
+            status: { $ne: 'archived' },
+          })
+            .limit(limit - orderedDocs.length)
+            .lean();
+          orderedDocs = [...orderedDocs, ...extraDocs];
+        }
 
         const formatted = orderedDocs.map(formatMongoProduct);
 
@@ -71,13 +86,21 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Fallback if no history exists yet: provide trending products up to limit so the grid is full
+    const fallbackDocs = await ProductModel.find({
+      status: { $ne: 'archived' },
+    })
+      .limit(limit)
+      .lean();
+
+    const formattedFallback = fallbackDocs.map(formatMongoProduct);
+
     return NextResponse.json({
       success: true,
-      source: 'empty',
+      source: 'fallback',
       customerId,
-      count: 0,
-      products: [],
-      message: 'No recently viewed products recorded yet for this customer.',
+      count: formattedFallback.length,
+      products: formattedFallback,
     });
   } catch (error) {
     console.error('Error in /api/recommendations/recently-viewed GET:', error);

@@ -103,8 +103,8 @@ html {
   scroll-behavior: smooth;
   overflow-x: clip;
   --color-foreground: 17, 17, 17;
-  /* Global Product Price Color — RKF Logo Dark Blue (comment out to revert to default #222) */
-  --color-product-price: #183e84;
+  /* Global Product Price Color — RKF Logo Red (comment out to revert to default #222) */
+  --color-product-price: #e01117;
 }
 
 body {
@@ -449,29 +449,6 @@ body.scroll-locked {
   transform: translateY(-50%) translateX(0);
 }
 
-.fc-quick-add-btn {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  background-color: #fff;
-  color: #222;
-  font-size: 16px;
-  font-weight: 500;
-  padding: 13px 0;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
-  transition: background-color 250ms ease, color 250ms ease, box-shadow 250ms ease;
-}
-
-.fc-quick-add-btn:hover {
-  background-color: #000;
-  color: #fff;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
-}
 
 /* Line clamp */
 .line-clamp-1 {
@@ -902,17 +879,32 @@ body.scroll-locked {
    ========================================================================== */
 
 /* 1. Universal Product Cards: Clean Studio Light-Gray Backdrop on Product Card Image ONLY */
-.fc-card .fc-card-img-link,
+.fc-card:not(.fc-unified-card) .fc-card-img-link,
 .product-card-image,
 .grocery-card-img-wrap {
-  background-color: #f6f7f9 !important;
+  background-color: #eef2f6 !important;
   border-color: #ededf0 !important;
-  transition: background-color 300ms ease, border-color 300ms ease, transform 300ms ease;
+  transition: background-color 300ms ease, border-color 300ms ease, box-shadow 300ms ease;
+  box-shadow: 0 8px 16px -2px rgba(24, 62, 132, 0.12), 4px 6px 10px -2px rgba(24, 62, 132, 0.04), -4px 6px 10px -2px rgba(24, 62, 132, 0.04) !important;
 }
 
-.fc-card:hover .fc-card-img-link {
-  background-color: #f1f3f6 !important;
+.fc-card:not(.fc-unified-card):hover .fc-card-img-link,
+.collection-card:hover .collection-card-img-wrap {
+  background-color: #e5ebf2 !important;
   border-color: #e2e5ea !important;
+  box-shadow: 0 10px 20px -2px rgba(24, 62, 132, 0.18), 4px 6px 12px -2px rgba(24, 62, 132, 0.06), -4px 6px 12px -2px rgba(24, 62, 132, 0.06) !important;
+}
+
+/* Universal Product Card Image Smooth Zoom on Hover */
+.fc-card .fc-card-img-link img,
+.product-card-image img {
+  object-fit: contain !important;
+  transition: transform 500ms cubic-bezier(0.2, 0, 0.2, 1) !important;
+}
+
+.fc-card:hover .fc-card-img-link img,
+.product-card-image:hover img {
+  transform: scale(1.08) !important;
 }
 
 /* Ensure all product name text links have completely transparent background */
@@ -925,16 +917,16 @@ body.scroll-locked {
 
 /* 2. Circular Category Slider: Soft Studio Backdrop Pods (Image 2) */
 .pd-cat-circle {
-  background-color: #f1f3f6 !important;
-  border: 2px solid #cbd5e1 !important;
-  box-shadow: 0 4px 14px rgba(11, 28, 61, 0.08) !important;
-  transition: background-color 350ms ease, border-color 350ms ease, transform 350ms ease, box-shadow 350ms ease;
+  background-color: #ebf0f5 !important;
+  border: none !important;
+  box-shadow: 0 8px 16px -2px rgba(24, 62, 132, 0.12), 4px 6px 10px -2px rgba(24, 62, 132, 0.04), -4px 6px 10px -2px rgba(24, 62, 132, 0.04) !important;
+  transition: transform 300ms ease, box-shadow 300ms ease, background-color 300ms ease;
 }
 
 .pd-cat-item:hover .pd-cat-circle {
-  background-color: #e8ebf0 !important;
-  border-color: #183e84 !important;
-  box-shadow: 0 8px 24px rgba(24, 62, 132, 0.14) !important;
+  background-color: #e2e8f0 !important;
+  border: none !important;
+  box-shadow: 0 10px 20px -2px rgba(24, 62, 132, 0.18), 4px 6px 12px -2px rgba(24, 62, 132, 0.06), -4px 6px 12px -2px rgba(24, 62, 132, 0.06) !important;
 }
 
 /* 3. Hero Slider Cards: Atmospheric Pastel Ambient Gradients (Image 2) */
@@ -1178,7 +1170,7 @@ body.scroll-locked {
 
 /* 5. Shop by Categories Cards: Soft Studio Light-Gray Backdrop */
 .cat-card-img-wrap {
-  background-color: #f6f7f9 !important;
+  background-color: #eef2f6 !important;
   border: 1px solid #ededf0;
 }
 
@@ -1188,5 +1180,5 @@ body.scroll-locked {
 .pdp-info-price,
 .pdp-sticky-price,
 .qv-price-current {
-  color: var(--color-product-price, #183e84) !important;
+  color: #e01117 !important;
 }

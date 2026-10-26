@@ -276,16 +276,28 @@ export function SearchDrawer() {
                       <p className="text-[16px] font-semibold text-[#222] mb-[5px]">
                         {product.name}
                       </p>
-                      <div className="flex items-center gap-[8px]">
-                        {product.compareAtPrice && (
-                          <span className="text-[14px] text-[#999] line-through">
-                            {formatPrice(product.compareAtPrice)}
-                          </span>
-                        )}
-                        <span className="product-price-text text-[15px] font-semibold text-[#222]">
-                          {formatPrice(product.price)}
-                        </span>
-                      </div>
+                      {(() => {
+                        const sDiscount = product.compareAtPrice && product.compareAtPrice > product.price
+                          ? Math.round(((product.compareAtPrice - product.price) / product.compareAtPrice) * 100)
+                          : 0;
+                        return (
+                          <div className="flex items-baseline gap-[6px] flex-wrap">
+                            <span className="product-price-text text-[15px] font-bold text-[#222]">
+                              {formatPrice(product.price)}
+                            </span>
+                            {sDiscount > 0 && (
+                              <span className="text-[#F15B41] bg-[#fff0ed] text-[11px] font-bold px-[4px] py-[1px] rounded-[3px] leading-none">
+                                -{sDiscount}%
+                              </span>
+                            )}
+                            {product.compareAtPrice && (
+                              <span className="text-[13px] text-[#999] line-through font-normal">
+                                {formatPrice(product.compareAtPrice)}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </div>
                   </Link>
                 ))}
@@ -360,16 +372,28 @@ export function SearchDrawer() {
                       <p className="text-[16px] font-semibold text-[#222] mb-[5px]">
                         {product.name}
                       </p>
-                      <div className="flex items-center gap-[8px]">
-                        {product.compareAtPrice && (
-                          <span className="text-[14px] text-[#999] line-through">
-                            {formatPrice(product.compareAtPrice)}
-                          </span>
-                        )}
-                        <span className="product-price-text text-[15px] font-semibold text-[#222]">
-                          {formatPrice(product.price)}
-                        </span>
-                      </div>
+                      {(() => {
+                        const sDiscount = product.compareAtPrice && product.compareAtPrice > product.price
+                          ? Math.round(((product.compareAtPrice - product.price) / product.compareAtPrice) * 100)
+                          : 0;
+                        return (
+                          <div className="flex items-baseline gap-[6px] flex-wrap">
+                            <span className="product-price-text text-[15px] font-bold text-[#222]">
+                              {formatPrice(product.price)}
+                            </span>
+                            {sDiscount > 0 && (
+                              <span className="text-[#F15B41] bg-[#fff0ed] text-[11px] font-bold px-[4px] py-[1px] rounded-[3px] leading-none">
+                                -{sDiscount}%
+                              </span>
+                            )}
+                            {product.compareAtPrice && (
+                              <span className="text-[13px] text-[#999] line-through font-normal">
+                                {formatPrice(product.compareAtPrice)}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </div>
                   </Link>
                 ))}

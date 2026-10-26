@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Image from 'next/image';
-import Link from 'next/link';
 
 function IconRadioDot({ size = 13 }: { size?: number }) {
   return (
@@ -13,23 +12,7 @@ function IconRadioDot({ size = 13 }: { size?: number }) {
   );
 }
 
-function IconArrowUpRight({ size = 16 }: { size?: number }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" width={size} height={size}>
-      <path d="M16.0037 9.41421L7.39712 18.0208L5.98291 16.6066L14.5895 8H7.00373V6H18.0037V17H16.0037V9.41421Z" />
-    </svg>
-  );
-}
-
-function IconArrowRight({ size = 13 }: { size?: number }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" width={size} height={size}>
-      <path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3647L8.22192 16.9505L13.1717 12.0007Z" />
-    </svg>
-  );
-}
-
-const defaultTabs = [
+const tabs = [
   {
     id: 'wholesale',
     step: '01',
@@ -37,7 +20,7 @@ const defaultTabs = [
     stat: 'Up to 40% Wholesale Savings',
     title: 'Wholesale & Bulk Orders at Direct Importer Prices',
     description: 'Special discounted tiers for retail shops, resellers, and bulk buyers across Sri Lanka.',
-    mediaSrc: '',
+    mediaSrc: '/pod/why-choose/wholesale.jpg',
   },
   {
     id: 'delivery',
@@ -46,7 +29,7 @@ const defaultTabs = [
     stat: 'All 25 Districts Covered',
     title: 'Fast & Safe Islandwide Delivery',
     description: 'Carefully packed and dispatched quickly to your doorstep or business anywhere in Sri Lanka.',
-    mediaSrc: '',
+    mediaSrc: '/pod/why-choose/delivery.jpg',
   },
   {
     id: 'quality',
@@ -55,54 +38,20 @@ const defaultTabs = [
     stat: 'Handpicked Premium Stock',
     title: '100% Quality-Checked Everyday Products',
     description: 'From hardware & home essentials to stationery, jewelry, and electronics—handpicked for durability and value.',
-    mediaSrc: '',
+    mediaSrc: '/pod/why-choose/quality.jpg',
   },
 ];
 
 export function PodTrendingSection() {
   const [activeTab, setActiveTab] = useState(0);
-  const [dbImages, setDbImages] = useState<string[]>([]);
-
-  useEffect(() => {
-    let isMounted = true;
-    fetch('/api/products?limit=6')
-      .then((r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.json();
-      })
-      .then((data) => {
-        if (!isMounted) return;
-        if (data.products && Array.isArray(data.products)) {
-          const imgs: string[] = [];
-          for (const p of data.products) {
-            const raw = p.images?.[0];
-            const src = typeof raw === 'string' ? raw : raw?.src;
-            if (src && !src.includes('/pod/tab/')) {
-              imgs.push(src);
-            }
-            if (imgs.length >= 3) break;
-          }
-          if (imgs.length > 0) setDbImages(imgs);
-        }
-      })
-      .catch(() => {});
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  const tabs = defaultTabs.map((tab, idx) => ({
-    ...tab,
-    mediaSrc: dbImages[idx] || tab.mediaSrc,
-  }));
 
   return (
     <section className="pdtab-section">
       <div className="container-main">
         <div className="pdtab-grid">
 
+          {/* Left Column: Interactive Tab Rows */}
           <div className="pdtab-content">
-
             <div className="pdtab-eyebrow">
               <IconRadioDot size={13} />
               WHY CHOOSE RKF
@@ -122,7 +71,7 @@ export function PodTrendingSection() {
                       <span className={`pdtab-step-badge${isActive ? ' is-active' : ''}`}>
                         {tab.step}
                       </span>
-                      <div className="flex-1">
+                      <div className="flex-1 min-w-0">
                         <h3 className="pdtab-row-title">
                           {tab.title}
                         </h3>
@@ -137,38 +86,37 @@ export function PodTrendingSection() {
                 );
               })}
             </div>
-
           </div>
 
+          {/* Right Column: Visual Media with Glassmorphism Stat Badge */}
           <div className="pdtab-media">
             {tabs.map((tab, i) => (
               <div
                 key={tab.id}
-                className={`pdtab-slide transition-[opacity,transform] duration-[450ms] ease-in-out ${
+                className={`pdtab-slide transition-[opacity,transform] duration-[400ms] ease-out ${
                   activeTab === i
-                    ? 'opacity-100 scale-100 pointer-events-auto'
-                    : 'opacity-0 scale-[0.97] pointer-events-none'
+                    ? 'opacity-100 scale-100 pointer-events-auto z-[2]'
+                    : 'opacity-0 scale-[0.98] pointer-events-none z-[1]'
                 }`}
               >
                 <div className="pdtab-image-frame">
-                  <div className="pdtab-image-inner">
-                    {tab.mediaSrc ? (
-                      <Image
-                        src={tab.mediaSrc}
-                        alt={tab.title}
-                        fill
-                        unoptimized
-                        className="object-contain object-center p-[16px]"
-                        sizes="(min-width: 750px) 45vw, 90vw"
-                        priority={i === 0}
-                      />
-                    ) : null}
-                  </div>
-                </div>
+                  <Image
+                    src={tab.mediaSrc}
+                    alt={tab.title}
+                    fill
+                    className="object-cover object-center"
+                    sizes="(min-width: 750px) 45vw, 90vw"
+                    priority={i === 0}
+                  />
 
-                <div className="pdtab-media-badge">
-                  <span className="pdtab-media-tag">{tab.tag}</span>
-                  <span className="pdtab-media-stat">{tab.stat}</span>
+                  {/* Sleek integrated glassmorphism stat badge over photo */}
+                  <div className="pdtab-media-badge">
+                    <div className="min-w-0">
+                      <span className="pdtab-media-tag">{tab.tag}</span>
+                      <span className="pdtab-media-stat">{tab.stat}</span>
+                    </div>
+                    <div className="w-[8px] h-[8px] rounded-full bg-[#10b981] shadow-[0_0_8px_#10b981] shrink-0" />
+                  </div>
                 </div>
               </div>
             ))}
@@ -181,184 +129,221 @@ export function PodTrendingSection() {
         .pdtab-grid {
           display: grid;
           grid-template-columns: 1fr;
-          border-radius: 18px;
+          border-radius: 16px;
           overflow: hidden;
-          box-shadow: 0 20px 50px rgba(11, 28, 61, 0.09);
-          border: 1px solid #e5e7eb;
+          box-shadow: 0 10px 30px rgba(11, 28, 61, 0.08);
+          border: 1px solid #e2e8f0;
+          background: #ffffff;
         }
 
-        
         .pdtab-content {
           background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
           display: flex;
           flex-direction: column;
-          padding: 40px 28px;
+          justify-content: center;
+          padding: 24px 20px;
+          border: 2.5px solid #e01117;
+          border-radius: 16px 16px 0 0;
         }
 
-        
         .pdtab-eyebrow {
           display: inline-flex;
           align-items: center;
-          gap: 8px;
-          font-size: 12px;
+          gap: 6px;
+          font-size: 11px;
           font-weight: 700;
-          letter-spacing: 0.14em;
+          letter-spacing: 0.12em;
           text-transform: uppercase;
           color: #ffffff;
           background: linear-gradient(135deg, #0b1c3d 0%, #183e84 100%);
-          padding: 7px 16px;
+          padding: 6px 14px;
           border-radius: 999px;
           align-self: flex-start;
-          margin-bottom: 28px;
-          box-shadow: 0 4px 14px rgba(11, 28, 61, 0.18);
+          margin-bottom: 16px;
+          box-shadow: 0 3px 10px rgba(11, 28, 61, 0.15);
         }
 
-        
         .pdtab-tabs-list {
           display: flex;
           flex-direction: column;
-          gap: 14px;
+          gap: 10px;
         }
+
         .pdtab-row {
-          padding: 20px 22px;
-          border-radius: 14px;
+          padding: 12px 14px;
+          border-radius: 12px;
           border: 1.5px solid #e2e8f0;
           background: #ffffff;
           cursor: pointer;
-          transition: all 300ms ease;
+          transition: border-color 200ms ease, background-color 200ms ease, box-shadow 200ms ease, transform 200ms ease;
         }
         .pdtab-row:hover {
           border-color: #cbd5e1;
-          transform: translateX(4px);
+          transform: translateX(3px);
         }
         .pdtab-row.is-active {
-          border-color: #183e84;
-          background: linear-gradient(135deg, rgba(11, 28, 61, 0.03) 0%, rgba(24, 62, 132, 0.07) 100%);
-          box-shadow: 0 10px 26px rgba(11, 28, 61, 0.07);
-          transform: translateX(6px);
+          border-color: #e01117;
+          background: linear-gradient(135deg, rgba(224, 17, 23, 0.03) 0%, rgba(224, 17, 23, 0.06) 100%);
+          box-shadow: 0 4px 16px rgba(224, 17, 23, 0.08);
+          transform: translateX(4px);
         }
+
         .pdtab-row-header {
           display: flex;
           align-items: flex-start;
-          gap: 16px;
+          gap: 12px;
         }
+
         .pdtab-step-badge {
-          width: 38px;
-          height: 38px;
-          border-radius: 10px;
+          width: 32px;
+          height: 32px;
+          border-radius: 8px;
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          font-size: 14px;
+          font-size: 13px;
           font-weight: 800;
-          letter-spacing: 0.04em;
           color: #64748b;
           background: #f1f5f9;
           flex-shrink: 0;
-          transition: all 300ms ease;
+          margin-top: 1px;
+          transition: all 250ms ease;
         }
         .pdtab-step-badge.is-active {
-          background: linear-gradient(135deg, #F15B41 0%, #d94a32 100%);
+          background: #e01117;
           color: #ffffff;
-          box-shadow: 0 6px 14px rgba(241, 91, 65, 0.3);
+          box-shadow: 0 4px 10px rgba(224, 17, 23, 0.28);
         }
+
         .pdtab-row-title {
-          font-size: clamp(17px, 2vw, 22px);
+          font-size: 15px;
           font-weight: 700;
           color: #1e293b;
-          margin: 4px 0 0;
+          margin: 0;
           line-height: 1.35;
-          letter-spacing: -0.015em;
-          transition: color 250ms ease;
+          letter-spacing: -0.01em;
+          transition: color 200ms ease;
         }
         .pdtab-row.is-active .pdtab-row-title {
           color: #0b1c3d;
         }
+
         .pdtab-inline-desc {
-          font-size: 14.5px;
+          font-size: 13px;
           color: #475569;
-          line-height: 1.7;
-          margin: 10px 0 0;
+          line-height: 1.55;
+          margin: 6px 0 0;
           font-weight: 400;
-          animation: pdtabFadeIn 320ms ease;
+          animation: pdtabFadeIn 250ms ease;
         }
         @keyframes pdtabFadeIn {
-          from { opacity: 0; transform: translateY(4px); }
+          from { opacity: 0; transform: translateY(3px); }
           to   { opacity: 1; transform: translateY(0); }
         }
 
-        
         .pdtab-media {
           position: relative;
-          min-height: 380px;
+          min-height: 280px;
+          background: #0b1c3d;
           overflow: hidden;
-          background: linear-gradient(135deg, #0b1c3d 0%, #112d62 55%, #183e84 100%);
         }
         .pdtab-slide {
           position: absolute;
           inset: 0;
-          display: flex;
-          flex-direction: column;
-          padding: clamp(20px, 3vw, 28px);
-          gap: 16px;
-        }
-        .pdtab-image-frame {
-          position: relative;
-          flex: 1;
-          min-height: 0;
-          width: 100%;
-          background: #ffffff;
-          border-radius: 16px;
-          overflow: hidden;
-          box-shadow: 0 12px 32px rgba(0, 0, 0, 0.22);
-          border: 1px solid rgba(255, 255, 255, 0.85);
-        }
-        .pdtab-image-inner {
-          position: absolute;
-          inset: 0;
-        }
-        .pdtab-media-badge {
-          flex-shrink: 0;
-          padding: 14px 20px;
-          border-radius: 14px;
-          background: rgba(11, 28, 61, 0.65);
-          backdrop-filter: blur(10px);
-          border: 1px solid rgba(147, 197, 253, 0.3);
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-          color: #fff;
-        }
-        .pdtab-media-tag {
-          font-size: 11px;
-          font-weight: 700;
-          text-transform: uppercase;
-          letter-spacing: 0.12em;
-          color: #93c5fd;
-        }
-        .pdtab-media-stat {
-          font-size: 17px;
-          font-weight: 700;
-          color: #ffffff;
-          letter-spacing: -0.01em;
+          padding: 14px;
         }
 
-        
+        .pdtab-image-frame {
+          position: relative;
+          width: 100%;
+          height: 100%;
+          border-radius: 12px;
+          overflow: hidden;
+          box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+        }
+
+        .pdtab-media-badge {
+          position: absolute;
+          bottom: 12px;
+          left: 12px;
+          right: 12px;
+          z-index: 3;
+          padding: 10px 14px;
+          border-radius: 10px;
+          background: rgba(11, 28, 61, 0.82);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          border: 1px solid rgba(255, 255, 255, 0.18);
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+        }
+        .pdtab-media-tag {
+          display: block;
+          font-size: 10px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.1em;
+          color: #93c5fd;
+          margin-bottom: 2px;
+        }
+        .pdtab-media-stat {
+          display: block;
+          font-size: 14px;
+          font-weight: 700;
+          color: #ffffff;
+          line-height: 1.25;
+        }
+
         @media (min-width: 750px) {
           .pdtab-grid {
-            grid-template-columns: 1.08fr 0.92fr;
-            min-height: 540px;
+            grid-template-columns: 1.15fr 0.85fr;
+            min-height: 380px;
           }
           .pdtab-content {
-            padding: 44px 40px;
-            justify-content: center;
+            padding: 30px 28px;
+            border-radius: 16px 0 0 16px;
+            border-right: 2.5px solid #e01117;
           }
-          .pdtab-media { height: auto; min-height: 540px; }
+          .pdtab-media {
+            min-height: 380px;
+          }
+          .pdtab-slide {
+            padding: 16px;
+          }
+          .pdtab-row {
+            padding: 14px 18px;
+          }
+          .pdtab-row-title {
+            font-size: 16px;
+          }
+          .pdtab-media-stat {
+            font-size: 15px;
+          }
         }
+
         @media (min-width: 992px) {
-          .pdtab-grid { min-height: 560px; }
-          .pdtab-content { padding: 52px 48px; }
-          .pdtab-media { min-height: 560px; }
+          .pdtab-grid {
+            grid-template-columns: 1.18fr 0.82fr;
+            min-height: 410px;
+          }
+          .pdtab-content {
+            padding: 32px 36px;
+          }
+          .pdtab-media {
+            min-height: 410px;
+          }
+          .pdtab-slide {
+            padding: 18px;
+          }
+          .pdtab-row-title {
+            font-size: 17px;
+          }
+          .pdtab-media-stat {
+            font-size: 16px;
+          }
         }
       `}</style>
     </section>

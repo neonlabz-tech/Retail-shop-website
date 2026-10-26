@@ -35,9 +35,6 @@ export function CategoriesCascadingMenu({ onClose, align = 'left' }: CategoriesC
             (c: CategoryTreeItem) => !excludedNames.includes(c.name.trim().toLowerCase())
           );
           setCategoriesList(filtered);
-          // if (data.categories.length > 0) {
-          //   setActiveCategoryId(data.categories[0].id);
-          // }
         }
       })
       .catch((err) => {
@@ -52,11 +49,9 @@ export function CategoriesCascadingMenu({ onClose, align = 'left' }: CategoriesC
     };
   }, []);
 
-  const activeCategory = categoriesList.find((c) => c.id === hoveredCategoryId);
-
   return (
     <div
-      className={`cat-cascading-menu absolute top-[calc(100%+8px)] w-[230px] min-h-[200px] bg-white border border-[#e5e7eb] rounded-[8px] shadow-[0_12px_32px_rgba(0,0,0,0.08)] z-[350] ${
+      className={`cat-cascading-menu absolute top-[calc(100%+8px)] w-[230px] min-h-[200px] bg-white border border-[#e5e7eb] rounded-[8px] shadow-[0_12px_32px_rgba(0,0,0,0.08)] z-[350] before:content-[''] before:absolute before:-top-[12px] before:left-0 before:right-0 before:h-[12px] ${
         align === 'center' ? 'left-1/2 -translate-x-1/2' : 'left-0'
       }`}
       onMouseLeave={() => setHoveredCategoryId(null)}
@@ -102,7 +97,7 @@ export function CategoriesCascadingMenu({ onClose, align = 'left' }: CategoriesC
                 )}
 
                 {isHovered && hasSubs && (
-                  <div className="cat-flyout-subpanel absolute top-[-6px] left-full w-[240px] bg-white border border-[#e5e7eb] rounded-[8px] shadow-[0_10px_28px_rgba(0,0,0,0.12)] px-[18px] py-[12px] flex flex-col z-[351]">
+                  <div className="cat-flyout-subpanel absolute top-[-6px] left-full w-[240px] bg-white border border-[#e5e7eb] rounded-[8px] shadow-[0_10px_28px_rgba(0,0,0,0.12)] px-[18px] py-[12px] flex flex-col z-[351] before:content-[''] before:absolute before:top-0 before:-left-[12px] before:w-[12px] before:h-full">
                     <div className="flex flex-col gap-[10px]">
                       {cat.subcategories.map((sub) => (
                         <Link

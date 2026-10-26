@@ -21,7 +21,7 @@ export function PodRandomRecommendations() {
 
   const fetchRandomProducts = () => {
     setIsLoading(true);
-    fetch('/api/recommendations/random?limit=4')
+    fetch('/api/recommendations/random?limit=5', { cache: 'no-store' })
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.json();
@@ -46,18 +46,15 @@ export function PodRandomRecommendations() {
   return (
     <section className="pod-random-recommendations-section">
       <div className="container-main">
-        <div className="flex flex-col items-start mb-[32px] text-left">
-          <h2 className="text-[clamp(22px,3vw,28px)] font-semibold text-[#222]">
+        <div className="flex flex-col items-start mb-[8px] min-[750px]:mb-[14px] text-left">
+          <h2 className="text-[17px] min-[750px]:text-[28px] font-semibold text-[#222]">
             Recommended For You
           </h2>
-          <p className="text-[15px] text-[#666] mt-[6px]">
-            Randomly picked gear and trending selections tailored to inspire
-          </p>
         </div>
 
         <div className="pod-random-grid">
           {isLoading
-            ? Array.from({ length: 4 }).map((_, i) => <ProductCardSkeleton key={i} />)
+            ? Array.from({ length: 5 }).map((_, i) => <ProductCardSkeleton key={i} />)
             : products.map((product, i) => (
                 <HomeProductCard key={product.id} product={product} index={i} />
               ))}
@@ -78,23 +75,16 @@ export function PodRandomRecommendations() {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
           gap: 14px;
+          align-items: stretch;
         }
-        .pod-random-grid > * { min-width: 0; }
+        .pod-random-grid > * { min-width: 0; height: 100%; }
 
         @media (min-width: 750px) {
-          .pod-random-grid { grid-template-columns: repeat(4, 1fr); gap: 20px; }
+          .pod-random-grid { grid-template-columns: repeat(3, 1fr); gap: 16px; }
         }
 
-        
-        .pod-random-grid .fc-card > a:first-child {
-          width: 100%;
-          aspect-ratio: 1 / 1;
-          margin: 0 auto 14px;
-        }
-        .pod-random-grid .fc-card > a:first-child img {
-          object-fit: cover !important;
-          background-color: #fff;
-          padding: 0 !important;
+        @media (min-width: 1024px) {
+          .pod-random-grid { grid-template-columns: repeat(5, 1fr); gap: 16px; }
         }
 
         .pod-refresh-btn:hover {
