@@ -244,6 +244,13 @@ export function NotificationDropdown({
     }
 
     const email = getCustomerEmail();
+    if (!email) {
+      setNotifications([]);
+      setUnreadCount(0);
+      setNotificationError(false);
+      return false;
+    }
+
     isFetchingRef.current = true;
     try {
       const data = await loadNotifications(email);

@@ -45,7 +45,7 @@ export const TRUST_BADGES = [
   { icon: 'headphones', title: 'Dedicated Support', description: 'Wholesale & retail buyer assistance' },
 ] as const;
 
-export const STORE_EMAIL = 'rkfdistributors2002@gmail.com';
+export const STORE_EMAIL = 'info@rkfdistributors.lk';
 export const STORE_PHONE = '+94 78 991 5587';
 export const STORE_ADDRESS = 'Play Ground Road, Kopay South, Jaffna';
 export const STORE_HOURS = '9:00 AM – 6:00 PM (All Days)';
