@@ -194,20 +194,22 @@ export function ProductCard({ product, className }: ProductCardProps) {
           </h3>
         </Link>
 
-        <div className="flex items-baseline gap-[4px] min-[750px]:gap-[5px] flex-nowrap whitespace-nowrap overflow-hidden mb-[0.6rem]">
+        <div className="flex flex-col min-[750px]:flex-row min-[750px]:items-baseline min-[750px]:gap-[6px] mb-[0.6rem] min-h-[3.6rem] min-[750px]:min-h-[2.2rem]">
           <span className={cn("product-price-text text-[1.3rem] min-[400px]:text-[1.4rem] font-bold text-heading shrink-0", isOutOfStock && "text-[#94a3b8] opacity-60")}>
             {formatPrice(product.price)}
           </span>
-          {discount > 0 && (
-            <span className="text-[#F15B41] bg-[#fff0ed] text-[1rem] min-[750px]:text-[1.1rem] font-bold px-[4px] py-[1px] rounded-[3px] leading-none shrink-0">
-              -{discount}%
-            </span>
-          )}
-          {product.compareAtPrice && (
-            <span className="text-[1.1rem] min-[750px]:text-[1.2rem] text-body line-through font-normal shrink-0">
-              {formatPrice(product.compareAtPrice)}
-            </span>
-          )}
+          {product.compareAtPrice && product.compareAtPrice > product.price ? (
+            <div className="flex items-center min-[750px]:items-baseline gap-[5px] mt-[2px] min-[750px]:mt-0">
+              {discount > 0 && (
+                <span className="text-[#F15B41] bg-[#fff0ed] text-[1rem] min-[750px]:text-[1.1rem] font-bold px-[4px] py-[1px] rounded-[3px] leading-none shrink-0">
+                  -{discount}%
+                </span>
+              )}
+              <span className="text-[1.1rem] min-[750px]:text-[1.2rem] text-body line-through font-normal shrink-0">
+                {formatPrice(product.compareAtPrice)}
+              </span>
+            </div>
+          ) : null}
         </div>
 
         {product.colors.length > 0 && (
