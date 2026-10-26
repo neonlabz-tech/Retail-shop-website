@@ -64,6 +64,8 @@ function IconShoppingBag({ size = 22 }: { size?: number }) {
 }
 
 function CountBadge({ count }: { count: number }) {
+  if (count <= 0) return null;
+
   return (
     <span
       style={{

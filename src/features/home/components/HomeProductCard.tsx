@@ -8,6 +8,7 @@ import { useUIStore } from '@/store/uiStore';
 import { useCompareStore } from '@/store/compareStore';
 import { useWishlistStore } from '@/store/wishlistStore';
 import type { Product } from '@/types/product';
+import { FALLBACK_IMAGE_SRC, handleImageError } from '@/lib/imageFallback';
 
 function IconHeart({ size = 18 }: { size?: number }) {
   return (
@@ -142,7 +143,7 @@ export function HomeProductCard({
   const { openQuickView } = useUIStore();
   const { toggleItem: toggleWishlist, isInWishlist } = useWishlistStore();
   const inWishlist = isInWishlist(product.id);
-  const defaultImg1 = product.images[0]?.src || '';
+  const defaultImg1 = product.images[0]?.src || FALLBACK_IMAGE_SRC;
   const defaultImg2 = product.images[1]?.src || defaultImg1;
   const hasCountdown = showCountdown ?? false;
   const hasScrollText = showScrollText ?? false;
@@ -179,6 +180,7 @@ export function HomeProductCard({
             src={defaultImg1}
             alt={product.name}
             fill
+            onError={handleImageError}
             className={`object-contain object-center p-[8px] transition-[opacity,transform] duration-500 ease-out ${hovered ? 'scale-108' : 'scale-100'} ${activeColorImage ? 'opacity-0' : 'opacity-100'}`}
             sizes="(max-width: 749px) 50vw, 25vw"
           />
@@ -189,6 +191,7 @@ export function HomeProductCard({
               src={imgSrc}
               alt={`${product.name} ${colorName}`}
               fill
+              onError={handleImageError}
               className={`object-contain object-center p-[8px] transition-[opacity,transform] duration-500 ease-out ${hovered ? 'scale-108' : 'scale-100'} ${
                 hoveredColor === colorName ? 'opacity-100 z-[2]' : 'opacity-0 z-[1]'
               }`}

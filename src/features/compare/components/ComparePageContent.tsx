@@ -3,9 +3,11 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useCompareStore } from '@/store/compareStore';
 import { useUIStore } from '@/store/uiStore';
 import { useCartStore } from '@/store/cartStore';
+import { checkAuthOrRedirect } from '@/store/authStore';
 import { formatPrice } from '@/utils/formatPrice';
 import { getStorefrontOfProductId, isSameStoreScope, productHrefBaseFor, shopHrefFor, type Storefront } from '@/utils/storefront';
 
@@ -51,6 +53,7 @@ function IconChevronRight({ size = 18 }: { size?: number }) {
 }
 
 export function ComparePageContent({ storefront }: { storefront?: Storefront } = {}) {
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [allItems, setAllItems] = useState<ReturnType<typeof useCompareStore.getState>['items']>([]);
   const [slideIndex, setSlideIndex] = useState(0);
@@ -91,6 +94,7 @@ export function ComparePageContent({ storefront }: { storefront?: Storefront } =
   const { addItem } = useCartStore();
 
   const handleAddToCart = (product: typeof items[0]) => {
+    if (!checkAuthOrRedirect(router)) return;
     const variant = product.variants?.[0];
     const variantId = variant?.id || product.id || 'default';
     const image = variant?.image || product.images?.[0]?.src || '';

@@ -69,9 +69,11 @@ function LsMobileIcons() {
         onMouseLeave={(e) => { e.currentTarget.style.color = '#222'; }}
       >
         <IconShoppingBag size={24} />
-        <span style={{ position: 'absolute', top: '-9px', right: '-10px', minWidth: '18px', height: '18px', padding: '0 5px', borderRadius: '9999px', backgroundColor: ACCENT, color: '#fff', fontSize: '10px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1, border: '2px solid #fff' }}>
-          {cartCount}
-        </span>
+        {cartCount > 0 && (
+          <span style={{ position: 'absolute', top: '-9px', right: '-10px', minWidth: '18px', height: '18px', padding: '0 5px', borderRadius: '9999px', backgroundColor: ACCENT, color: '#fff', fontSize: '10px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1, border: '2px solid #fff' }}>
+            {cartCount}
+          </span>
+        )}
       </button>
     </div>
   );

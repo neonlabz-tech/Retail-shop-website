@@ -14,20 +14,6 @@ function IcoFacebook() {
     </svg>
   );
 }
-function IcoTwitter() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M10.4883 14.651L15.25 21H22.25L14.3917 10.5223L20.9308 3H18.2808L13.1643 8.88578L8.75 3H1.75L9.26086 13.0145L2.31915 21H4.96917L10.4883 14.651ZM16.25 19L5.75 5H7.75L18.25 19H16.25Z" />
-    </svg>
-  );
-}
-function IcoPin() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 2C8.13 2 5 5.13 5 9C5 14.25 12 22 12 22C12 22 19 14.25 19 9C19 5.13 15.87 2 12 2ZM12 11.5C10.62 11.5 9.5 10.38 9.5 9C9.5 7.62 10.62 6.5 12 6.5C13.38 6.5 14.5 7.62 14.5 9C14.5 10.38 13.38 11.5 12 11.5Z" />
-    </svg>
-  );
-}
 function IcoShare() {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
@@ -123,12 +109,6 @@ export function BlogDetailContent({ post, prevPost, nextPost }: Props) {
           <div className="bd-social">
             <button className="bd-social-btn" type="button" aria-label="Share on Facebook">
               <IcoFacebook /> Facebook
-            </button>
-            <button className="bd-social-btn" type="button" aria-label="Share on Twitter">
-              <IcoTwitter /> Twitter
-            </button>
-            <button className="bd-social-btn" type="button" aria-label="Pin it on Pinterest">
-              <IcoPin /> Pin it
             </button>
             <button className="bd-social-btn" type="button" aria-label="Share">
               <IcoShare /> Share

@@ -6,6 +6,7 @@ import { useWishlistStore } from '@/store/wishlistStore';
 import { useCompareStore } from '@/store/compareStore';
 import { isGrocerySlug, isGroceryProductId } from '@/utils/storefront';
 import { AccountDropdown } from './AccountDropdown';
+import { NotificationDropdown } from './NotificationDropdown';
 
 function IconUser({ size = 22 }: { size?: number }) {
   return (
@@ -56,6 +57,8 @@ function IconShoppingBag({ size = 22 }: { size?: number }) {
 }
 
 function CountBadge({ count }: { count: number }) {
+  if (count <= 0) return null;
+
   return (
     <span
       style={{
@@ -124,6 +127,7 @@ export function GroceryHeaderActions() {
         <IconShoppingBag />
         <CountBadge count={totalCartItems} />
       </button>
+      <NotificationDropdown badgeColor="#1E7A3C" hoverColor="#1E7A3C" />
     </div>
   );
 }

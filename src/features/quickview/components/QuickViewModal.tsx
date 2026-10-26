@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useUIStore } from '@/store/uiStore';
 import { useCartStore } from '@/store/cartStore';
+import { checkAuthOrRedirect } from '@/store/authStore';
 import { formatPrice } from '@/utils/formatPrice';
 import { getStorefrontOfSlug, productHrefBaseFor } from '@/utils/storefront';
 
@@ -77,6 +78,10 @@ export function QuickViewModal() {
   const activeSize = selectedSize || product.sizes?.[0] || '';
 
   const handleAddToCart = () => {
+    if (!checkAuthOrRedirect(router)) {
+      closeQuickView();
+      return;
+    }
     const variant = product.variants?.find(
       (v) => v.color === activeColor && v.size === activeSize
     ) || product.variants?.[0];
@@ -101,6 +106,10 @@ export function QuickViewModal() {
   };
 
   const handleBuyNow = () => {
+    if (!checkAuthOrRedirect(router)) {
+      closeQuickView();
+      return;
+    }
     const variant = product.variants?.find(
       (v) => v.color === activeColor && v.size === activeSize
     ) || product.variants?.[0];

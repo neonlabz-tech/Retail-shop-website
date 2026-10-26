@@ -7,6 +7,7 @@ import { useUIStore } from '@/store/uiStore';
 import { useCompareStore } from '@/store/compareStore';
 import { useWishlistStore } from '@/store/wishlistStore';
 import type { Product } from '@/types/product';
+import { FALLBACK_IMAGE_SRC, handleImageError } from '@/lib/imageFallback';
 
 function IconHeart({ size = 18 }: { size?: number }) {
   return (
@@ -98,7 +99,7 @@ export function GroceryProductCard({
   const inWishlist = isInWishlist(product.id);
   const inCompare = isInCompare(product.id);
 
-  const img1 = product.images[0]?.src ?? '';
+  const img1 = product.images[0]?.src || FALLBACK_IMAGE_SRC;
   const img2 = product.images[1]?.src ?? img1;
 
   const badgeLabel =
@@ -124,6 +125,7 @@ export function GroceryProductCard({
             src={img1}
             alt={product.name}
             fill
+            onError={handleImageError}
             style={{ objectFit: 'contain', transition: 'opacity 400ms ease', opacity: hovered ? 0 : 1 }}
             sizes="(min-width: 992px) 20vw, (min-width: 750px) 30vw, 45vw"
           />
@@ -132,6 +134,7 @@ export function GroceryProductCard({
             alt=""
             fill
             aria-hidden
+            onError={handleImageError}
             style={{ objectFit: 'contain', transition: 'opacity 400ms ease', opacity: hovered ? 1 : 0 }}
             sizes="(min-width: 992px) 20vw, (min-width: 750px) 30vw, 45vw"
           />

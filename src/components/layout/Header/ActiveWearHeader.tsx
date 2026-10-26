@@ -58,6 +58,8 @@ function IconSearch({ size = 24 }: { size?: number }) {
 }
 
 function CountBadge({ count }: { count: number }) {
+  if (count <= 0) return null;
+
   return (
     <span
       style={{
