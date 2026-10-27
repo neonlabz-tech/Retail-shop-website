@@ -36,136 +36,14 @@ function IconArrowRight({ size = 18 }: { size?: number }) {
   );
 }
 
-const fashionSuggestionPages = [
-  { label: 'About us', href: '/pages/about' },
-  { label: 'Frequently Asked Questions & Support', href: '/pages/faq' },
-];
-
-const grocerySuggestionPages = [
-  { label: 'About us', href: '/grocery/about' },
-  { label: 'Store Location', href: '/grocery/store-location' },
-];
-
-const petFoodSuggestionPages = [
-  { label: 'About us', href: '/pet-food/about' },
-  { label: 'Store Location', href: '/pet-food/store-location' },
-];
-
-const megastoreSuggestionPages = [
-  { label: 'About us', href: '/megastore/about' },
-  { label: 'Store Location', href: '/megastore/store-location' },
-];
-
-const carAccessoriesSuggestionPages = [
-  { label: 'About us', href: '/car-accessories/about' },
-  { label: 'Store Location', href: '/car-accessories/store-location' },
-];
-
-const pizzaSuggestionPages = [
-  { label: 'About us', href: '/pizza/about' },
-  { label: 'Store Location', href: '/pizza/store-location' },
-];
-
-const plantGardenSuggestionPages = [
-  { label: 'About us', href: '/plant-garden/about' },
-  { label: 'Store Location', href: '/plant-garden/store-location' },
-];
-
-const skinCareSuggestionPages = [
-  { label: 'About us', href: '/skin-care/about' },
-  { label: 'Store Location', href: '/skin-care/store-location' },
-];
-
-const jewellerySuggestionPages = [
-  { label: 'About us', href: '/pages/about' },
-  { label: 'Store Location', href: '/pages/store-location' },
-];
-
-const boutiqueSuggestionPages = [
-  { label: 'About us', href: '/boutique-fashion/about' },
-  { label: 'Store Location', href: '/boutique-fashion/store-location' },
-];
-
-const phoneCaseSuggestionPages = [
-  { label: 'About us', href: '/phone-case/about' },
-  { label: 'Store Location', href: '/phone-case/store-location' },
-];
-
-const smartWatchesSuggestionPages = [
-  { label: 'About us', href: '/smart-watches/about' },
-  { label: 'Store Location', href: '/smart-watches/store-location' },
-];
-
-const footwearSuggestionPages = [
-  { label: 'About us', href: '/footwear/about' },
-  { label: 'Store Location', href: '/pages/store-location' },
-];
-
 export function SearchDrawer() {
   const { searchOpen, closeSearch } = useUIStore();
   const pathname = usePathname();
   const storefront = getStorefrontFromPath(pathname);
-  const searchEndpoint =
-    storefront === 'grocery' ? '/api/grocery-search' :
-    storefront === 'pet-food' ? '/api/pet-food-search' :
-    storefront === 'nutrition' ? '/api/nutrition-search' :
-    storefront === 'megastore' ? '/api/megastore-search' :
-    storefront === 'car-accessories' ? '/api/car-accessories-search' :
-    storefront === 'pizza' ? '/api/pizza-search' :
-    storefront === 'plant-garden' ? '/api/plant-garden-search' :
-    storefront === 'skin-care' ? '/api/skin-care-search' :
-    storefront === 'jewellery' ? '/api/jewellery-search' :
-    storefront === 'headphones' ? '/api/headphones-search' :
-    storefront === 'sneaker' ? '/api/sneaker-search' :
-    storefront === 'boutique-fashion' ? '/api/boutique-fashion-search' :
-    storefront === 'elegant-fashion' ? '/api/elegant-fashion-search' :
-    storefront === 'lipstain' ? '/api/lipstain-search' :
-    storefront === 'phone-case' ? '/api/phone-case-search' :
-    storefront === 'smart-watches' ? '/api/smart-watches-search' :
-    storefront === 'footwear' ? '/api/footwear-search' :
-    storefront === 'fashion-04' ? '/api/fashion-04-search' :
-    storefront === 'fashion-03' ? '/api/fashion-03-search' :
-    storefront === 'active-wear' ? '/api/active-wear-search' :
-    storefront === 'backpack' ? '/api/backpack-search' :
-    storefront === 'basketball' ? '/api/basketball-search' :
-    storefront === 'glasses' ? '/api/glasses-search' :
-    storefront === 'plumbing-supplies' ? '/api/plumbing-supplies-search' :
-    storefront === 'book' ? '/api/book-search' :
-    storefront === 'jewelry-2' ? '/api/jewelry-2-search' :
-    storefront === 'coffee' ? '/api/coffee-search' :
-    storefront === 'craft-and-decore' ? '/api/craft-and-decore-search' :
-    storefront === 'toys' ? '/api/toys-search' :
-    storefront === 'socks' ? '/api/socks-search' :
-    storefront === 'pod' ? '/api/pod-search' :
-    '/api/search';
-  const productHrefBase = productHrefBaseFor(storefront);
-  const shopHref = shopHrefFor(storefront);
-  const popularTerms =
-    storefront === 'grocery' ? GROCERY_POPULAR_SEARCHES :
-    storefront === 'pet-food' ? PET_FOOD_POPULAR_SEARCHES :
-    storefront === 'megastore' ? MEGASTORE_POPULAR_SEARCHES :
-    storefront === 'pizza' ? PIZZA_POPULAR_SEARCHES :
-    storefront === 'plant-garden' ? PLANT_GARDEN_POPULAR_SEARCHES :
-    storefront === 'skin-care' ? SKIN_CARE_POPULAR_SEARCHES :
-    storefront === 'jewellery' ? JEWELLERY_POPULAR_SEARCHES :
-    storefront === 'phone-case' ? PHONE_CASE_POPULAR_SEARCHES :
-    storefront === 'smart-watches' ? SMART_WATCHES_POPULAR_SEARCHES :
-    storefront === 'footwear' ? FOOTWEAR_POPULAR_SEARCHES :
-    POPULAR_SEARCHES;
-  const suggestionPages =
-    storefront === 'grocery' ? grocerySuggestionPages :
-    storefront === 'pet-food' ? petFoodSuggestionPages :
-    storefront === 'megastore' ? megastoreSuggestionPages :
-    storefront === 'car-accessories' ? carAccessoriesSuggestionPages :
-    storefront === 'pizza' ? pizzaSuggestionPages :
-    storefront === 'plant-garden' ? plantGardenSuggestionPages :
-    storefront === 'skin-care' ? skinCareSuggestionPages :
-    storefront === 'jewellery' ? jewellerySuggestionPages :
-    storefront === 'boutique-fashion' ? boutiqueSuggestionPages :
-    storefront === 'phone-case' ? phoneCaseSuggestionPages :
-    storefront === 'smart-watches' ? smartWatchesSuggestionPages :
-    storefront === 'footwear' ? footwearSuggestionPages :
-    fashionSuggestionPages;
+  const searchEndpoint = '/api/pod-search';
+  const productHrefBase = '/products';
+  const shopHref = '/shop';
+  const popularTerms = POPULAR_SEARCHES;
   const [query, setQuery] = useState('');
   const debouncedQuery = useDebounce(query, 300);
   const { data } = useSearch(debouncedQuery, { endpoint: searchEndpoint });
@@ -282,7 +160,7 @@ export function SearchDrawer() {
                           : 0;
                         return (
                           <div className="flex items-baseline gap-[6px] flex-wrap">
-                            <span className="product-price-text text-[15px] font-bold text-[#222]">
+                            <span className="product-price-text text-[15px] font-bold text-[#e01117]">
                               {formatPrice(product.price)}
                             </span>
                             {sDiscount > 0 && (
@@ -328,26 +206,6 @@ export function SearchDrawer() {
                 </div>
               )}
 
-              <div className="mb-[8px]">
-                <div className="pb-[10px] border-b border-[#e5e5e5] mb-[12px]">
-                  <span className="text-[12px] font-bold text-[#888] tracking-[2px] uppercase">
-                    PAGES
-                  </span>
-                </div>
-                {suggestionPages.map((page) => (
-                  <Link
-                    key={page.label}
-                    href={page.href}
-                    onClick={closeSearch}
-                    className="block text-[15px] text-[#222] py-[8px] px-0 no-underline transition-[color] duration-200 ease-in-out"
-                    onMouseEnter={(e) => { e.currentTarget.style.color = '#F15B41'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.color = '#222'; }}
-                  >
-                    {page.label}
-                  </Link>
-                ))}
-              </div>
-
               <div className="pb-[10px] border-b border-[#e5e5e5] mb-[12px]">
                 <span className="text-[12px] font-bold text-[#888] tracking-[2px] uppercase">
                   PRODUCTS
@@ -378,7 +236,7 @@ export function SearchDrawer() {
                           : 0;
                         return (
                           <div className="flex items-baseline gap-[6px] flex-wrap">
-                            <span className="product-price-text text-[15px] font-bold text-[#222]">
+                            <span className="product-price-text text-[15px] font-bold text-[#e01117]">
                               {formatPrice(product.price)}
                             </span>
                             {sDiscount > 0 && (

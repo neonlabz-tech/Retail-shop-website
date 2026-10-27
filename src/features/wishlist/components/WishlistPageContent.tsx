@@ -282,7 +282,7 @@ function WishlistCard({ item, index, onRemove, onQuickAdd, onQuickView, onCompar
             : 0;
           return (
             <div className="mt-[6px] flex items-baseline justify-center gap-[6px] flex-wrap">
-              <span className="product-price-text text-[15px] font-bold text-[#222]">
+              <span className="product-price-text text-[15px] font-bold text-[#e01117]">
                 {formatPrice(item.price)}
               </span>
               {wlDiscount > 0 && (

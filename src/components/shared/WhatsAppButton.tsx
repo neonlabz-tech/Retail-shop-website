@@ -25,8 +25,8 @@ export function WhatsAppButton() {
     return null;
   }
 
-  // You can enter your number starting with 0 (e.g. '0707992740') or international format ('94707992740')
-  const phoneNumber = '0707992740';
+  // You can enter your number starting with 0 (e.g. '0789915587') or international format ('94789915587')
+  const phoneNumber = '0789915587';
   const formattedPhone = phoneNumber.replace(/\D/g, '').replace(/^0/, '94');
   const defaultMessage = 'Hello! I am browsing your store and would like to inquire about your products.';
   const whatsappUrl = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(defaultMessage)}`;

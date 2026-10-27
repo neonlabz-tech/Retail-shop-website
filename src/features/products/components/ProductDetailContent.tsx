@@ -20,11 +20,10 @@ import { useProducts } from '@/features/products/hooks/useProducts';
 import { formatPrice } from '@/utils/formatPrice';
 import { calculateDiscount } from '@/utils/calculateDiscount';
 import { FeaturedSlider } from '@/features/home/components/FeaturedSlider';
-import { GroceryFeaturedSlider } from '@/features/grocery-shop/components/GroceryFeaturedSlider';
 import { TrustBadges } from '@/components/shared/TrustBadges';
 import { HomeProductCard } from '@/features/home/components/HomeProductCard';
-import { GroceryProductCard } from '@/features/grocery-shop/components/GroceryProductCard';
 import type { Product } from '@/types/product';
+import { SHIPPING_POLICY_TEXT, RETURN_POLICY_TEXT } from '@/data/termsAndConditions';
 
 function IconBag({ size = 18 }: { size?: number }) {
   return (<svg viewBox="0 0 24 24" fill="currentColor" width={size} height={size}><path d="M9 6H15C15 4.34315 13.6569 3 12 3C10.3431 3 9 4.34315 9 6ZM7 6C7 3.23858 9.23858 1 12 1C14.7614 1 17 3.23858 17 6H20C20.5523 6 21 6.44772 21 7V21C21 21.5523 20.5523 22 20 22H4C3.44772 22 3 21.5523 3 21V7C3 6.44772 3.44772 6 4 6H7ZM5 8V20H19V8H5ZM9 10C9 11.6569 10.3431 13 12 13C13.6569 13 15 11.6569 15 10H17C17 12.7614 14.7614 15 12 15C9.23858 15 7 12.7614 7 10H9Z" /></svg>);
@@ -440,7 +439,7 @@ function PairsWellWith({ products, productHrefBase = '/products' }: { products: 
                         : 0;
                       return (
                         <div className="flex items-baseline gap-[6px] flex-wrap">
-                          <span className="text-[14px] font-bold text-[#222]">{formatPrice(p.price)}</span>
+                          <span className="pdp-pairs-price text-[14px] font-bold text-[#e01117]">{formatPrice(p.price)}</span>
                           {pDiscount > 0 && (
                             <span className="text-[#F15B41] bg-[#fff0ed] text-[11px] font-bold px-[4px] py-[1px] rounded-[3px] leading-none">
                               -{pDiscount}%
@@ -524,7 +523,12 @@ export function ProductDetailContent({
   const [shareMenuOpen, setShareMenuOpen] = useState(false);
   const [wishlistLoading, setWishlistLoading] = useState(false);
   const [compareLoading, setCompareLoading] = useState(false);
+  const [stickyCartVisible, setStickyCartVisible] = useState(false);
+  const [footerVisible, setFooterVisible] = useState(false);
   const [activeGalleryIndex, setActiveGalleryIndex] = useState(0);
+  const addToCartRef = useRef<HTMLDivElement>(null);
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const footerObserverRef = useRef<IntersectionObserver | null>(null);
 
   const product = data?.product;
   const searchParams = useSearchParams();
@@ -537,6 +541,15 @@ export function ProductDetailContent({
   const [starCounts, setStarCounts] = useState<Record<number, number>>({ 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 });
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [likedReviewIds, setLikedReviewIds] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('rkf_liked_reviews');
+      if (stored) {
+        setLikedReviewIds(JSON.parse(stored));
+      }
+    } catch {}
+  }, []);
   const [isBreadcrumbExpanded, setIsBreadcrumbExpanded] = useState(false);
   const hasAutoOpenedReviewRef = useRef(false);
 
@@ -642,19 +655,30 @@ export function ProductDetailContent({
     }
   };
   const handleLikeReview = async (reviewId: string) => {
-    if (likedReviewIds[reviewId]) return;
-    setLikedReviewIds((prev) => ({ ...prev, [reviewId]: true }));
+    const isCurrentlyLiked = Boolean(likedReviewIds[reviewId]);
+    const nextLikedState = !isCurrentlyLiked;
+    const delta = nextLikedState ? 1 : -1;
+
+    setLikedReviewIds((prev) => {
+      const updated = { ...prev, [reviewId]: nextLikedState };
+      try {
+        localStorage.setItem('rkf_liked_reviews', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+
     setReviewsList((prev) =>
-      prev.map((r) => (r.id === reviewId ? { ...r, likes: (r.likes || 0) + 1 } : r))
+      prev.map((r) => (r.id === reviewId ? { ...r, likes: Math.max(0, (r.likes || 0) + delta) } : r))
     );
+
     try {
       await fetch('/api/reviews', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'like', reviewId }),
+        body: JSON.stringify({ action: nextLikedState ? 'like' : 'unlike', reviewId }),
       });
     } catch (e) {
-      console.error('Failed to like review:', e);
+      console.error('Failed to toggle review like:', e);
     }
   };
 
@@ -710,8 +734,49 @@ export function ProductDetailContent({
     }
   }, [product]);
 
+  useEffect(() => {
+    const footer = document.querySelector('footer');
+    if (!footer) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setFooterVisible(entry.isIntersecting),
+      { threshold: 0 }
+    );
+    observer.observe(footer);
+    footerObserverRef.current = observer;
+    return () => observer.disconnect();
+  }, []);
+
+  const addToCartCallbackRef = useCallback((node: HTMLDivElement | null) => {
+    if (observerRef.current) {
+      observerRef.current.disconnect();
+      observerRef.current = null;
+    }
+    if (node) {
+      addToCartRef.current = node;
+      const observer = new IntersectionObserver(
+        ([entry]) => setStickyCartVisible(!entry.isIntersecting),
+        { threshold: 0 }
+      );
+      observer.observe(node);
+      observerRef.current = observer;
+    }
+  }, []);
+
   if (isLoading || !product) {
-    return (<div className="container-main py-[60px] px-0 text-center text-[16px] text-[#888]">Loading product...</div>);
+    return (
+      <div className="container-main py-[40px]">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-[40px] items-start">
+          <div className="aspect-square w-full rounded-[12px] animate-shimmer" />
+          <div className="space-y-[16px] py-[20px]">
+            <div className="h-[28px] w-[65%] rounded-[6px] animate-shimmer" />
+            <div className="h-[22px] w-[35%] rounded-[6px] animate-shimmer" />
+            <div className="h-[16px] w-[85%] rounded-[6px] animate-shimmer" />
+            <div className="h-[16px] w-[70%] rounded-[6px] animate-shimmer" />
+            <div className="h-[48px] w-[180px] rounded-[30px] animate-shimmer mt-[24px]" />
+          </div>
+        </div>
+      </div>
+    );
   }
 
   const activeColor = selectedColor || product.colors?.[0]?.name || '';
@@ -756,8 +821,12 @@ export function ProductDetailContent({
     );
   };
 
+  const activeVariant = getActiveVariant();
+  const isOutOfStock = product.availability === 'out-of-stock' || (typeof product.stock === 'number' && product.stock <= 0) || (activeVariant ? !activeVariant.available : false);
+  const maxStock = typeof product.stock === 'number' && product.stock > 0 ? product.stock : (isOutOfStock ? 0 : 999);
+
   const handleAddToCart = () => {
-    if (!product) return;
+    if (!product || isOutOfStock) return;
     if (!checkAuthOrRedirect(router)) return;
     const variant = getActiveVariant();
     const variantId = variant?.id || product.id || 'default';
@@ -774,15 +843,17 @@ export function ProductDetailContent({
         size: activeSize,
         price: product.price,
         compareAtPrice: product.compareAtPrice,
-        quantity,
+        quantity: Math.min(maxStock, quantity),
         vendor: product.vendor,
         weight: product.weight || 0,
+        stock: product.stock,
       });
       setAddingToCart(false);
     }, 400);
   };
 
   const handleBuyNow = () => {
+    if (!product || isOutOfStock) return;
     if (!checkAuthOrRedirect(router)) return;
     const variant = product.variants?.find(v => v.color === activeColor && v.size === activeSize) || product.variants?.[0];
     const variantId = variant?.id || product.id || 'default';
@@ -798,9 +869,10 @@ export function ProductDetailContent({
       size: activeSize,
       price: product.price,
       compareAtPrice: product.compareAtPrice,
-      quantity,
+      quantity: Math.min(maxStock, quantity),
       vendor: product.vendor,
       weight: product.weight || 0,
+      stock: product.stock,
     });
     closeDrawer();
     router.push('/checkout');
@@ -823,7 +895,7 @@ export function ProductDetailContent({
       `Could you please help me with more details?`,
     ].filter(Boolean).join('\n');
 
-    window.open(`https://wa.me/94707992740?text=${encodeURIComponent(messageLines)}`, '_blank', 'noopener,noreferrer');
+    window.open(`https://wa.me/94789915587?text=${encodeURIComponent(messageLines)}`, '_blank', 'noopener,noreferrer');
   };
 
   const SHOW_EXTRA_SECTIONS = false;
@@ -937,13 +1009,28 @@ export function ProductDetailContent({
                   {formatPrice(product.price)}
                 </span>
                 {discount > 0 && (
-                  <span className="text-[#F15B41] text-[15px] font-bold tracking-tight">
-                    {discount}% off
+                  <span className="text-[#e01117] bg-[#fff0ed] text-[13px] font-bold px-[6px] py-[2px] rounded-[4px] leading-none">
+                    -{discount}%
                   </span>
                 )}
                 {product.compareAtPrice && (
                   <span className="pdp-info-compare-at text-[16px] text-[#999] line-through font-normal">
                     {formatPrice(product.compareAtPrice)}
+                  </span>
+                )}
+              </div>
+
+              {/* In-Stock / Out-of-Stock Indicator Badge */}
+              <div className="pdp-stock-badge flex items-center gap-[8px] mb-[18px]">
+                <span className={`inline-flex items-center gap-[6px] text-[13px] font-semibold px-[10px] py-[4px] rounded-full ${
+                  isOutOfStock ? 'bg-red-50 text-[#e01117] border border-red-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                }`}>
+                  <span className={`w-[7px] h-[7px] rounded-full ${isOutOfStock ? 'bg-[#e01117]' : 'bg-emerald-500'}`} />
+                  {isOutOfStock ? 'Out of Stock' : (typeof product.stock === 'number' && product.stock <= 10 ? `Only ${product.stock} left in stock` : 'In Stock')}
+                </span>
+                {!isOutOfStock && typeof product.stock === 'number' && product.stock <= 10 && (
+                  <span className="text-[12px] font-semibold text-[#e01117] animate-pulse">
+                    (Order soon before it runs out!)
                   </span>
                 )}
               </div>
@@ -988,33 +1075,52 @@ export function ProductDetailContent({
                 </div>
               )}
 
-              <div className="pdp-info-qty-block mb-[16px]">
+              <div ref={addToCartCallbackRef} className="pdp-info-qty-block mb-[16px]">
                 <p className="pdp-info-field-label text-[15px] font-semibold text-[#222] mb-[10px]">Quantity</p>
                 <div className="pdp-info-qty-row flex items-center gap-[14px]">
-                  <div className="pdp-qty-stepper inline-flex border border-solid border-[#e5e5e5] rounded-[4px]">
-                    <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="pdp-qty-step-btn w-[40px] h-[44px] flex items-center justify-center bg-transparent border-none cursor-pointer text-[18px] text-[#222]">−</button>
+                  <div className={`pdp-qty-stepper inline-flex border border-solid border-[#e5e5e5] rounded-[4px] ${isOutOfStock ? 'opacity-40 pointer-events-none' : ''}`}>
+                    <button
+                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                      disabled={isOutOfStock || quantity <= 1}
+                      className="pdp-qty-step-btn w-[40px] h-[44px] flex items-center justify-center bg-transparent border-none cursor-pointer text-[18px] text-[#222] disabled:opacity-30 disabled:cursor-not-allowed"
+                    >−</button>
                     <span className="pdp-qty-value w-[40px] h-[44px] flex items-center justify-center text-[15px] font-medium border-l border-r border-solid border-[#e5e5e5]">{quantity}</span>
-                    <button onClick={() => setQuantity(quantity + 1)} className="pdp-qty-step-btn w-[40px] h-[44px] flex items-center justify-center bg-transparent border-none cursor-pointer text-[18px] text-[#222]">+</button>
+                    <button
+                      onClick={() => setQuantity(Math.min(maxStock, quantity + 1))}
+                      disabled={isOutOfStock || quantity >= maxStock}
+                      className="pdp-qty-step-btn w-[40px] h-[44px] flex items-center justify-center bg-transparent border-none cursor-pointer text-[18px] text-[#222] disabled:opacity-30 disabled:cursor-not-allowed"
+                    >+</button>
                   </div>
                   <button
                     onClick={handleAddToCart}
-                    disabled={addingToCart}
+                    disabled={addingToCart || isOutOfStock}
                     className={`pdp-add-to-cart-btn flex-1 flex items-center justify-center gap-[10px] py-[14px] px-0 text-[#fff] text-[16px] font-semibold border-none rounded-none transition-colors duration-[250ms] ease-in-out ${
-                      addingToCart ? 'bg-[#555] cursor-wait opacity-80' : 'bg-[#222] cursor-pointer opacity-100'
+                      isOutOfStock
+                        ? 'bg-[#94a3b8] cursor-not-allowed opacity-90'
+                        : addingToCart
+                        ? 'bg-[#555] cursor-wait opacity-80'
+                        : 'bg-[#222] cursor-pointer opacity-100 hover:bg-[#F15B41]'
                     }`}
-                    onMouseEnter={(e) => { if (!addingToCart) e.currentTarget.style.backgroundColor = '#F15B41'; }}
-                    onMouseLeave={(e) => { if (!addingToCart) e.currentTarget.style.backgroundColor = '#222'; }}
-                  >{addingToCart ? 'Adding...' : <><IconBag size={18} /> Add to cart</>}</button>
+                    onMouseEnter={(e) => { if (!addingToCart && !isOutOfStock) e.currentTarget.style.backgroundColor = '#F15B41'; }}
+                    onMouseLeave={(e) => { if (!addingToCart && !isOutOfStock) e.currentTarget.style.backgroundColor = '#222'; }}
+                  >{isOutOfStock ? 'Out of stock' : addingToCart ? 'Adding...' : <><IconBag size={18} /> Add to cart</>}</button>
                 </div>
+                {!isOutOfStock && typeof product.stock === 'number' && product.stock > 0 && quantity >= maxStock && (
+                  <p className="text-[12px] text-[#e01117] font-medium mt-[6px]">
+                    Maximum available quantity reached ({maxStock} units).
+                  </p>
+                )}
               </div>
 
-<button
-                type="button"
-                onClick={handleBuyNow}
-                className="pdp-buy-now-btn w-full py-[14px] px-0 bg-[#fff] text-[#222] text-[16px] font-semibold border-[1.5px] border-solid border-[#222] rounded-none cursor-pointer mb-[20px] transition-all duration-[250ms] ease-in-out"
-              >
-                Buy it now
-              </button>
+              {!isOutOfStock && (
+                <button
+                  type="button"
+                  onClick={handleBuyNow}
+                  className="pdp-buy-now-btn w-full py-[14px] px-0 bg-[#fff] text-[#222] text-[16px] font-semibold border-[1.5px] border-solid border-[#222] rounded-none cursor-pointer mb-[20px] transition-all duration-[250ms] ease-in-out hover:bg-[#222] hover:text-[#fff]"
+                >
+                  Buy it now
+                </button>
+              )}
 
               <div className="pdp-info-actions-row flex items-center gap-[24px] mb-[24px]">
                 <button
@@ -1156,11 +1262,11 @@ export function ProductDetailContent({
                   },
                   {
                     title: 'Shipping and Returns',
-                    content: <p className="text-justify md:text-left">Island-wide delivery available across Sri Lanka. Standard shipping takes 2-4 business days. 7-day return policy on eligible items in original packaging.</p>,
+                    content: <p className="text-justify md:text-left">{SHIPPING_POLICY_TEXT}</p>,
                   },
                   {
                     title: 'Return Policies',
-                    content: <p className="text-justify md:text-left">Items must be returned in original condition with all tags attached within 30 days of delivery. Refunds will be processed within 5-7 business days after we receive the returned item.</p>,
+                    content: <p className="text-justify md:text-left">{RETURN_POLICY_TEXT}</p>,
                   },
                 ]} />
               </div>
@@ -1454,19 +1560,17 @@ export function ProductDetailContent({
                   <button
                     type="button"
                     onClick={() => handleLikeReview(review.id)}
-                    disabled={likedReviewIds[review.id]}
-                    className={`inline-flex items-center gap-[6px] py-[4px] px-[10px] rounded-[6px] border text-[13px] transition-colors ${
+                    title={likedReviewIds[review.id] ? 'Click to remove feedback' : 'Helpful review'}
+                    aria-label={likedReviewIds[review.id] ? 'Unlike review' : 'Like review'}
+                    className={`inline-flex items-center gap-[6px] py-[4px] px-[10px] rounded-[6px] border text-[13px] transition-all cursor-pointer ${
                       likedReviewIds[review.id]
-                        ? 'border-[#111827] bg-[#111827] text-white cursor-default'
-                        : 'border-[#e5e7eb] bg-white text-[#4b5563] hover:border-[#9ca3af] hover:text-[#111827] cursor-pointer'
+                        ? 'border-[#111827] bg-[#111827] text-white hover:bg-[#1f2937]'
+                        : 'border-[#e5e7eb] bg-white text-[#4b5563] hover:border-[#9ca3af] hover:text-[#111827]'
                     }`}
                   >
                     <span>👍</span>
                     <span className="font-medium">{review.likes || 0}</span>
                   </button>
-                  {likedReviewIds[review.id] && (
-                    <span className="text-[12px] text-[#16a34a] font-medium">Thank you for your feedback!</span>
-                  )}
                 </div>
               </div>
             ))}
@@ -1501,16 +1605,11 @@ export function ProductDetailContent({
       </div>
 
       <div className="pdp-related-section">
-        {cardVariant === 'grocery' ? (
-          <GroceryFeaturedSlider />
-        ) : (
-          <FeaturedSlider
-            apiEndpoint={relatedEndpoint ?? apiEndpoint}
-            cardVariant={cardVariant}
-            productHrefBase={productHrefBase}
-            count={(relatedEndpoint ?? apiEndpoint) === '/api/megastore-products' ? 6 : undefined}
-          />
-        )}
+        <FeaturedSlider
+          apiEndpoint={relatedEndpoint ?? apiEndpoint}
+          cardVariant={cardVariant}
+          productHrefBase={productHrefBase}
+        />
       </div>
 
       <div className="container-main pdp-recently-section">
@@ -1537,11 +1636,7 @@ export function ProductDetailContent({
               >
                 {recentList.map((p, i) => (
                   <SwiperSlide key={p.id}>
-                    {cardVariant === 'grocery' ? (
-                      <GroceryProductCard product={p} index={i} hrefBase={productHrefBase} />
-                    ) : (
-                      <HomeProductCard product={p} index={i} hrefBase={productHrefBase} />
-                    )}
+                    <HomeProductCard product={p} index={i} hrefBase={productHrefBase} />
                   </SwiperSlide>
                 ))}
               </Swiper>
@@ -1567,6 +1662,121 @@ export function ProductDetailContent({
         })()}
       </div>
 
+      <div className="pdp-sticky-spacer" />
+
+      <div
+        className={`pdp-sticky-bar fixed left-0 right-0 z-[9998] bg-[#fff] border-t border-solid border-[#e5e5e5] shadow-[0_-2px_10px_rgba(0,0,0,0.06)] transition-transform duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${
+          stickyCartVisible && !footerVisible ? 'translate-y-0' : 'translate-y-full'
+        }`}
+      >
+        <div className="container-main pdp-sticky-inner">
+          <div className="pdp-sticky-product flex items-center gap-[clamp(10px,1.1vw,14px)] min-w-0">
+            <div className="w-[clamp(52px,6vw,80px)] h-[clamp(58px,7vw,90px)] overflow-hidden relative bg-[#f5f5f5] shrink-0 rounded-[4px] flex items-center justify-center">
+              {(product.images[activeGalleryIndex]?.src || product.images[0]?.src) ? (
+                <Image
+                  src={product.images[activeGalleryIndex]?.src || product.images[0]?.src || ''}
+                  alt={product.name}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 1200px) 70px, 80px"
+                />
+              ) : (
+                <span className="text-[11px] text-[#999]">No img</span>
+              )}
+            </div>
+            <span className="pdp-sticky-name text-[clamp(12px,1.2vw,14px)] font-semibold text-[#222] overflow-hidden text-ellipsis whitespace-nowrap">{product.name}</span>
+          </div>
+
+          {product.colors.length > 0 || product.sizes.length > 0 ? (
+            <select
+              className="pdp-sticky-variant py-[clamp(9px,1vw,12px)] pr-[clamp(24px,2.5vw,34px)] pl-[clamp(12px,1.3vw,16px)] text-[clamp(12px,1.1vw,13px)] border border-solid border-[#e0e0e0] rounded-[6px] text-[#222] bg-[#fff] cursor-pointer appearance-none bg-[url('data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%2210%22%20height=%226%22%20viewBox=%220%200%2010%206%22%3E%3Cpath%20fill=%22%23555%22%20d=%22M5%206L0%200h10z%22/%3E%3C/svg%3E')] bg-no-repeat bg-[position:right_14px_center] bg-[length:10px_6px]"
+              value={`${activeColor}${activeColor && activeSize ? ' / ' : ''}${activeSize}`}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val.includes(' / ')) {
+                  const [c, s] = val.split(' / ');
+                  setSelectedColor(c);
+                  setSelectedSize(s);
+                } else if (product.colors.some((c) => c.name === val)) {
+                  setSelectedColor(val);
+                } else if (product.sizes.includes(val)) {
+                  setSelectedSize(val);
+                }
+              }}
+            >
+              {product.colors.length > 0 && product.sizes.length > 0 ? (
+                product.colors.flatMap((c) =>
+                  product.sizes.map((s) => (
+                    <option key={`${c.name}-${s}`} value={`${c.name} / ${s}`}>
+                      {c.name} / {s} - {formatPrice(product.price)}
+                    </option>
+                  ))
+                )
+              ) : product.colors.length > 0 ? (
+                product.colors.map((c) => (
+                  <option key={c.name} value={c.name}>
+                    {c.name} - {formatPrice(product.price)}
+                  </option>
+                ))
+              ) : (
+                product.sizes.map((s) => (
+                  <option key={s} value={s}>
+                    {s} - {formatPrice(product.price)}
+                  </option>
+                ))
+              )}
+            </select>
+          ) : (
+            <div className="pdp-sticky-price flex items-baseline gap-[6px] text-[clamp(14px,1.3vw,16px)] font-bold text-[#e01117] py-[clamp(8px,1vw,10px)] px-[14px] bg-[#f8f8f8] rounded-[6px] border border-solid border-[#e5e5e5] whitespace-nowrap">
+              <span>{formatPrice(product.price)}</span>
+              {discount > 0 && (
+                <span className="text-[#F15B41] bg-[#fff0ed] text-[11px] font-bold px-[4px] py-[1px] rounded-[3px] leading-none">
+                  -{discount}%
+                </span>
+              )}
+              {product.compareAtPrice && (
+                <span className="text-[12px] text-[#999] line-through font-normal">
+                  {formatPrice(product.compareAtPrice)}
+                </span>
+              )}
+            </div>
+          )}
+
+          <div className={`pdp-sticky-qty inline-flex items-center border border-solid border-[#e0e0e0] rounded-[6px] overflow-hidden shrink-0 ${isOutOfStock ? 'opacity-40 pointer-events-none' : ''}`}>
+            <button
+              onClick={() => setQuantity(Math.max(1, quantity - 1))}
+              disabled={isOutOfStock || quantity <= 1}
+              className="w-[clamp(32px,3.4vw,40px)] h-[clamp(38px,4vw,46px)] flex items-center justify-center bg-transparent border-none cursor-pointer text-[clamp(15px,1.6vw,18px)] text-[#555] disabled:opacity-30 disabled:cursor-not-allowed"
+            >−</button>
+            <span className="w-[clamp(30px,3vw,36px)] h-[clamp(38px,4vw,46px)] flex items-center justify-center text-[clamp(12px,1.2vw,14px)] font-medium border-l border-r border-solid border-[#e0e0e0] text-[#222]">{quantity}</span>
+            <button
+              onClick={() => setQuantity(Math.min(maxStock, quantity + 1))}
+              disabled={isOutOfStock || quantity >= maxStock}
+              className="w-[clamp(32px,3.4vw,40px)] h-[clamp(38px,4vw,46px)] flex items-center justify-center bg-transparent border-none cursor-pointer text-[clamp(15px,1.6vw,18px)] text-[#555] disabled:opacity-30 disabled:cursor-not-allowed"
+            >+</button>
+          </div>
+
+          <button
+            className={`pdp-sticky-atc text-[#fff] text-[clamp(12px,1.2vw,14px)] font-semibold border-none transition-colors duration-200 ease-in-out whitespace-nowrap ${
+              isOutOfStock
+                ? 'bg-[#94a3b8] cursor-not-allowed opacity-90'
+                : addingToCart
+                ? 'bg-[#555] cursor-wait'
+                : 'bg-[#222] hover:bg-[#F15B41] cursor-pointer'
+            }`}
+            onClick={handleAddToCart}
+            disabled={addingToCart || isOutOfStock}
+          >{isOutOfStock ? 'Out of stock' : addingToCart ? 'Adding...' : 'Add to cart'}</button>
+
+          {!isOutOfStock && (
+            <button
+              type="button"
+              onClick={handleBuyNow}
+              className="pdp-sticky-buy bg-[#fff] hover:bg-[#222] text-[#222] hover:text-[#fff] text-[clamp(12px,1.2vw,14px)] font-semibold border-[1.5px] border-solid border-[#222] cursor-pointer transition-all duration-200 ease-in-out whitespace-nowrap"
+            >Buy it now</button>
+          )}
+        </div>
+      </div>
       <style>{`
         
         @media (min-width: 992px) and (max-width: 1199px) {

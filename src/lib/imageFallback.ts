@@ -24,9 +24,50 @@ export function normalizeImageSrc(value: unknown): string {
   return '';
 }
 
-export function handleImageError(event: SyntheticEvent<HTMLImageElement>) {
+/**
+ * Handles image load errors with an automatic double-check retry mechanism.
+ * If an image fails to load (due to temporary network lag or connection drop),
+ * it waits briefly and retries up to 2 times before falling back to the placeholder.
+ */
+export function handleImageError(
+  event: SyntheticEvent<HTMLImageElement>,
+  maxRetries = 2,
+  retryDelayMs = 350
+) {
   const image = event.currentTarget;
-  if (image.getAttribute('src') !== FALLBACK_IMAGE_SRC && !image.src.endsWith(FALLBACK_IMAGE_SRC)) {
+  if (!image) return;
+
+  const currentSrc = image.getAttribute('src') || image.src || '';
+
+  // If already at fallback or data URI, do nothing
+  if (!currentSrc || currentSrc === FALLBACK_IMAGE_SRC || currentSrc.startsWith('data:')) {
+    return;
+  }
+
+  // Record original source URL on first failure
+  if (!image.dataset.originalSrc) {
+    image.dataset.originalSrc = currentSrc;
+  }
+
+  const originalSrc = image.dataset.originalSrc;
+  const currentRetry = parseInt(image.dataset.retryCount || '0', 10);
+
+  // If we haven't reached max retries, retry after a short delay
+  if (currentRetry < maxRetries && originalSrc) {
+    image.dataset.retryCount = String(currentRetry + 1);
+
+    setTimeout(() => {
+      // Append or update cache-busting timestamp to force fresh browser request
+      const cleanBase = originalSrc.replace(/([?&])_retry=\d+/, '');
+      const sep = cleanBase.includes('?') ? '&' : '?';
+      image.src = `${cleanBase}${sep}_retry=${Date.now()}`;
+    }, retryDelayMs);
+
+    return;
+  }
+
+  // All retries failed: fall back to placeholder
+  if (image.src !== FALLBACK_IMAGE_SRC && !image.src.endsWith(FALLBACK_IMAGE_SRC)) {
     image.src = FALLBACK_IMAGE_SRC;
   }
 }

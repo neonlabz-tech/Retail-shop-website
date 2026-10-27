@@ -6,7 +6,6 @@ import Image from 'next/image';
 import type { MegaMenuColumn, MegaCategoryCard } from '@/types/common';
 import type { Product } from '@/types/product';
 import { formatPrice } from '@/utils/formatPrice';
-import { HOME_DEMO_COLUMNS } from '@/data/homeDemoMenu';
 
 function IconArrowLeftS({ size = 18 }: { size?: number }) {
   return (
@@ -420,8 +419,7 @@ export function MegaMenu({ columns, promoImage, showProductSlider, categoryCards
 
   if (!columns) return null;
 
-  const isDemoMenu = columns.some((c) => c.title && c.title.toLowerCase().startsWith('demo list'));
-  const effectiveColumns = isDemoMenu ? HOME_DEMO_COLUMNS : columns;
+  const effectiveColumns = columns;
 
   return (
     <div

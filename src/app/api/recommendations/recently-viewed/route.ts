@@ -4,6 +4,7 @@ import { connectDB } from '@/lib/db';
 import ProductModel from '@/models/Product';
 import RecentlyViewedModel from '@/models/RecentlyViewed';
 import { formatMongoProduct } from '@/lib/formatProduct';
+import type { Product } from '@/types/product';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -20,14 +21,16 @@ function resolveCustomerId(request: NextRequest): { customerId: string; isNew: b
 }
 
 export async function GET(request: NextRequest) {
-  try {
-    const searchParams = request.nextUrl.searchParams;
-    const limit = Math.max(1, parseInt(searchParams.get('limit') || '8'));
-    const idsParam = searchParams.get('ids');
-    const { customerId } = resolveCustomerId(request);
+  const searchParams = request.nextUrl.searchParams;
+  const inStockOnly = searchParams.get('inStock') === 'true' || searchParams.get('availability') === 'in-stock';
+  const limit = Math.max(1, parseInt(searchParams.get('limit') || '8'));
+  const idsParam = searchParams.get('ids');
+  const { customerId } = resolveCustomerId(request);
 
+  try {
     await connectDB();
 
+    const baseStockFilter = inStockOnly ? { stock: { $gt: 0 } } : {};
     let productIds: string[] = [];
 
     if (idsParam) {
@@ -55,6 +58,7 @@ export async function GET(request: NextRequest) {
         const foundDocs = await ProductModel.find({
           _id: { $in: validObjectIds },
           status: { $ne: 'archived' },
+          ...baseStockFilter,
         }).lean();
 
         const docMap = new Map(foundDocs.map((d) => [d._id.toString(), d]));
@@ -68,6 +72,7 @@ export async function GET(request: NextRequest) {
           const extraDocs = await ProductModel.find({
             _id: { $nin: excludeIds },
             status: { $ne: 'archived' },
+            ...baseStockFilter,
           })
             .limit(limit - orderedDocs.length)
             .lean();
@@ -89,6 +94,7 @@ export async function GET(request: NextRequest) {
     // Fallback if no history exists yet: provide trending products up to limit so the grid is full
     const fallbackDocs = await ProductModel.find({
       status: { $ne: 'archived' },
+      ...baseStockFilter,
     })
       .limit(limit)
       .lean();
@@ -103,11 +109,14 @@ export async function GET(request: NextRequest) {
       products: formattedFallback,
     });
   } catch (error) {
-    console.error('Error in /api/recommendations/recently-viewed GET:', error);
-    return NextResponse.json(
-      { success: false, error: 'Internal Server Error' },
-      { status: 500 }
-    );
+    console.warn('MongoDB unavailable in /api/recommendations/recently-viewed GET:', (error as Error)?.message);
+    return NextResponse.json({
+      success: true,
+      source: 'database-unavailable',
+      customerId,
+      count: 0,
+      products: [],
+    });
   }
 }
 
@@ -169,10 +178,10 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error) {
-    console.error('Error in /api/recommendations/recently-viewed POST:', error);
-    return NextResponse.json(
-      { success: false, error: 'Internal Server Error' },
-      { status: 500 }
-    );
+    console.warn('MongoDB unavailable in /api/recommendations/recently-viewed POST:', (error as Error)?.message);
+    return NextResponse.json({
+      success: false,
+      error: 'Database unavailable',
+    });
   }
 }

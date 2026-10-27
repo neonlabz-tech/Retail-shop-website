@@ -11,8 +11,7 @@ import { QuickViewModal } from '@/features/quickview/components/QuickViewModal';
 import { SITE_NAME, SITE_DESCRIPTION, SITE_URL } from '@/lib/constants';
 import { WhatsAppButton } from '@/components/shared/WhatsAppButton';
 import { CompareBar } from '@/components/shared/CompareBar';
-import { PageLoader } from '@/components/shared/PageLoader';
-import { NewsletterPopup } from '@/components/shared/NewsletterPopup';
+// import { NewsletterPopup } from '@/components/shared/NewsletterPopup';
 
 const albertSans = Albert_Sans({
   subsets: ['latin'],
@@ -47,7 +46,6 @@ export default function RootLayout({
   return (
     <html lang="en" dir="ltr" className={albertSans.variable}>
       <body className="min-h-screen flex flex-col">
-        <PageLoader />
         <Providers>
           <Header />
           <main className="flex-1">{children}</main>
@@ -60,7 +58,7 @@ export default function RootLayout({
           <QuickViewModal />
           <CompareBar />
           <WhatsAppButton />
-          <NewsletterPopup />
+          {/* <NewsletterPopup /> */}
         </Providers>
       </body>
     </html>

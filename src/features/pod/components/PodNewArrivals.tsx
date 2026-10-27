@@ -29,9 +29,25 @@ function ProductCardSkeleton() {
 
 export function PodNewArrivals() {
   const [swiperInstance, setSwiperInstance] = useState<SwiperType | null>(null);
-  const { data, isLoading } = useProducts({ limit: 8, page: 2 }, { endpoint: '/api/pod-products' });
+  const { data, isLoading } = useProducts(
+    { limit: 12, page: 2, availability: 'in-stock' },
+    { endpoint: '/api/pod-products' }
+  );
 
-  const products = data?.products.slice(0, 8) || [];
+  const { data: page1Data } = useProducts(
+    { limit: 12, page: 1, availability: 'in-stock' },
+    { endpoint: '/api/pod-products' }
+  );
+
+  // Guarantee that only in-stock products appear on the homepage New Arrivals slider
+  const page2InStock = (data?.products || []).filter(
+    (p) => p.availability !== 'out-of-stock' && (typeof p.stock !== 'number' || p.stock > 0)
+  );
+  const page1InStock = (page1Data?.products || []).filter(
+    (p) => p.availability !== 'out-of-stock' && (typeof p.stock !== 'number' || p.stock > 0)
+  );
+
+  const products = (page2InStock.length >= 5 ? page2InStock : page1InStock).slice(0, 10);
 
   return (
     <section className="pdna-section">

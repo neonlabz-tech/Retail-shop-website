@@ -363,6 +363,7 @@ export async function POST(request: NextRequest) {
     await customer.save();
 
     let totalOrderWeightGrams = 0;
+    const stockErrors: string[] = [];
 
     // Format items for order and resolve MongoDB product document IDs and weights
     const formattedItems = await Promise.all(
@@ -370,6 +371,7 @@ export async function POST(request: NextRequest) {
         let matchedProductDocId: mongoose.Types.ObjectId | undefined = undefined;
         let matchedProductSlug = typeof item.slug === 'string' ? item.slug.trim() : '';
         let itemWeight = typeof item.weight === 'number' && item.weight > 0 ? item.weight : 0;
+        const qty = Math.max(1, Number(item.quantity) || 1);
 
         try {
           const orCond: any[] = [];
@@ -390,11 +392,18 @@ export async function POST(request: NextRequest) {
               if (!itemWeight) {
                 itemWeight = parseWeightInGrams(p);
               }
+              // Validate stock limits
+              if (typeof p.stock === 'number') {
+                if (p.stock <= 0) {
+                  stockErrors.push(`"${p.name || item.name}" is currently out of stock.`);
+                } else if (p.stock < qty) {
+                  stockErrors.push(`Only ${p.stock} units of "${p.name || item.name}" are available in stock (you requested ${qty}).`);
+                }
+              }
             }
           }
         } catch {}
 
-        const qty = Math.max(1, Number(item.quantity) || 1);
         totalOrderWeightGrams += itemWeight * qty;
 
         return {
@@ -411,6 +420,16 @@ export async function POST(request: NextRequest) {
         };
       })
     );
+
+    if (stockErrors.length > 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: stockErrors.join(' '),
+        },
+        { status: 400 }
+      );
+    }
 
     // Shipping fee: 500 when order exceeds 500g, default 350 for all orders (0 if cart is empty)
     const calculatedShippingFee = calculateShippingFee(totalOrderWeightGrams, items.length);
