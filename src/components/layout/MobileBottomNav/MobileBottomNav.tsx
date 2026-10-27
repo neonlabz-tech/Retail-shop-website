@@ -3,32 +3,8 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useCartStore } from '@/store/cartStore';
-import {
-  getStorefrontFromPath,
-  isGrocerySlug,
-  isPetFoodSlug,
-  isNutritionSlug,
-  isMegastoreSlug,
-  isCarAccessoriesSlug,
-  isPizzaSlug,
-  isPlantGardenSlug,
-  isSkinCareSlug,
-  isJewellerySlug,
-  isHeadphonesSlug,
-  isSneakerSlug,
-  isFurnitureSlug,
-  isElegantFashionSlug,
-  isLipstainSlug,
-  isFootwearSlug,
-  isFashion04Slug,
-  isFashion03Slug,
-  isActiveWearSlug,
-  isBackpackSlug,
-  isBasketballSlug,
-  type Storefront,
-} from '@/utils/storefront';
 
-/* ── Icons (Remix Icon-style outlines, match screenshot weight) ── */
+/* ── Icons ── */
 
 function IconHome({ size = 22 }: { size?: number }) {
   return (
@@ -87,217 +63,6 @@ function IconAccount({ size = 22 }: { size?: number }) {
   );
 }
 
-/* ── Helpers ── */
-
-function homeHrefFor(storefront: Storefront): string {
-  switch (storefront) {
-    case 'grocery':
-      return '/home/grocery-shop';
-    case 'pet-food':
-      return '/home/pet-food-shop';
-    case 'nutrition':
-      return '/home/nutrition-shop';
-    case 'megastore':
-      return '/home/megastore-shop';
-    case 'car-accessories':
-      return '/home/car-accessories-shop';
-    case 'pizza':
-      return '/home/pizza-shop';
-    case 'plant-garden':
-      return '/home/plant-garden-shop';
-    case 'skin-care':
-      return '/home/skin-care-shop';
-    case 'jewellery':
-      return '/home/jewellery-shop';
-    case 'headphones':
-      return '/home/headphones-shop';
-    case 'sneaker':
-      return '/home/sneaker-shop';
-    case 'furniture':
-      return '/home/furniture-shop';
-    case 'elegant-fashion':
-      return '/home/elegant-fashion-shop';
-    case 'lipstain':
-      return '/home/lipstain-shop';
-    case 'smart-watches':
-      return '/home/smart-watches-shop';
-    case 'electronics-store-2':
-      return '/home/electronics-store-2-shop';
-    case 'single-product':
-      return '/home/single-product-shop';
-    case 'footwear':
-      return '/home/footwear-shop';
-    case 'fashion-04':
-      return '/home/fashion-04-shop';
-    case 'fashion-03':
-      return '/home/fashion-03-shop';
-    case 'active-wear':
-      return '/home/active-wear-shop';
-    case 'backpack':
-      return '/home/backpack-shop';
-    case 'basketball':
-      return '/home/basketball-shop';
-    case 'glasses':
-      return '/home/glasses-shop';
-    case 'plumbing-supplies':
-      return '/home/plumbing-supplies-shop';
-    case 'book':
-      return '/home/book-shop';
-    case 'jewelry-2':
-      return '/home/jewelry-2-shop';
-    case 'coffee':
-      return '/home/coffee-shop';
-    case 'craft-and-decore':
-      return '/home/craft-and-decore-shop';
-    case 'rtl-demo':
-      return '/home/rtl-demo-shop';
-    case 'toys':
-      return '/home/toys-shop';
-    case 'socks':
-      return '/home/socks-shop';
-    case 'pod':
-      return '/home/pod-shop';
-    default:
-      return '/';
-  }
-}
-
-function accentFor(storefront: Storefront): string {
-  switch (storefront) {
-    case 'grocery':
-      return 'rgb(27, 128, 87)';
-    case 'pet-food':
-      return 'rgb(10, 66, 83)';
-    case 'nutrition':
-      return '#0e1a0a';
-    case 'megastore':
-      return '#f26522';
-    case 'car-accessories':
-      return '#5b72d6';
-    case 'pizza':
-      return '#e84d1c';
-    case 'plant-garden':
-      return '#3a7d44';
-    case 'skin-care':
-      return '#111';
-    case 'jewellery':
-      return '#b89b6e';
-    case 'headphones':
-      return '#5de8ff';
-    case 'sneaker':
-      return '#e84d1c';
-    case 'furniture':
-      return '#c8a45a';
-    case 'elegant-fashion':
-      return '#1a2b5e';
-    case 'lipstain':
-      return '#c9173c';
-    case 'smart-watches':
-      return '#fc5732';
-    case 'electronics-store-2':
-      return '#2b6be6';
-    case 'single-product':
-      return '#1a6fe8';
-    case 'footwear':
-      return '#F15B41';
-    case 'basketball':
-      return '#e8521f';
-    case 'plumbing-supplies':
-      return '#0a2540';
-    case 'book':
-      return '#e0294a';
-    default:
-      return '#222';
-  }
-}
-
-function cartCountForStorefront(
-  items: { slug: string; quantity: number }[],
-  storefront: Storefront,
-) {
-  const relevant =
-    storefront === 'grocery'
-      ? items.filter((i) => isGrocerySlug(i.slug))
-      : storefront === 'pet-food'
-      ? items.filter((i) => isPetFoodSlug(i.slug))
-      : storefront === 'nutrition'
-      ? items.filter((i) => isNutritionSlug(i.slug))
-      : storefront === 'megastore'
-      ? items.filter((i) => isMegastoreSlug(i.slug))
-      : storefront === 'car-accessories'
-      ? items.filter((i) => isCarAccessoriesSlug(i.slug))
-      : storefront === 'pizza'
-      ? items.filter((i) => isPizzaSlug(i.slug))
-      : storefront === 'plant-garden'
-      ? items.filter((i) => isPlantGardenSlug(i.slug))
-      : storefront === 'skin-care'
-      ? items.filter((i) => isSkinCareSlug(i.slug))
-      : storefront === 'jewellery'
-      ? items.filter((i) => isJewellerySlug(i.slug))
-      : storefront === 'headphones'
-      ? items.filter((i) => isHeadphonesSlug(i.slug))
-      : storefront === 'sneaker'
-      ? items.filter((i) => isSneakerSlug(i.slug))
-      : storefront === 'furniture'
-      ? items.filter((i) => isFurnitureSlug(i.slug))
-      : storefront === 'elegant-fashion'
-      ? items.filter((i) => isElegantFashionSlug(i.slug))
-      : storefront === 'lipstain'
-      ? items.filter((i) => isLipstainSlug(i.slug))
-      : storefront === 'footwear'
-      ? items.filter((i) => isFootwearSlug(i.slug))
-      : storefront === 'fashion-04'
-      ? items.filter((i) => isFashion04Slug(i.slug))
-      : storefront === 'fashion-03'
-      ? items.filter((i) => isFashion03Slug(i.slug))
-      : storefront === 'active-wear'
-      ? items.filter((i) => isActiveWearSlug(i.slug))
-      : storefront === 'backpack'
-      ? items.filter((i) => isBackpackSlug(i.slug))
-      : storefront === 'basketball'
-      ? items.filter((i) => isBasketballSlug(i.slug))
-      : items.filter(
-          (i) =>
-            !isGrocerySlug(i.slug) && !isPetFoodSlug(i.slug) && !isNutritionSlug(i.slug) && !isMegastoreSlug(i.slug) && !isCarAccessoriesSlug(i.slug) && !isPizzaSlug(i.slug) && !isPlantGardenSlug(i.slug) && !isSkinCareSlug(i.slug) && !isJewellerySlug(i.slug) && !isHeadphonesSlug(i.slug) && !isSneakerSlug(i.slug) && !isFurnitureSlug(i.slug) && !isElegantFashionSlug(i.slug) && !isLipstainSlug(i.slug) && !isFootwearSlug(i.slug) && !isFashion04Slug(i.slug) && !isFashion03Slug(i.slug) && !isActiveWearSlug(i.slug) && !isBackpackSlug(i.slug) && !isBasketballSlug(i.slug),
-        );
-  return relevant.reduce((sum, i) => sum + i.quantity, 0);
-}
-
-/* ── Helpers for Category & Products ── */
-
-function categoriesHrefFor(storefront: Storefront): string {
-  switch (storefront) {
-    case 'grocery': return '/grocery/categories';
-    case 'pet-food': return '/pet-food/categories';
-    case 'nutrition': return '/nutrition/categories';
-    case 'megastore': return '/megastore/categories';
-    case 'car-accessories': return '/car-accessories/categories';
-    case 'pizza': return '/pizza/categories';
-    case 'plant-garden': return '/plant-garden/categories';
-    case 'boutique-fashion': return '/boutique-fashion/categories';
-    case 'phone-case': return '/phone-case/categories';
-    case 'smart-watches': return '/smart-watches/categories';
-    default: return '/categories';
-  }
-}
-
-function productsHrefFor(storefront: Storefront): string {
-  switch (storefront) {
-    case 'grocery': return '/grocery/shop';
-    case 'pet-food': return '/pet-food/shop';
-    case 'nutrition': return '/nutrition/shop';
-    case 'megastore': return '/megastore/shop';
-    case 'car-accessories': return '/car-accessories/shop';
-    case 'pizza': return '/pizza/shop';
-    case 'plant-garden': return '/plant-garden/shop';
-    case 'headphones': return '/headphones/shop';
-    case 'boutique-fashion': return '/boutique-fashion/shop';
-    case 'phone-case': return '/phone-case/shop';
-    case 'smart-watches': return '/smart-watches/shop';
-    default: return '/products';
-  }
-}
-
 /* ── Component ── */
 
 export function MobileBottomNav() {
@@ -305,20 +70,20 @@ export function MobileBottomNav() {
   if (pathname === '/login' || pathname === '/register') {
     return null;
   }
-  const storefront = getStorefrontFromPath(pathname);
-  const accent = accentFor(storefront);
-  const homeHref = homeHrefFor(storefront);
-  const categoriesHref = categoriesHrefFor(storefront);
-  const productsHref = productsHrefFor(storefront);
+
+  const accent = '#c96742';
+  const homeHref = '/';
+  const categoriesHref = '/categories';
+  const productsHref = '/products';
   const accountHref = '/profile';
 
   const openCart = useCartStore((s) => s.openDrawer);
   const cartItems = useCartStore((s) => s.items);
-  const cartCount = cartCountForStorefront(cartItems, storefront);
+  const cartCount = cartItems.reduce((sum, item) => sum + (Number(item.quantity) || 1), 0);
 
-  const isHomeActive = pathname === homeHref || (storefront === 'fashion' && pathname === '/');
-  const isCategoryActive = pathname === categoriesHref || pathname.includes('/categories') || pathname.includes('/collections');
-  const isProductsActive = pathname === productsHref || pathname === '/products' || pathname.startsWith('/products/');
+  const isHomeActive = pathname === '/';
+  const isCategoryActive = pathname.includes('/categories') || pathname.includes('/collections');
+  const isProductsActive = pathname === '/products' || pathname.startsWith('/products/') || pathname === '/shop';
   const isAccountActive = pathname === accountHref;
 
   return (
@@ -344,7 +109,7 @@ export function MobileBottomNav() {
           <span className="mbn-label">Products</span>
         </Link>
 
-        {/* 3. Home (Center Floating Button - no text) */}
+        {/* 3. Home (Center Floating Button) */}
         <Link
           href={homeHref}
           className={`mbn-center-item ${isHomeActive ? 'is-active' : ''}`}
@@ -435,7 +200,7 @@ export function MobileBottomNav() {
         }
 
         :global(.mbn-bar .mbn-item.is-active) {
-          color: ${accent === '#222' ? '#0f172a' : accent};
+          color: ${accent};
         }
 
         :global(.mbn-bar .mbn-label) {
@@ -448,12 +213,6 @@ export function MobileBottomNav() {
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
-          text-align: center;
-        }
-
-        :global(.mbn-bar .mbn-item.is-active .mbn-label) {
-          font-weight: 600;
-          color: ${accent === '#222' ? '#0f172a' : accent};
         }
 
         :global(.mbn-bar .mbn-icon-wrap) {
@@ -463,85 +222,62 @@ export function MobileBottomNav() {
           justify-content: center;
         }
 
-        :global(.mbn-bar .mbn-item svg) {
-          display: block;
-          flex-shrink: 0;
+        :global(.mbn-bar .mbn-badge) {
+          position: absolute;
+          top: -4px;
+          right: -8px;
+          min-width: 16px;
+          height: 16px;
+          padding: 0 4px;
+          border-radius: 9999px;
+          background-color: #ef4444;
+          color: #ffffff;
+          font-size: 10px;
+          font-weight: 700;
+          line-height: 16px;
+          text-align: center;
+          box-sizing: border-box;
         }
 
+        /* ── Center Floating Button ── */
         :global(.mbn-bar .mbn-center-item) {
-          flex: 1 1 0%;
-          width: 20%;
-          min-width: 0;
+          flex: 0 0 54px;
+          width: 54px;
           height: 100%;
           display: flex;
           align-items: center;
           justify-content: center;
-          text-decoration: none;
           position: relative;
-          cursor: pointer;
-          box-sizing: border-box;
+          text-decoration: none;
         }
 
         :global(.mbn-bar .mbn-center-circle) {
           position: absolute;
-          top: -18px;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 56px;
-          height: 56px;
-          border-radius: 9999px;
-          background: ${accent === '#222' ? '#0f172a' : accent};
+          top: -14px;
+          width: 52px;
+          height: 52px;
+          border-radius: 50%;
+          background: #111111;
           color: #ffffff;
           display: flex;
           align-items: center;
           justify-content: center;
-          border: 4px solid #ffffff;
-          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18), 0 2px 4px rgba(0, 0, 0, 0.08);
-          transition: transform 180ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 180ms ease;
-          box-sizing: border-box;
-        }
-
-        :global(.mbn-bar .mbn-center-item:active .mbn-center-circle) {
-          transform: translateX(-50%) translateY(2px) scale(0.94);
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.14);
+          box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+          transition: transform 180ms ease, background-color 180ms ease;
         }
 
         :global(.mbn-bar .mbn-center-item.is-active .mbn-center-circle) {
-          box-shadow: 0 0 0 3px ${accent === '#222' ? 'rgba(15, 23, 42, 0.2)' : `${accent}40`}, 0 6px 20px rgba(0, 0, 0, 0.22);
+          background: ${accent};
         }
 
-        :global(.mbn-bar .mbn-badge) {
-          position: absolute;
-          top: -6px;
-          right: -10px;
-          min-width: 18px;
-          height: 18px;
-          padding: 0 5px;
-          border-radius: 9999px;
-          background: ${accent === '#222' ? '#0f172a' : accent};
-          color: #fff;
-          font-size: 10px;
-          font-weight: 700;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          line-height: 1;
-          border: 2px solid #fff;
-          box-sizing: border-box;
+        :global(.mbn-bar .mbn-center-item:active .mbn-center-circle) {
+          transform: scale(0.95);
         }
 
-        /* Shown only at ≤ 749px */
-        @media (max-width: 749px) {
-          .mbn-bar { display: flex; }
-        }
-
-        /* Hide the bottom nav while a full-height modal/drawer is open
-           (body.scroll-locked is set by useLockBodyScroll). Prevents the
-           nav from peeking through under a full-viewport drawer on
-           devices where 100dvh under-measures, and fixes the UX of a
-           background nav being visible under a modal. */
-        :global(body.scroll-locked) .mbn-bar {
-          display: none !important;
+        @media (max-width: 715px) {
+          .mbn-bar {
+            display: block;
+          }
         }
       `}</style>
     </nav>

@@ -1,7 +1,20 @@
 import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 
+let cachedCategoriesData: { categories: any[]; subcategories: any[] } | null = null;
+let lastCacheTime = 0;
+const CACHE_TTL_MS = 2 * 60 * 1000; // 2 minutes in-memory cache
+
 export async function GET() {
+  const now = Date.now();
+  if (cachedCategoriesData && now - lastCacheTime < CACHE_TTL_MS) {
+    return NextResponse.json(cachedCategoriesData, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=180',
+      },
+    });
+  }
+
   try {
     const conn = await connectDB();
     const db = conn.connection.db;
@@ -89,9 +102,16 @@ export async function GET() {
         }
       });
 
-      return NextResponse.json({
+      cachedCategoriesData = {
         categories: categoriesWithSubs,
         subcategories: subcategoryItems,
+      };
+      lastCacheTime = Date.now();
+
+      return NextResponse.json(cachedCategoriesData, {
+        headers: {
+          'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=180',
+        },
       });
     }
   } catch (err) {

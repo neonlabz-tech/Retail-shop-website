@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { formatPrice } from '@/utils/formatPrice';
 import { useUIStore } from '@/store/uiStore';
 import { useCompareStore } from '@/store/compareStore';
@@ -106,7 +107,7 @@ export function ScrollingText() {
       <div className="animate-marquee flex whitespace-nowrap">
         {Array.from({ length: 4 }).map((_, i) => (
           <span key={i} className="text-[14px] text-[#fff] font-medium mr-[40px] inline-flex items-center gap-[6px]">
-            <span className="text-[16px]">★</span> HOT SALE ITEM &nbsp;&nbsp; <span className="text-[16px]">★</span> UP TO 50% OFF &nbsp;&nbsp;
+            <span className="text-[16px]">â˜…</span> HOT SALE ITEM &nbsp;&nbsp; <span className="text-[16px]">â˜…</span> UP TO 50% OFF &nbsp;&nbsp;
           </span>
         ))}
       </div>
@@ -137,6 +138,7 @@ export function HomeProductCard({
   countdownBg,
   compact = false,
 }: ProductCardProps) {
+  const router = useRouter();
   const [hovered, setHovered] = useState(false);
   const [hoveredColor, setHoveredColor] = useState<string | null>(null);
 
@@ -148,6 +150,7 @@ export function HomeProductCard({
   const hasCountdown = showCountdown ?? false;
   const hasScrollText = showScrollText ?? false;
   const productHref = `${hrefBase}/${product.slug}`;
+  const isOutOfStock = product.availability === 'out-of-stock' || (typeof product.stock === 'number' && product.stock <= 0) || (product.variants?.[0] && product.variants[0].available === false);
   const discount = product.compareAtPrice && product.compareAtPrice > product.price
     ? Math.round(((product.compareAtPrice - product.price) / product.compareAtPrice) * 100)
     : 0;
@@ -163,9 +166,24 @@ export function HomeProductCard({
   const chipColor = themeColor ?? '#F15B41';
   const tooltipBg = themeColor ?? '#222';
 
+  const handleCardClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('button, a, input, select, textarea, [data-interactive]')) {
+      return;
+    }
+    if (e.metaKey || e.ctrlKey) {
+      window.open(productHref, '_blank');
+      return;
+    }
+    router.push(productHref);
+  };
+
   return (
     <div
-      className={`fc-card fc-unified-card group relative w-full h-full min-w-0 max-w-full bg-white rounded-[10px] border border-[#e5e7eb] overflow-hidden shadow-[0_2px_10px_rgba(0,0,0,0.05)] transition-all duration-300 ease-in-out hover:shadow-[0_12px_28px_rgba(0,0,0,0.12)] hover:border-[#cbd5e1] flex flex-col justify-between${compact ? ' fc-card--compact' : ''}`}
+      onClick={handleCardClick}
+      className={`fc-card fc-unified-card group relative w-full h-full min-w-0 max-w-full bg-white rounded-[10px] border border-[#e5e7eb] overflow-hidden shadow-[0_2px_10px_rgba(0,0,0,0.05)] transition-all duration-300 ease-in-out hover:shadow-[0_12px_28px_rgba(0,0,0,0.12)] hover:border-[#cbd5e1] flex flex-col justify-between cursor-pointer${compact ? ' fc-card--compact' : ''} ${
+        isOutOfStock ? 'opacity-55 hover:opacity-70' : ''
+      }`}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => { setHovered(false); setHoveredColor(null); }}
       style={{ ['--fc-tooltip-bg' as string]: tooltipBg }}
@@ -180,17 +198,19 @@ export function HomeProductCard({
             src={defaultImg1}
             alt={product.name}
             fill
+            priority={index < 4}
             onError={handleImageError}
             className={`object-contain object-center p-[8px] transition-[opacity,transform] duration-500 ease-out ${hovered ? 'scale-108' : 'scale-100'} ${activeColorImage ? 'opacity-0' : 'opacity-100'}`}
             sizes="(max-width: 749px) 50vw, 25vw"
           />
 
-          {Object.entries(colorImages).map(([colorName, imgSrc]) => (
+          {hovered && Object.entries(colorImages).map(([colorName, imgSrc]) => (
             <Image
               key={colorName}
               src={imgSrc}
               alt={`${product.name} ${colorName}`}
               fill
+              loading="lazy"
               onError={handleImageError}
               className={`object-contain object-center p-[8px] transition-[opacity,transform] duration-500 ease-out ${hovered ? 'scale-108' : 'scale-100'} ${
                 hoveredColor === colorName ? 'opacity-100 z-[2]' : 'opacity-0 z-[1]'
@@ -200,7 +220,11 @@ export function HomeProductCard({
           ))}
         </div>
 
-        {product.badge && (
+        {isOutOfStock ? (
+          <span className="absolute top-[10px] left-[10px] text-[#fff] text-[10px] font-bold py-[3px] px-[8px] rounded-[3px] z-[3] uppercase bg-[#64748b] tracking-wider shadow-sm">
+            Out of Stock
+          </span>
+        ) : product.badge ? (
           <span
             className={`absolute top-[10px] left-[10px] text-[#fff] text-[11px] font-semibold py-[3px] px-[8px] rounded-[3px] z-[3] capitalize ${
               product.badge === 'new' ? 'bg-[#222]' : 'bg-[#e01117]'
@@ -208,7 +232,7 @@ export function HomeProductCard({
           >
             {product.badge}
           </span>
-        )}
+        ) : null}
 
         <div
           className={`fc-actions-overlay absolute top-[10px] right-[10px] flex flex-col gap-[6px] z-[3] transition-[opacity,transform] duration-300 ease-in-out ${
@@ -226,8 +250,19 @@ export function HomeProductCard({
             <span className="fc-tooltip">Quick view</span>
           </div>
           <div className="fc-tooltip-wrap fc-quickadd-wrap relative">
-            <button aria-label="Quick Add" className="fc-action-btn fc-action-btn-light" onClick={(e) => { e.preventDefault(); e.stopPropagation(); openQuickView(product); }}><IconBag size={18} /></button>
-            <span className="fc-tooltip">Quick Add</span>
+            <button
+              aria-label={isOutOfStock ? "Out of Stock" : "Quick Add"}
+              disabled={isOutOfStock}
+              className={`fc-action-btn ${isOutOfStock ? 'opacity-40 cursor-not-allowed bg-[#f1f5f9] text-[#94a3b8]' : 'fc-action-btn-light'}`}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (!isOutOfStock) openQuickView(product);
+              }}
+            >
+              <IconBag size={18} />
+            </button>
+            <span className="fc-tooltip">{isOutOfStock ? 'Out of Stock' : 'Quick Add'}</span>
           </div>
         </div>
 
@@ -263,59 +298,29 @@ export function HomeProductCard({
           </Link>
         </div>
 
-        <div className="flex flex-col justify-end">
-          <div className="flex items-baseline gap-[6px]">
-            <span className="product-price-text text-[15px] min-[750px]:text-[16px] font-bold text-[#e01117] leading-tight" style={{ color: priceColor }}>
-              {formatPrice(product.price)}
-            </span>
-          </div>
-          <div className="min-h-[18px] flex items-center gap-[6px] text-[12px] mt-[3px]">
-            {product.compareAtPrice && product.compareAtPrice > product.price ? (
-              <>
-                <span className="text-[#94a3b8] line-through font-normal">
-                  {formatPrice(product.compareAtPrice)}
-                </span>
-                {discount > 0 && (
-                  <span className="text-[#e01117] font-semibold">
-                    -{discount}%
-                  </span>
-                )}
-              </>
-            ) : null}
-          </div>
-
-          {product.colors.length > 0 && (
-            <div className="mt-[8px] flex items-center gap-[5px] relative">
-              {product.colors.slice(0, 3).map((c) => (
-                <span
-                  key={c.name}
-                  onMouseEnter={() => setHoveredColor(c.name)}
-                  onMouseLeave={() => setHoveredColor(null)}
-                  className={`w-[14px] h-[14px] rounded-full inline-block cursor-pointer transition-[border-color,transform] duration-200 ease-in-out relative border ${
-                    hoveredColor === c.name
-                      ? 'border-[2px] border-[#222] scale-[1.25]'
-                      : c.value === '#FFFFFF'
-                      ? 'border border-[#ddd] scale-100'
-                      : 'border border-transparent scale-100'
-                  }`}
-                  style={{ backgroundColor: c.value }}
-                />
-              ))}
-              {product.colors.length > 3 && <span className="text-[11px] font-medium text-[#64748b]">+{product.colors.length - 3}</span>}
-              {hoveredColor && (
-                <span
-                  className="absolute bottom-[calc(100%+6px)] left-0 text-[#fff] text-[11px] font-medium py-[3px] px-[8px] rounded-[4px] whitespace-nowrap pointer-events-none animate-[fadeIn_150ms_ease]"
-                  style={{ backgroundColor: tooltipBg }}
-                >
-                  {hoveredColor}
+        <div className="flex flex-col min-[750px]:flex-row min-[750px]:items-baseline min-[750px]:gap-[6px] mt-[2px] min-h-[36px] min-[750px]:min-h-[22px]">
+          <span
+            className="product-price-text text-[13px] min-[400px]:text-[14px] min-[750px]:text-[15px] font-bold text-[#e01117] leading-tight shrink-0"
+            style={{ color: isOutOfStock ? '#94a3b8' : priceColor }}
+          >
+            {formatPrice(product.price)}
+          </span>
+          {!isOutOfStock && product.compareAtPrice && product.compareAtPrice > product.price ? (
+            <div className="flex items-center min-[750px]:items-baseline gap-[5px] mt-[2px] min-[750px]:mt-0">
+              {discount > 0 && (
+                <span className="text-[#e01117] bg-[#fff0ed] text-[10px] min-[750px]:text-[11px] font-bold px-[4px] py-[1px] rounded-[3px] leading-none shrink-0">
+                  -{discount}%
                 </span>
               )}
+              <span className="text-[11px] min-[750px]:text-[12px] text-[#94a3b8] line-through font-normal shrink-0">
+                {formatPrice(product.compareAtPrice)}
+              </span>
             </div>
-          )}
+          ) : null}
         </div>
       </div>
 
-      <style>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         .fc-card.fc-unified-card .fc-product-title-link {
           display: -webkit-box !important;
           -webkit-line-clamp: 2 !important;
@@ -426,7 +431,7 @@ export function HomeProductCard({
             height: 15px !important;
           }
         }
-      `}</style>
+      `}} />
     </div>
   );
 }

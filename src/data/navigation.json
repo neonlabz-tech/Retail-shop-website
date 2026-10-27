@@ -221,11 +221,6 @@
         "type": "dropdown",
         "children": [
             {
-                "id": "pg-1",
-                "label": "About us",
-                "href": "/pages/about"
-            },
-            {
                 "id": "pg-2",
                 "label": "Contact",
                 "href": "/pages/contact"
@@ -254,11 +249,6 @@
                 "id": "pg-7",
                 "label": "404",
                 "href": "/pages/404"
-            },
-            {
-                "id": "pg-8",
-                "label": "Privacy policy",
-                "href": "/pages/privacy-policy"
             },
             {
                 "id": "pg-9",

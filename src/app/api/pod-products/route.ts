@@ -31,6 +31,10 @@ function buildSizeCounts(products: Product[]): FilterCounts[] {
   return Array.from(map.entries()).map(([name, count]) => ({ name, count }));
 }
 
+let cachedPodProducts: Product[] | null = null;
+let lastPodProductsTime = 0;
+const POD_CACHE_TTL_MS = 60 * 1000;
+
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
 
@@ -53,14 +57,22 @@ export async function GET(request: NextRequest) {
   const isSaleParam = searchParams.get('sale') === 'true' || searchParams.get('onSale') === 'true';
 
   let allPodProducts: Product[] = [];
-  try {
-    await connectDB();
-    const mongoDocs = await ProductModel.find({ status: { $ne: 'archived' } }).lean();
-    if (mongoDocs && mongoDocs.length > 0) {
-      allPodProducts = mongoDocs.map(formatMongoProduct);
+  const now = Date.now();
+  if (cachedPodProducts && now - lastPodProductsTime < POD_CACHE_TTL_MS) {
+    allPodProducts = cachedPodProducts;
+  } else {
+    try {
+      await connectDB();
+      const mongoDocs = await ProductModel.find({ status: { $ne: 'archived' } }).lean();
+      if (mongoDocs && mongoDocs.length > 0) {
+        allPodProducts = mongoDocs.map(formatMongoProduct);
+        cachedPodProducts = allPodProducts;
+        lastPodProductsTime = now;
+      }
+    } catch (err) {
+      console.error('MongoDB query error in /api/pod-products:', err);
+      if (cachedPodProducts) allPodProducts = cachedPodProducts;
     }
-  } catch (err) {
-    console.error('MongoDB query error in /api/pod-products:', err);
   }
 
   let filtered = [...allPodProducts];
@@ -120,9 +132,19 @@ export async function GET(request: NextRequest) {
   if (availability) {
     const avail = availability.toLowerCase();
     if (avail === 'in-stock' || avail === 'in_stock' || avail === 'true') {
-      filtered = filtered.filter((p) => p.availability === 'in-stock');
+      filtered = filtered.filter(
+        (p) =>
+          p.availability !== 'out-of-stock' &&
+          (typeof p.stock !== 'number' || p.stock > 0) &&
+          (!p.variants?.[0] || p.variants[0].available !== false)
+      );
     } else if (avail === 'out-of-stock' || avail === 'out_of_stock' || avail === 'false') {
-      filtered = filtered.filter((p) => p.availability === 'out-of-stock');
+      filtered = filtered.filter(
+        (p) =>
+          p.availability === 'out-of-stock' ||
+          (typeof p.stock === 'number' && p.stock <= 0) ||
+          (p.variants?.[0] && p.variants[0].available === false)
+      );
     }
   }
 
@@ -199,6 +221,10 @@ export async function GET(request: NextRequest) {
         min: 0,
         max: allPodProducts.length ? Math.max(...allPodProducts.map((p) => p.price)) : 0,
       },
+    },
+  }, {
+    headers: {
+      'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60',
     },
   });
 }

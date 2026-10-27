@@ -6,7 +6,6 @@ import { Navigation } from 'swiper/modules';
 import type { Swiper as SwiperType } from 'swiper';
 import { useProducts } from '@/features/products/hooks/useProducts';
 import { HomeProductCard } from './HomeProductCard';
-import { GroceryProductCard } from '@/features/grocery-shop/components/GroceryProductCard';
 
 import 'swiper/css';
 
@@ -55,7 +54,7 @@ export function FeaturedSlider({ apiEndpoint, cardVariant = 'home', productHrefB
   return (
     <section className="fs-section">
       <div className="container-main">
-        <div className="mb-[32px] text-left">
+        <div className="mb-[16px] min-[750px]:mb-[24px] text-left">
           <h2 className="text-[clamp(22px,3vw,28px)] font-semibold text-[#222]">{title}</h2>
         </div>
 
@@ -76,16 +75,12 @@ export function FeaturedSlider({ apiEndpoint, cardVariant = 'home', productHrefB
             >
               {products.map((product, i) => (
                 <SwiperSlide key={product.id}>
-                  {cardVariant === 'grocery' ? (
-                    <GroceryProductCard product={product} index={i} hrefBase={productHrefBase} />
-                  ) : (
-                    <HomeProductCard
-                      product={product}
-                      index={i + 15}
-                      hrefBase={productHrefBase}
-                      {...cardTheme}
-                    />
-                  )}
+                  <HomeProductCard
+                    product={product}
+                    index={i + 15}
+                    hrefBase={productHrefBase}
+                    {...cardTheme}
+                  />
                 </SwiperSlide>
               ))}
             </Swiper>

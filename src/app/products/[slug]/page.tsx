@@ -67,30 +67,7 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
   };
 }
 
-function getApiEndpoint(slug: string): string {
-  if (slug.startsWith('ef-')) return '/api/elegant-fashion-products';
-  if (slug.startsWith('jw-')) return '/api/jewellery-products';
-  if (slug.startsWith('sn-')) return '/api/sneaker-products';
-  if (slug.startsWith('fu-')) return '/api/furniture-products';
-  if (slug.startsWith('ls-')) return '/api/lipstain-products';
-  if (slug.startsWith('hp-')) return '/api/headphones-products';
-  if (slug.startsWith('sk-')) return '/api/skin-care-products';
-  if (slug.startsWith('es2-')) return '/api/electronics-store-products';
-  if (slug.startsWith('fw-')) return '/api/footwear-products';
-  if (slug.startsWith('f4-')) return '/api/fashion-04-products';
-  if (slug.startsWith('f3-')) return '/api/fashion-03-products';
-  if (slug.startsWith('aw-')) return '/api/active-wear-products';
-  if (slug.startsWith('bp-')) return '/api/backpack-products';
-  if (slug.startsWith('bb-')) return '/api/basketball-products';
-  if (slug.startsWith('gl-')) return '/api/glasses-products';
-  if (slug.startsWith('pl-')) return '/api/plumbing-supplies-products';
-  if (slug.startsWith('bk-')) return '/api/book-products';
-  if (slug.startsWith('jz-')) return '/api/jewelry-2-products';
-  if (slug.startsWith('cf-')) return '/api/coffee-products';
-  if (slug.startsWith('cd-')) return '/api/craft-and-decore-products';
-  if (slug.startsWith('toy-')) return '/api/toys-products';
-  if (slug.startsWith('sock-')) return '/api/socks-products';
-  if (slug.startsWith('pod-')) return '/api/pod-products';
+function getApiEndpoint(_slug?: string): string {
   return '/api/products';
 }
 
