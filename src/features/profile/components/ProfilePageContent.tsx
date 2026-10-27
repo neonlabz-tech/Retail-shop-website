@@ -168,6 +168,154 @@ export function ProfilePageContent() {
     setProfileError(null);
   };
 
+  // Address Management State
+  const [isAddingAddress, setIsAddingAddress] = useState(false);
+  const [editingAddressIndex, setEditingAddressIndex] = useState<number | null>(null);
+  const [addressForm, setAddressForm] = useState({
+    label: 'Home',
+    line1: '',
+    line2: '',
+    city: '',
+    state: '',
+    postalCode: '',
+    country: 'Sri Lanka',
+    isDefault: false,
+  });
+  const [savingAddress, setSavingAddress] = useState(false);
+  const [addressError, setAddressError] = useState<string | null>(null);
+
+  const handleStartAddAddress = () => {
+    setEditingAddressIndex(null);
+    setAddressForm({
+      label: 'Home',
+      line1: '',
+      line2: '',
+      city: '',
+      state: '',
+      postalCode: '',
+      country: 'Sri Lanka',
+      isDefault: !user?.addresses || user.addresses.length === 0,
+    });
+    setAddressError(null);
+    setIsAddingAddress(true);
+  };
+
+  const handleStartEditAddress = (index: number) => {
+    const addr = user?.addresses?.[index];
+    if (!addr) return;
+    setIsAddingAddress(false);
+    setAddressForm({
+      label: addr.label || 'Home',
+      line1: addr.line1 || '',
+      line2: addr.line2 || '',
+      city: addr.city || '',
+      state: addr.state || '',
+      postalCode: addr.postalCode || '',
+      country: addr.country || 'Sri Lanka',
+      isDefault: Boolean(addr.isDefault),
+    });
+    setAddressError(null);
+    setEditingAddressIndex(index);
+  };
+
+  const handleCancelAddressForm = () => {
+    setIsAddingAddress(false);
+    setEditingAddressIndex(null);
+    setAddressError(null);
+  };
+
+  const handleSaveAddress = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!addressForm.line1.trim()) {
+      setAddressError('Street address is required.');
+      return;
+    }
+    if (!addressForm.city.trim()) {
+      setAddressError('City is required.');
+      return;
+    }
+
+    setSavingAddress(true);
+    setAddressError(null);
+    try {
+      const payload = isAddingAddress
+        ? { action: 'add_address', address: addressForm }
+        : { action: 'edit_address', index: editingAddressIndex, address: addressForm };
+
+      const res = await fetch('/api/auth/me', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to save address');
+      }
+      if (data.user) {
+        useAuthStore.getState().setUser(data.user);
+      }
+      setIsAddingAddress(false);
+      setEditingAddressIndex(null);
+      setActionNotice(isAddingAddress ? 'New delivery address added successfully.' : 'Delivery address updated successfully.');
+      setTimeout(() => setActionNotice(null), 4000);
+    } catch (err: any) {
+      setAddressError(err.message || 'Failed to save address');
+    } finally {
+      setSavingAddress(false);
+    }
+  };
+
+  const handleSetDefaultAddress = async (index: number) => {
+    setSavingAddress(true);
+    try {
+      const res = await fetch('/api/auth/me', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'set_default_address', index }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to update default address');
+      }
+      if (data.user) {
+        useAuthStore.getState().setUser(data.user);
+      }
+      setActionNotice('Primary default address updated.');
+      setTimeout(() => setActionNotice(null), 4000);
+    } catch (err: any) {
+      setActionNotice(err.message || 'Failed to set default address');
+      setTimeout(() => setActionNotice(null), 4000);
+    } finally {
+      setSavingAddress(false);
+    }
+  };
+
+  const handleDeleteAddress = async (index: number) => {
+    if (!confirm('Are you sure you want to remove this delivery address?')) return;
+    setSavingAddress(true);
+    try {
+      const res = await fetch('/api/auth/me', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete_address', index }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to delete address');
+      }
+      if (data.user) {
+        useAuthStore.getState().setUser(data.user);
+      }
+      setActionNotice('Delivery address removed.');
+      setTimeout(() => setActionNotice(null), 4000);
+    } catch (err: any) {
+      setActionNotice(err.message || 'Failed to delete address');
+      setTimeout(() => setActionNotice(null), 4000);
+    } finally {
+      setSavingAddress(false);
+    }
+  };
+
   const handleSaveProfile = async () => {
     setSavingProfile(true);
     setProfileError(null);
@@ -728,9 +876,9 @@ export function ProfilePageContent() {
                   )}
                 </div>
 
-                {/* 2. Primary Saved Address */}
+                {/* 2. Multi-Address Delivery Manager */}
                 <div className="bg-white border border-slate-200/80 rounded-[1.4rem] p-[2rem_1.8rem] sm:p-[2.8rem_3rem] shadow-[0_2px_12px_rgba(15,23,42,0.03)]">
-                  <div className="flex items-center justify-between pb-[1.8rem] border-b border-slate-100 mb-[2rem]">
+                  <div className="flex items-center justify-between pb-[1.8rem] border-b border-slate-100 mb-[2rem] gap-[1.2rem] flex-wrap">
                     <div className="flex items-center gap-[1.2rem]">
                       <div className="w-[4rem] h-[4rem] rounded-[1rem] bg-slate-100 text-slate-800 flex items-center justify-center flex-shrink-0">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -739,62 +887,463 @@ export function ProfilePageContent() {
                         </svg>
                       </div>
                       <div>
-                        <h3 className="text-[1.8rem] sm:text-[2rem] font-bold text-slate-900 tracking-tight">Primary Delivery Address</h3>
-                        <p className="text-[1.25rem] sm:text-[1.35rem] text-slate-500">Default destination used for orders and shipping documents.</p>
+                        <h3 className="text-[1.8rem] sm:text-[2rem] font-bold text-slate-900 tracking-tight">Saved Delivery Addresses</h3>
+                        <p className="text-[1.25rem] sm:text-[1.35rem] text-slate-500">Manage multiple delivery destinations (Home, Office, etc.) for quick checkout.</p>
                       </div>
                     </div>
-                    {defaultAddress && (
-                      <span className="inline-flex items-center gap-[0.5rem] px-[1rem] py-[0.35rem] rounded-full bg-blue-50 text-blue-700 text-[1.15rem] font-semibold border border-blue-200">
-                        Default
-                      </span>
+
+                    {!isAddingAddress && (
+                      <button
+                        type="button"
+                        onClick={handleStartAddAddress}
+                        className="inline-flex items-center gap-[0.7rem] px-[1.5rem] py-[0.75rem] rounded-[0.8rem] bg-slate-900 hover:bg-slate-800 text-white text-[1.25rem] font-semibold transition-all shadow-xs cursor-pointer"
+                      >
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <line x1="12" y1="5" x2="12" y2="19" />
+                          <line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                        <span>Add New Address</span>
+                      </button>
                     )}
                   </div>
 
-                  {defaultAddress ? (
-                    <div className="bg-slate-50/80 border border-slate-200/70 rounded-[1.2rem] p-[2rem_2.2rem]">
-                      <div className="flex items-center gap-[0.8rem] mb-[1.2rem]">
-                        <span className="text-[1.6rem] font-bold text-slate-900">{fullName}</span>
-                        <span className="text-[1.15rem] font-semibold text-slate-500 bg-white px-[0.8rem] py-[0.2rem] rounded-full border border-slate-200">Recipient</span>
+                  {/* Inline Address Error Alert */}
+                  {addressError && (
+                    <div className="mb-[1.8rem] p-[1.2rem_1.6rem] bg-rose-50 border border-rose-200 rounded-[1rem] text-[1.3rem] text-rose-700 flex items-center gap-[0.8rem]">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="flex-shrink-0">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="8" x2="12" y2="12" />
+                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                      </svg>
+                      <span>{addressError}</span>
+                    </div>
+                  )}
+
+                  {/* ADD NEW ADDRESS INLINE FORM */}
+                  {isAddingAddress && (
+                    <form onSubmit={handleSaveAddress} className="mb-[2.4rem] bg-slate-50 border border-slate-200 rounded-[1.2rem] p-[2rem] sm:p-[2.4rem]">
+                      <div className="flex items-center justify-between pb-[1.4rem] border-b border-slate-200/80 mb-[1.8rem]">
+                        <h4 className="text-[1.6rem] font-bold text-slate-900">Add New Address</h4>
+                        <span className="text-[1.2rem] text-slate-500">All fields required for shipping</span>
                       </div>
-                      
-                      <div className="space-y-[0.6rem] text-[1.35rem] sm:text-[1.4rem] text-slate-600">
-                        <p className="flex items-start gap-[0.8rem]">
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mt-[0.3rem] text-slate-400 flex-shrink-0">
-                            <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                          </svg>
-                          <span><strong>Street:</strong> {defaultAddress.line1}</span>
-                        </p>
-                        <p className="flex items-start gap-[0.8rem]">
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mt-[0.3rem] text-slate-400 flex-shrink-0">
-                            <circle cx="12" cy="12" r="10" />
-                            <line x1="2" y1="12" x2="22" y2="12" />
-                            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-                          </svg>
-                          <span><strong>City / Country:</strong> {defaultAddress.city}, {defaultAddress.country || 'Sri Lanka'}</span>
-                        </p>
-                        {user.phone && (
-                          <p className="flex items-start gap-[0.8rem]">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mt-[0.3rem] text-slate-400 flex-shrink-0">
-                              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
-                            </svg>
-                            <span><strong>Contact Phone:</strong> {user.phone}</span>
-                          </p>
-                        )}
+
+                      <div className="space-y-[1.6rem]">
+                        {/* Address Label Pills */}
+                        <div>
+                          <label className="block text-[1.15rem] font-semibold text-slate-600 uppercase tracking-[0.05em] mb-[0.6rem]">
+                            Address Type / Label
+                          </label>
+                          <div className="flex items-center gap-[0.8rem] flex-wrap">
+                            {['Home', 'Office', 'Warehouse', 'Other'].map((lbl) => (
+                              <button
+                                key={lbl}
+                                type="button"
+                                onClick={() => setAddressForm((f) => ({ ...f, label: lbl }))}
+                                className={`px-[1.4rem] py-[0.6rem] rounded-full text-[1.25rem] font-semibold transition-all cursor-pointer ${
+                                  addressForm.label.toLowerCase() === lbl.toLowerCase()
+                                    ? 'bg-slate-900 text-white shadow-xs'
+                                    : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
+                                }`}
+                              >
+                                {lbl}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Street Line 1 */}
+                        <div>
+                          <label htmlFor="add-line1" className="block text-[1.15rem] font-semibold text-slate-600 uppercase tracking-[0.05em] mb-[0.4rem]">
+                            Street Address *
+                          </label>
+                          <input
+                            id="add-line1"
+                            type="text"
+                            required
+                            placeholder="e.g. No. 45, Temple Road"
+                            value={addressForm.line1}
+                            onChange={(e) => setAddressForm((f) => ({ ...f, line1: e.target.value }))}
+                            className="w-full bg-white border border-slate-300 rounded-[0.8rem] px-[1.2rem] py-[0.85rem] text-[1.45rem] font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
+                          />
+                        </div>
+
+                        {/* Line 2 (Apartment, Suite, Unit) */}
+                        <div>
+                          <label htmlFor="add-line2" className="block text-[1.15rem] font-semibold text-slate-600 uppercase tracking-[0.05em] mb-[0.4rem]">
+                            Apartment, suite, unit (optional)
+                          </label>
+                          <input
+                            id="add-line2"
+                            type="text"
+                            placeholder="e.g. Floor 2, Apt 3"
+                            value={addressForm.line2}
+                            onChange={(e) => setAddressForm((f) => ({ ...f, line2: e.target.value }))}
+                            className="w-full bg-white border border-slate-300 rounded-[0.8rem] px-[1.2rem] py-[0.85rem] text-[1.45rem] font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
+                          />
+                        </div>
+
+                        {/* City, State & Postal Code */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-[1.2rem]">
+                          <div>
+                            <label htmlFor="add-city" className="block text-[1.15rem] font-semibold text-slate-600 uppercase tracking-[0.05em] mb-[0.4rem]">
+                              City *
+                            </label>
+                            <input
+                              id="add-city"
+                              type="text"
+                              required
+                              placeholder="e.g. Jaffna or Colombo"
+                              value={addressForm.city}
+                              onChange={(e) => setAddressForm((f) => ({ ...f, city: e.target.value }))}
+                              className="w-full bg-white border border-slate-300 rounded-[0.8rem] px-[1.2rem] py-[0.85rem] text-[1.45rem] font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
+                            />
+                          </div>
+                          <div>
+                            <label htmlFor="add-postal" className="block text-[1.15rem] font-semibold text-slate-600 uppercase tracking-[0.05em] mb-[0.4rem]">
+                              Postal Code
+                            </label>
+                            <input
+                              id="add-postal"
+                              type="text"
+                              placeholder="e.g. 40000"
+                              value={addressForm.postalCode}
+                              onChange={(e) => setAddressForm((f) => ({ ...f, postalCode: e.target.value }))}
+                              className="w-full bg-white border border-slate-300 rounded-[0.8rem] px-[1.2rem] py-[0.85rem] text-[1.45rem] font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
+                            />
+                          </div>
+                          <div>
+                            <label htmlFor="add-country" className="block text-[1.15rem] font-semibold text-slate-600 uppercase tracking-[0.05em] mb-[0.4rem]">
+                              Country
+                            </label>
+                            <input
+                              id="add-country"
+                              type="text"
+                              value={addressForm.country}
+                              onChange={(e) => setAddressForm((f) => ({ ...f, country: e.target.value }))}
+                              className="w-full bg-white border border-slate-300 rounded-[0.8rem] px-[1.2rem] py-[0.85rem] text-[1.45rem] font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Set as Default Checkbox */}
+                        <label className="flex items-center gap-[0.8rem] pt-[0.4rem] cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={addressForm.isDefault}
+                            onChange={(e) => setAddressForm((f) => ({ ...f, isDefault: e.target.checked }))}
+                            className="w-[1.8rem] h-[1.8rem] rounded text-slate-900 focus:ring-slate-900"
+                          />
+                          <span className="text-[1.35rem] font-medium text-slate-800">
+                            Set as primary default address for orders
+                          </span>
+                        </label>
                       </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex items-center justify-end gap-[1rem] mt-[2rem] pt-[1.6rem] border-t border-slate-200">
+                        <button
+                          type="button"
+                          onClick={handleCancelAddressForm}
+                          disabled={savingAddress}
+                          className="px-[1.6rem] py-[0.8rem] rounded-[0.8rem] border border-slate-300 text-slate-700 hover:bg-slate-100 text-[1.3rem] font-semibold transition-colors cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={savingAddress}
+                          className="inline-flex items-center gap-[0.7rem] px-[2.2rem] py-[0.8rem] rounded-[0.8rem] bg-emerald-600 hover:bg-emerald-700 text-white text-[1.3rem] font-semibold transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                        >
+                          {savingAddress ? (
+                            <>
+                              <span className="w-[1.4rem] h-[1.4rem] border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                              <span>Saving Address...</span>
+                            </>
+                          ) : (
+                            <>
+                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                <polyline points="20 6 9 17 4 12" />
+                              </svg>
+                              <span>Save Address</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </form>
+                  )}
+
+                  {/* SAVED ADDRESSES LIST */}
+                  {Array.isArray(user.addresses) && user.addresses.length > 0 ? (
+                    <div className="space-y-[1.6rem]">
+                      {user.addresses.map((addr: any, idx: number) => {
+                        const isEditingThis = editingAddressIndex === idx;
+
+                        if (isEditingThis) {
+                          return (
+                            <form key={idx} onSubmit={handleSaveAddress} className="bg-slate-50 border-2 border-slate-900/40 rounded-[1.2rem] p-[2rem] sm:p-[2.4rem]">
+                              <div className="flex items-center justify-between pb-[1.4rem] border-b border-slate-200/80 mb-[1.8rem]">
+                                <h4 className="text-[1.6rem] font-bold text-slate-900">Edit {addr.label || 'Delivery'} Address</h4>
+                                <span className="text-[1.2rem] text-slate-500">Address #{idx + 1}</span>
+                              </div>
+
+                              <div className="space-y-[1.6rem]">
+                                <div>
+                                  <label className="block text-[1.15rem] font-semibold text-slate-600 uppercase tracking-[0.05em] mb-[0.6rem]">
+                                    Address Type / Label
+                                  </label>
+                                  <div className="flex items-center gap-[0.8rem] flex-wrap">
+                                    {['Home', 'Office', 'Warehouse', 'Other'].map((lbl) => (
+                                      <button
+                                        key={lbl}
+                                        type="button"
+                                        onClick={() => setAddressForm((f) => ({ ...f, label: lbl }))}
+                                        className={`px-[1.4rem] py-[0.6rem] rounded-full text-[1.25rem] font-semibold transition-all cursor-pointer ${
+                                          addressForm.label.toLowerCase() === lbl.toLowerCase()
+                                            ? 'bg-slate-900 text-white shadow-xs'
+                                            : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
+                                        }`}
+                                      >
+                                        {lbl}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                <div>
+                                  <label htmlFor={`edit-line1-${idx}`} className="block text-[1.15rem] font-semibold text-slate-600 uppercase tracking-[0.05em] mb-[0.4rem]">
+                                    Street Address *
+                                  </label>
+                                  <input
+                                    id={`edit-line1-${idx}`}
+                                    type="text"
+                                    required
+                                    value={addressForm.line1}
+                                    onChange={(e) => setAddressForm((f) => ({ ...f, line1: e.target.value }))}
+                                    className="w-full bg-white border border-slate-300 rounded-[0.8rem] px-[1.2rem] py-[0.85rem] text-[1.45rem] font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
+                                  />
+                                </div>
+
+                                <div>
+                                  <label htmlFor={`edit-line2-${idx}`} className="block text-[1.15rem] font-semibold text-slate-600 uppercase tracking-[0.05em] mb-[0.4rem]">
+                                    Apartment, suite, unit (optional)
+                                  </label>
+                                  <input
+                                    id={`edit-line2-${idx}`}
+                                    type="text"
+                                    value={addressForm.line2}
+                                    onChange={(e) => setAddressForm((f) => ({ ...f, line2: e.target.value }))}
+                                    className="w-full bg-white border border-slate-300 rounded-[0.8rem] px-[1.2rem] py-[0.85rem] text-[1.45rem] font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
+                                  />
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-[1.2rem]">
+                                  <div>
+                                    <label htmlFor={`edit-city-${idx}`} className="block text-[1.15rem] font-semibold text-slate-600 uppercase tracking-[0.05em] mb-[0.4rem]">
+                                      City *
+                                    </label>
+                                    <input
+                                      id={`edit-city-${idx}`}
+                                      type="text"
+                                      required
+                                      value={addressForm.city}
+                                      onChange={(e) => setAddressForm((f) => ({ ...f, city: e.target.value }))}
+                                      className="w-full bg-white border border-slate-300 rounded-[0.8rem] px-[1.2rem] py-[0.85rem] text-[1.45rem] font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label htmlFor={`edit-postal-${idx}`} className="block text-[1.15rem] font-semibold text-slate-600 uppercase tracking-[0.05em] mb-[0.4rem]">
+                                      Postal Code
+                                    </label>
+                                    <input
+                                      id={`edit-postal-${idx}`}
+                                      type="text"
+                                      value={addressForm.postalCode}
+                                      onChange={(e) => setAddressForm((f) => ({ ...f, postalCode: e.target.value }))}
+                                      className="w-full bg-white border border-slate-300 rounded-[0.8rem] px-[1.2rem] py-[0.85rem] text-[1.45rem] font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label htmlFor={`edit-country-${idx}`} className="block text-[1.15rem] font-semibold text-slate-600 uppercase tracking-[0.05em] mb-[0.4rem]">
+                                      Country
+                                    </label>
+                                    <input
+                                      id={`edit-country-${idx}`}
+                                      type="text"
+                                      value={addressForm.country}
+                                      onChange={(e) => setAddressForm((f) => ({ ...f, country: e.target.value }))}
+                                      className="w-full bg-white border border-slate-300 rounded-[0.8rem] px-[1.2rem] py-[0.85rem] text-[1.45rem] font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
+                                    />
+                                  </div>
+                                </div>
+
+                                <label className="flex items-center gap-[0.8rem] pt-[0.4rem] cursor-pointer select-none">
+                                  <input
+                                    type="checkbox"
+                                    checked={addressForm.isDefault}
+                                    onChange={(e) => setAddressForm((f) => ({ ...f, isDefault: e.target.checked }))}
+                                    className="w-[1.8rem] h-[1.8rem] rounded text-slate-900 focus:ring-slate-900"
+                                  />
+                                  <span className="text-[1.35rem] font-medium text-slate-800">
+                                    Set as primary default address for orders
+                                  </span>
+                                </label>
+                              </div>
+
+                              <div className="flex items-center justify-end gap-[1rem] mt-[2rem] pt-[1.6rem] border-t border-slate-200">
+                                <button
+                                  type="button"
+                                  onClick={handleCancelAddressForm}
+                                  disabled={savingAddress}
+                                  className="px-[1.6rem] py-[0.8rem] rounded-[0.8rem] border border-slate-300 text-slate-700 hover:bg-slate-100 text-[1.3rem] font-semibold transition-colors cursor-pointer"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  type="submit"
+                                  disabled={savingAddress}
+                                  className="inline-flex items-center gap-[0.7rem] px-[2.2rem] py-[0.8rem] rounded-[0.8rem] bg-emerald-600 hover:bg-emerald-700 text-white text-[1.3rem] font-semibold transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                                >
+                                  {savingAddress ? (
+                                    <>
+                                      <span className="w-[1.4rem] h-[1.4rem] border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                                      <span>Saving...</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                        <polyline points="20 6 9 17 4 12" />
+                                      </svg>
+                                      <span>Update Address</span>
+                                    </>
+                                  )}
+                                </button>
+                              </div>
+                            </form>
+                          );
+                        }
+
+                        return (
+                          <div
+                            key={idx}
+                            className={`border rounded-[1.2rem] p-[2rem_2.2rem] transition-all ${
+                              addr.isDefault
+                                ? 'bg-blue-50/20 border-blue-200 shadow-xs ring-1 ring-blue-100'
+                                : 'bg-slate-50/70 border-slate-200/80 hover:border-slate-300'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between pb-[1.2rem] border-b border-slate-200/60 mb-[1.2rem] gap-[1rem] flex-wrap">
+                              <div className="flex items-center gap-[0.8rem] flex-wrap">
+                                <span className="text-[1.2rem] font-bold text-slate-800 uppercase tracking-[0.06em] bg-white px-[1rem] py-[0.35rem] rounded-full border border-slate-200 shadow-2xs">
+                                  {addr.label || 'Home'}
+                                </span>
+                                {addr.isDefault ? (
+                                  <span className="inline-flex items-center gap-[0.4rem] px-[1rem] py-[0.35rem] rounded-full bg-blue-50 text-blue-700 text-[1.15rem] font-semibold border border-blue-200">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                                    </svg>
+                                    <span>Default Address</span>
+                                  </span>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSetDefaultAddress(idx)}
+                                    disabled={savingAddress}
+                                    className="text-[1.2rem] font-semibold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer disabled:opacity-50"
+                                  >
+                                    Set as Default
+                                  </button>
+                                )}
+                              </div>
+
+                              <div className="flex items-center gap-[1.2rem]">
+                                <button
+                                  type="button"
+                                  onClick={() => handleStartEditAddress(idx)}
+                                  disabled={savingAddress}
+                                  className="inline-flex items-center gap-[0.5rem] text-[1.25rem] font-semibold text-slate-700 hover:text-slate-900 transition-colors cursor-pointer"
+                                >
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                                    <path d="m15 5 4 4" />
+                                  </svg>
+                                  <span>Edit</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteAddress(idx)}
+                                  disabled={savingAddress}
+                                  className="inline-flex items-center gap-[0.5rem] text-[1.25rem] font-semibold text-rose-600 hover:text-rose-800 transition-colors cursor-pointer"
+                                >
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M3 6h18" />
+                                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                                  </svg>
+                                  <span>Delete</span>
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="space-y-[0.6rem] text-[1.35rem] sm:text-[1.4rem] text-slate-700">
+                              <p className="flex items-start gap-[0.8rem]">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mt-[0.3rem] text-slate-400 flex-shrink-0">
+                                  <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                                </svg>
+                                <span>
+                                  <strong>Street:</strong> {addr.line1}
+                                  {addr.line2 ? `, ${addr.line2}` : ''}
+                                </span>
+                              </p>
+                              <p className="flex items-start gap-[0.8rem]">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mt-[0.3rem] text-slate-400 flex-shrink-0">
+                                  <circle cx="12" cy="12" r="10" />
+                                  <line x1="2" y1="12" x2="22" y2="12" />
+                                  <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                                </svg>
+                                <span>
+                                  <strong>City / Country:</strong> {addr.city}
+                                  {addr.postalCode ? ` (${addr.postalCode})` : ''}, {addr.country || 'Sri Lanka'}
+                                </span>
+                              </p>
+                              {user.phone && (
+                                <p className="flex items-start gap-[0.8rem]">
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mt-[0.3rem] text-slate-400 flex-shrink-0">
+                                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                                  </svg>
+                                  <span><strong>Contact Phone:</strong> {user.phone}</span>
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   ) : (
-                    <div className="bg-slate-50/60 border border-dashed border-slate-300 rounded-[1.2rem] p-[3rem_2rem] text-center">
-                      <div className="w-[4.8rem] h-[4.8rem] rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-[1.2rem]">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
-                          <circle cx="12" cy="10" r="3" />
-                        </svg>
+                    !isAddingAddress && (
+                      <div className="bg-slate-50/60 border border-dashed border-slate-300 rounded-[1.2rem] p-[3.2rem_2rem] text-center">
+                        <div className="w-[4.8rem] h-[4.8rem] rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-[1.2rem]">
+                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+                            <circle cx="12" cy="10" r="3" />
+                          </svg>
+                        </div>
+                        <h4 className="text-[1.6rem] font-bold text-slate-800 mb-[0.4rem]">No delivery addresses saved yet</h4>
+                        <p className="text-[1.3rem] text-slate-500 max-w-[440px] mx-auto mb-[1.8rem]">
+                          Save your Home, Office, or secondary delivery addresses here for 1-click checkout.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={handleStartAddAddress}
+                          className="inline-flex items-center gap-[0.7rem] px-[2rem] py-[0.9rem] rounded-[0.8rem] bg-slate-900 hover:bg-slate-800 text-white text-[1.3rem] font-semibold transition-all shadow-xs cursor-pointer"
+                        >
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <line x1="12" y1="5" x2="12" y2="19" />
+                            <line x1="5" y1="12" x2="19" y2="12" />
+                          </svg>
+                          <span>Add Your First Address</span>
+                        </button>
                       </div>
-                      <h4 className="text-[1.5rem] font-bold text-slate-800 mb-[0.4rem]">No saved address yet</h4>
-                      <p className="text-[1.3rem] text-slate-500 max-w-[420px] mx-auto">
-                        Your shipping address will be automatically saved and displayed here when you complete your first order.
-                      </p>
-                    </div>
+                    )
                   )}
                 </div>
 

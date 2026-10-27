@@ -1201,8 +1201,7 @@ body.scroll-locked {
   }
 }
 
-.skeleton-shimmer,
-img:not([data-noskeleton="true"]):not(.no-skeleton):not([width="1"]):not([height="1"]) {
+.skeleton-shimmer {
   background: linear-gradient(
     90deg,
     #f3f4f6 0%,
@@ -1211,9 +1210,11 @@ img:not([data-noskeleton="true"]):not(.no-skeleton):not([width="1"]):not([height
     #e5e7eb 75%,
     #f3f4f6 100%
   ) !important;
-}
-
-.skeleton-shimmer {
   background-size: 200% 100% !important;
   animation: image-skeleton-pulse-shimmer 1.6s ease-in-out infinite !important;
+}
+
+/* Ensure transparent images and product pictures never have forced backgrounds */
+img {
+  background-color: transparent !important;
 }

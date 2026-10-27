@@ -110,7 +110,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <Link href={`/products/${product.slug}`} className="block relative aspect-square overflow-hidden rounded-[var(--radius-md)] bg-[#eef2f6] border border-[#ededf0] mb-[1.2rem] shadow-[0_8px_16px_-2px_rgba(24,62,132,0.12),4px_6px_10px_-2px_rgba(24,62,132,0.04),-4px_6px_10px_-2px_rgba(24,62,132,0.04)]">
+      <Link href={`/products/${product.slug}`} className="block relative aspect-square overflow-hidden rounded-[var(--radius-md)] bg-white border border-[#ededf0] mb-[1.2rem] shadow-[0_8px_16px_-2px_rgba(24,62,132,0.12),4px_6px_10px_-2px_rgba(24,62,132,0.04),-4px_6px_10px_-2px_rgba(24,62,132,0.04)]">
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <Image
             src={primaryImage}

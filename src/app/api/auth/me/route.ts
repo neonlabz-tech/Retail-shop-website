@@ -113,7 +113,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { firstName, lastName, phone } = body;
+    const { firstName, lastName, phone, action, address, addresses, index } = body;
 
     await connectDB();
     const user = await User.findById(payload.userId);
@@ -125,6 +125,7 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
+    // 1. Basic profile updates
     if (typeof firstName === 'string') {
       user.firstName = firstName.trim();
     }
@@ -138,6 +139,82 @@ export async function PATCH(request: NextRequest) {
     const combinedName = [user.firstName, user.lastName].filter(Boolean).join(' ');
     if (combinedName) {
       user.name = combinedName;
+    }
+
+    // 2. Address array management
+    if (!Array.isArray(user.addresses)) {
+      user.addresses = [];
+    }
+
+    if (action === 'add_address' && address) {
+      const isDef = Boolean(address.isDefault) || user.addresses.length === 0;
+      if (isDef) {
+        user.addresses.forEach((a) => {
+          a.isDefault = false;
+        });
+      }
+      user.addresses.push({
+        label: typeof address.label === 'string' && address.label.trim() ? address.label.trim() : 'Home',
+        line1: typeof address.line1 === 'string' ? address.line1.trim() : '',
+        line2: typeof address.line2 === 'string' ? address.line2.trim() : '',
+        city: typeof address.city === 'string' ? address.city.trim() : '',
+        state: typeof address.state === 'string' ? address.state.trim() : '',
+        postalCode: typeof address.postalCode === 'string' ? address.postalCode.trim() : '',
+        country: typeof address.country === 'string' && address.country.trim() ? address.country.trim() : 'Sri Lanka',
+        isDefault: isDef,
+      });
+      user.markModified('addresses');
+    } else if (action === 'edit_address' && typeof index === 'number' && address) {
+      if (user.addresses[index]) {
+        const isDef = Boolean(address.isDefault);
+        if (isDef) {
+          user.addresses.forEach((a, i) => {
+            a.isDefault = i === index;
+          });
+        }
+        user.addresses[index].label = typeof address.label === 'string' && address.label.trim() ? address.label.trim() : user.addresses[index].label || 'Home';
+        user.addresses[index].line1 = typeof address.line1 === 'string' ? address.line1.trim() : user.addresses[index].line1;
+        user.addresses[index].line2 = typeof address.line2 === 'string' ? address.line2.trim() : user.addresses[index].line2;
+        user.addresses[index].city = typeof address.city === 'string' ? address.city.trim() : user.addresses[index].city;
+        user.addresses[index].state = typeof address.state === 'string' ? address.state.trim() : user.addresses[index].state;
+        user.addresses[index].postalCode = typeof address.postalCode === 'string' ? address.postalCode.trim() : user.addresses[index].postalCode;
+        user.addresses[index].country = typeof address.country === 'string' && address.country.trim() ? address.country.trim() : (user.addresses[index].country || 'Sri Lanka');
+        if (isDef) {
+          user.addresses[index].isDefault = true;
+        }
+        user.markModified('addresses');
+      }
+    } else if (action === 'delete_address' && typeof index === 'number') {
+      if (user.addresses[index]) {
+        const wasDefault = user.addresses[index].isDefault;
+        user.addresses.splice(index, 1);
+        if (wasDefault && user.addresses.length > 0) {
+          user.addresses[0].isDefault = true;
+        }
+        user.markModified('addresses');
+      }
+    } else if (action === 'set_default_address' && typeof index === 'number') {
+      if (user.addresses[index]) {
+        user.addresses.forEach((a, i) => {
+          a.isDefault = i === index;
+        });
+        user.markModified('addresses');
+      }
+    } else if (Array.isArray(addresses)) {
+      user.addresses = addresses.map((addr: any) => ({
+        label: typeof addr.label === 'string' && addr.label.trim() ? addr.label.trim() : 'Home',
+        line1: typeof addr.line1 === 'string' ? addr.line1.trim() : '',
+        line2: typeof addr.line2 === 'string' ? addr.line2.trim() : '',
+        city: typeof addr.city === 'string' ? addr.city.trim() : '',
+        state: typeof addr.state === 'string' ? addr.state.trim() : '',
+        postalCode: typeof addr.postalCode === 'string' ? addr.postalCode.trim() : '',
+        country: typeof addr.country === 'string' && addr.country.trim() ? addr.country.trim() : 'Sri Lanka',
+        isDefault: Boolean(addr.isDefault),
+      }));
+      if (user.addresses.length > 0 && !user.addresses.some((a) => a.isDefault)) {
+        user.addresses[0].isDefault = true;
+      }
+      user.markModified('addresses');
     }
 
     await user.save();
@@ -158,7 +235,7 @@ export async function PATCH(request: NextRequest) {
 
     const response = NextResponse.json({
       success: true,
-      message: 'Profile updated successfully',
+      message: 'Updated successfully',
       user: userData,
     });
 
@@ -172,8 +249,8 @@ export async function PATCH(request: NextRequest) {
 
     return response;
   } catch (error: unknown) {
-    console.error('Profile update error:', error);
-    const message = error instanceof Error ? error.message : 'Failed to update profile';
+    console.error('Update error:', error);
+    const message = error instanceof Error ? error.message : 'Failed to update';
     return NextResponse.json(
       { success: false, error: message },
       { status: 500 }
