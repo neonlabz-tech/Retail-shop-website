@@ -1,9 +1,13 @@
 import type { Metadata } from 'next';
 import dynamic from 'next/dynamic';
 import { SITE_NAME } from '@/lib/constants';
+import { PodTopCategoriesSkeleton } from '@/features/pod/components/PodTopCategoriesSkeleton';
 
 const PodHero = dynamic(() => import('@/features/pod/components/PodHero').then(m => ({ default: m.PodHero })));
-const PodTopCategories = dynamic(() => import('@/features/pod/components/PodTopCategories').then(m => ({ default: m.PodTopCategories })));
+const PodTopCategories = dynamic(
+  () => import('@/features/pod/components/PodTopCategories').then(m => ({ default: m.PodTopCategories })),
+  { loading: () => <PodTopCategoriesSkeleton /> }
+);
 const PodPromoGrid = dynamic(() => import('@/features/pod/components/PodPromoGrid').then(m => ({ default: m.PodPromoGrid })));
 const PodFeaturedProducts = dynamic(() => import('@/features/pod/components/PodFeaturedProducts').then(m => ({ default: m.PodFeaturedProducts })));
 const PodDealBanner = dynamic(() => import('@/features/pod/components/PodDealBanner').then(m => ({ default: m.PodDealBanner })));

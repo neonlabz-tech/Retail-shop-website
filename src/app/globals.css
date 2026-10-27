@@ -921,6 +921,11 @@ body.scroll-locked {
   border: none !important;
   box-shadow: 0 8px 16px -2px rgba(24, 62, 132, 0.12), 4px 6px 10px -2px rgba(24, 62, 132, 0.04), -4px 6px 10px -2px rgba(24, 62, 132, 0.04) !important;
   transition: transform 300ms ease, box-shadow 300ms ease, background-color 300ms ease;
+  isolation: isolate;
+}
+
+.pd-cat-img {
+  mix-blend-mode: multiply !important;
 }
 
 .pd-cat-item:hover .pd-cat-circle {
