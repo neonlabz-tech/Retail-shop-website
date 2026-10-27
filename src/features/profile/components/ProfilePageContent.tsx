@@ -147,6 +147,57 @@ export function ProfilePageContent() {
 
   const [actionNotice, setActionNotice] = useState<string | null>(null);
 
+  // Inline Profile Editing State
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [editFirstName, setEditFirstName] = useState('');
+  const [editLastName, setEditLastName] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
+
+  const handleStartEdit = () => {
+    setEditFirstName(user?.firstName || '');
+    setEditLastName(user?.lastName || '');
+    setEditPhone(user?.phone || '');
+    setProfileError(null);
+    setIsEditingProfile(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditingProfile(false);
+    setProfileError(null);
+  };
+
+  const handleSaveProfile = async () => {
+    setSavingProfile(true);
+    setProfileError(null);
+    try {
+      const res = await fetch('/api/auth/me', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          firstName: editFirstName.trim(),
+          lastName: editLastName.trim(),
+          phone: editPhone.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to update profile');
+      }
+      if (data.user) {
+        useAuthStore.getState().setUser(data.user);
+      }
+      setIsEditingProfile(false);
+      setActionNotice('Your personal details have been updated successfully.');
+      setTimeout(() => setActionNotice(null), 4000);
+    } catch (err: any) {
+      setProfileError(err.message || 'Failed to update profile');
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
@@ -260,9 +311,6 @@ export function ProfilePageContent() {
                 Verified Customer
               </span>
             </div>
-            <p className="text-[1.35rem] sm:text-[1.45rem] text-slate-500 mt-[0.4rem] max-w-[620px]">
-              Manage your personal credentials, track ongoing shipments in real time, and review delivered orders.
-            </p>
           </div>
 
           <div className="flex items-center gap-[1rem] sm:gap-[1.2rem] flex-wrap">
@@ -491,7 +539,7 @@ export function ProfilePageContent() {
 
                 {/* 1. Account Identity & Credentials */}
                 <div className="bg-white border border-slate-200/80 rounded-[1.4rem] p-[2rem_1.8rem] sm:p-[2.8rem_3rem] shadow-[0_2px_12px_rgba(15,23,42,0.03)]">
-                  <div className="flex items-center justify-between pb-[1.8rem] border-b border-slate-100 mb-[2rem]">
+                  <div className="flex items-center justify-between pb-[1.8rem] border-b border-slate-100 mb-[2rem] gap-[1.2rem] flex-wrap">
                     <div className="flex items-center gap-[1.2rem]">
                       <div className="w-[4rem] h-[4rem] rounded-[1rem] bg-slate-100 text-slate-800 flex items-center justify-center flex-shrink-0">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -504,37 +552,180 @@ export function ProfilePageContent() {
                         <p className="text-[1.25rem] sm:text-[1.35rem] text-slate-500">Your profile details and primary contact channels.</p>
                       </div>
                     </div>
-                    <span className="hidden sm:inline-flex items-center gap-[0.5rem] px-[1rem] py-[0.35rem] rounded-full bg-slate-100 text-slate-700 text-[1.15rem] font-semibold border border-slate-200/60">
-                      Primary Profile
-                    </span>
+
+                    {!isEditingProfile ? (
+                      <button
+                        type="button"
+                        onClick={handleStartEdit}
+                        className="inline-flex items-center gap-[0.7rem] px-[1.5rem] py-[0.75rem] rounded-[0.8rem] bg-slate-900 hover:bg-slate-800 text-white text-[1.25rem] font-semibold transition-all shadow-xs cursor-pointer"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                          <path d="m15 5 4 4" />
+                        </svg>
+                        <span>Edit Profile</span>
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-[0.8rem]">
+                        <button
+                          type="button"
+                          onClick={handleCancelEdit}
+                          disabled={savingProfile}
+                          className="px-[1.4rem] py-[0.7rem] rounded-[0.8rem] border border-slate-300 text-slate-700 hover:bg-slate-100 text-[1.25rem] font-semibold transition-colors cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleSaveProfile}
+                          disabled={savingProfile}
+                          className="inline-flex items-center gap-[0.6rem] px-[1.6rem] py-[0.7rem] rounded-[0.8rem] bg-emerald-600 hover:bg-emerald-700 text-white text-[1.25rem] font-semibold transition-all shadow-xs cursor-pointer disabled:opacity-50"
+                        >
+                          {savingProfile ? (
+                            <>
+                              <span className="w-[1.2rem] h-[1.2rem] border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                              <span>Saving...</span>
+                            </>
+                          ) : (
+                            <>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                <polyline points="20 6 9 17 4 12" />
+                              </svg>
+                              <span>Save Changes</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    )}
                   </div>
 
+                  {/* Inline Error Message */}
+                  {profileError && (
+                    <div className="mb-[1.8rem] p-[1.2rem_1.6rem] bg-rose-50 border border-rose-200 rounded-[1rem] text-[1.3rem] text-rose-700 flex items-center gap-[0.8rem]">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="flex-shrink-0">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="8" x2="12" y2="12" />
+                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                      </svg>
+                      <span>{profileError}</span>
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-[1.6rem]">
+                    {/* First Name */}
                     <div className="bg-slate-50/70 border border-slate-200/60 rounded-[1rem] p-[1.4rem_1.6rem]">
-                      <span className="block text-[1.15rem] font-semibold text-slate-500 uppercase tracking-[0.05em] mb-[0.3rem]">First Name</span>
-                      <span className="text-[1.5rem] sm:text-[1.6rem] font-semibold text-slate-900">{user.firstName || '—'}</span>
+                      <label htmlFor="edit-first-name" className="block text-[1.15rem] font-semibold text-slate-500 uppercase tracking-[0.05em] mb-[0.4rem]">
+                        First Name
+                      </label>
+                      {isEditingProfile ? (
+                        <input
+                          id="edit-first-name"
+                          type="text"
+                          value={editFirstName}
+                          onChange={(e) => setEditFirstName(e.target.value)}
+                          placeholder="First Name"
+                          className="w-full bg-white border border-slate-300 rounded-[0.8rem] px-[1.2rem] py-[0.8rem] text-[1.5rem] font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
+                        />
+                      ) : (
+                        <span className="text-[1.5rem] sm:text-[1.6rem] font-semibold text-slate-900">{user.firstName || '—'}</span>
+                      )}
                     </div>
 
+                    {/* Last Name */}
                     <div className="bg-slate-50/70 border border-slate-200/60 rounded-[1rem] p-[1.4rem_1.6rem]">
-                      <span className="block text-[1.15rem] font-semibold text-slate-500 uppercase tracking-[0.05em] mb-[0.3rem]">Last Name</span>
-                      <span className="text-[1.5rem] sm:text-[1.6rem] font-semibold text-slate-900">{user.lastName || '—'}</span>
+                      <label htmlFor="edit-last-name" className="block text-[1.15rem] font-semibold text-slate-500 uppercase tracking-[0.05em] mb-[0.4rem]">
+                        Last Name
+                      </label>
+                      {isEditingProfile ? (
+                        <input
+                          id="edit-last-name"
+                          type="text"
+                          value={editLastName}
+                          onChange={(e) => setEditLastName(e.target.value)}
+                          placeholder="Last Name"
+                          className="w-full bg-white border border-slate-300 rounded-[0.8rem] px-[1.2rem] py-[0.8rem] text-[1.5rem] font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
+                        />
+                      ) : (
+                        <span className="text-[1.5rem] sm:text-[1.6rem] font-semibold text-slate-900">{user.lastName || '—'}</span>
+                      )}
                     </div>
 
+                    {/* Email Address */}
                     <div className="bg-slate-50/70 border border-slate-200/60 rounded-[1rem] p-[1.4rem_1.6rem]">
-                      <div className="flex items-center justify-between mb-[0.3rem]">
+                      <div className="flex items-center justify-between mb-[0.4rem]">
                         <span className="text-[1.15rem] font-semibold text-slate-500 uppercase tracking-[0.05em]">Email Address</span>
                         <span className="text-[1.05rem] font-semibold text-emerald-700 bg-emerald-50 px-[0.6rem] py-[0.1rem] rounded-full border border-emerald-200">
                           Verified
                         </span>
                       </div>
-                      <span className="text-[1.45rem] sm:text-[1.55rem] font-semibold text-slate-900 break-all">{user.email}</span>
+                      {isEditingProfile ? (
+                        <div>
+                          <input
+                            type="text"
+                            value={user.email}
+                            disabled
+                            className="w-full bg-slate-100/90 border border-slate-200 rounded-[0.8rem] px-[1.2rem] py-[0.8rem] text-[1.45rem] font-medium text-slate-500 cursor-not-allowed select-none"
+                          />
+                          <p className="text-[1.1rem] text-slate-400 mt-[0.4rem]">Primary account login email</p>
+                        </div>
+                      ) : (
+                        <span className="text-[1.45rem] sm:text-[1.55rem] font-semibold text-slate-900 break-all">{user.email}</span>
+                      )}
                     </div>
 
+                    {/* Phone Number */}
                     <div className="bg-slate-50/70 border border-slate-200/60 rounded-[1rem] p-[1.4rem_1.6rem]">
-                      <span className="block text-[1.15rem] font-semibold text-slate-500 uppercase tracking-[0.05em] mb-[0.3rem]">Phone Number</span>
-                      <span className="text-[1.45rem] sm:text-[1.55rem] font-semibold text-slate-900">{user.phone || '—'}</span>
+                      <label htmlFor="edit-phone" className="block text-[1.15rem] font-semibold text-slate-500 uppercase tracking-[0.05em] mb-[0.4rem]">
+                        Phone Number
+                      </label>
+                      {isEditingProfile ? (
+                        <input
+                          id="edit-phone"
+                          type="tel"
+                          value={editPhone}
+                          onChange={(e) => setEditPhone(e.target.value)}
+                          placeholder="e.g. 077 123 4567"
+                          className="w-full bg-white border border-slate-300 rounded-[0.8rem] px-[1.2rem] py-[0.8rem] text-[1.45rem] font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
+                        />
+                      ) : (
+                        <span className="text-[1.45rem] sm:text-[1.55rem] font-semibold text-slate-900">{user.phone || '—'}</span>
+                      )}
                     </div>
                   </div>
+
+                  {/* Mobile & Bottom Action Buttons when editing */}
+                  {isEditingProfile && (
+                    <div className="flex items-center justify-end gap-[1rem] mt-[2rem] pt-[1.8rem] border-t border-slate-100 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={handleCancelEdit}
+                        disabled={savingProfile}
+                        className="px-[1.6rem] py-[0.8rem] rounded-[0.8rem] border border-slate-300 text-slate-700 hover:bg-slate-100 text-[1.3rem] font-semibold transition-colors cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSaveProfile}
+                        disabled={savingProfile}
+                        className="inline-flex items-center gap-[0.7rem] px-[2rem] py-[0.8rem] rounded-[0.8rem] bg-slate-900 hover:bg-slate-800 text-white text-[1.3rem] font-semibold transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                      >
+                        {savingProfile ? (
+                          <>
+                            <span className="w-[1.4rem] h-[1.4rem] border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                            <span>Saving Changes...</span>
+                          </>
+                        ) : (
+                          <>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                              <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                            <span>Save Changes</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* 2. Primary Saved Address */}

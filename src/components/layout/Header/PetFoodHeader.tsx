@@ -104,8 +104,6 @@ export function PetFoodHeader() {
               </span>
               <Link href="#" className="pet-food-utility-link">Features</Link>
               <span className="pet-food-utility-sep" aria-hidden="true">|</span>
-              <Link href="/pet-food/about" className="pet-food-utility-link">About Us</Link>
-              <span className="pet-food-utility-sep" aria-hidden="true">|</span>
               <Link href="#" className="pet-food-utility-link">FAQs</Link>
             </div>
           </div>

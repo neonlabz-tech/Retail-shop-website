@@ -418,19 +418,15 @@ export function MobileNav() {
 
               if (item.id === 'nav-blog') return null;
 
-              const isAboutUs = item.id === 'nav-pages';
+              if (item.id === 'nav-pages') return null;
               const isCategoriesItem = item.id === 'nav-categories';
               const isProductsItem = item.id === 'nav-products';
-              const itemLabel = isAboutUs ? 'About us' : item.label;
-              const linkHref = isAboutUs
-                ? '/pages/about'
-                : isProductsItem
-                  ? '/products'
-                  : (item.href && item.href !== '#' ? item.href : undefined);
+              const itemLabel = item.label;
+              const linkHref = isProductsItem
+                ? '/products'
+                : (item.href && item.href !== '#' ? item.href : undefined);
 
-              const columns: MegaMenuColumn[] = isAboutUs
-                ? []
-                : isCategoriesItem
+              const columns: MegaMenuColumn[] = isCategoriesItem
                   ? dbCategories.map((cat) => ({
                       title: cat.name,
                       links: cat.subcategories.map((sub, idx) => ({
@@ -442,10 +438,9 @@ export function MobileNav() {
                   : isProductsItem
                     ? []
                     : (item.megaMenu ?? []);
-              const flatChildren = isAboutUs ? [] : (item.children ?? []);
-              const categoryCards = isAboutUs || isCategoriesItem ? [] : (item.megaCategoryCards ?? []);
+              const flatChildren = item.children ?? [];
+              const categoryCards = isCategoriesItem ? [] : (item.megaCategoryCards ?? []);
               const hasChildren =
-                !isAboutUs &&
                 !isProductsItem &&
                 (columns.length > 0 ||
                 flatChildren.length > 0 ||

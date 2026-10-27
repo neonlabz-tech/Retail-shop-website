@@ -91,8 +91,6 @@ export function CarAccessoriesHeader() {
             <div className="ca-utility">
               <Link href="#" className="ca-utility-link">Features</Link>
               <span className="ca-utility-sep" aria-hidden="true">|</span>
-              <Link href="/car-accessories/about" className="ca-utility-link">About Us</Link>
-              <span className="ca-utility-sep" aria-hidden="true">|</span>
               <Link href="/car-accessories/faq" className="ca-utility-link">FAQs</Link>
             </div>
           </div>

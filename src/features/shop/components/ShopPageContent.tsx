@@ -603,11 +603,11 @@ export function ShopPageContent({
 
   return (
     <ShopThemeCtx.Provider value={theme}>
-      <div className="container-main pt-[30px]">
-        <div className="rounded-[10px] h-[120px] flex items-center py-0 px-[40px]" style={{ backgroundColor: theme.headerBg }}>
+      <div className="container-main pt-[16px] min-[750px]:pt-[20px]">
+        <div className="rounded-[10px] h-[80px] min-[750px]:h-[88px] flex items-center py-0 px-[24px] min-[750px]:px-[32px]" style={{ backgroundColor: theme.headerBg }}>
           <div>
-            <h1 className="text-[36px] font-bold mb-[6px]" style={{ color: theme.textColor }}>{title}</h1>
-            <div className="flex items-center gap-[8px] text-[15px]">
+            <h1 className="text-[24px] min-[750px]:text-[28px] font-bold mb-[3px]" style={{ color: theme.textColor }}>{title}</h1>
+            <div className="flex items-center gap-[6px] text-[13px] min-[750px]:text-[14px]">
               <Link href={homeHref} className="underline underline-offset-[3px]" style={{ color: theme.mutedColor }}>{homeLabel}</Link>
               <span className="text-[#bbb]">/</span>
               <span style={{ color: theme.textColor }}>{breadcrumbLabel}</span>
@@ -617,7 +617,7 @@ export function ShopPageContent({
       </div>
 
       <div className="container-main">
-        <div className="flex items-center justify-between h-[70px] rounded-none py-0 px-[20px] mb-[30px] mt-[20px]" style={{ backgroundColor: theme.toolbarBg }}>
+        <div className="flex items-center justify-between h-[50px] min-[750px]:h-[52px] rounded-[8px] py-0 px-[16px] mb-[20px] min-[750px]:mb-[24px] mt-[12px] min-[750px]:mt-[14px]" style={{ backgroundColor: theme.toolbarBg }}>
           <div className="shop-view-toggles flex items-center gap-[6px]">
             {([
               { cols: 2 as const, Icon: IconCol2 },

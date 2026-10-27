@@ -581,11 +581,6 @@
         "type": "dropdown",
         "children": [
             {
-                "id": "pg-1",
-                "label": "About us",
-                "href": "/pages/about"
-            },
-            {
                 "id": "pg-2",
                 "label": "Contact",
                 "href": "/pages/contact"

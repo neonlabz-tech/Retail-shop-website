@@ -322,16 +322,6 @@
                 "title": "Explore More",
                 "links": [
                     {
-                        "id": "exp-1",
-                        "label": "About us",
-                        "href": "/footwear/about"
-                    },
-                    {
-                        "id": "exp-2",
-                        "label": "Our Story",
-                        "href": "/footwear/about"
-                    },
-                    {
                         "id": "exp-3",
                         "label": "Blog",
                         "href": "/blog"
@@ -565,11 +555,6 @@
         "href": "#",
         "type": "dropdown",
         "children": [
-            {
-                "id": "pg-1",
-                "label": "About Us",
-                "href": "/footwear/about"
-            },
             {
                 "id": "pg-2",
                 "label": "Contact",

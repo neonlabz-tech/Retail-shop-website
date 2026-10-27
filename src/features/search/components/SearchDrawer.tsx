@@ -37,67 +37,54 @@ function IconArrowRight({ size = 18 }: { size?: number }) {
 }
 
 const fashionSuggestionPages = [
-  { label: 'About us', href: '/pages/about' },
   { label: 'Frequently Asked Questions & Support', href: '/pages/faq' },
 ];
 
 const grocerySuggestionPages = [
-  { label: 'About us', href: '/grocery/about' },
   { label: 'Store Location', href: '/grocery/store-location' },
 ];
 
 const petFoodSuggestionPages = [
-  { label: 'About us', href: '/pet-food/about' },
   { label: 'Store Location', href: '/pet-food/store-location' },
 ];
 
 const megastoreSuggestionPages = [
-  { label: 'About us', href: '/megastore/about' },
   { label: 'Store Location', href: '/megastore/store-location' },
 ];
 
 const carAccessoriesSuggestionPages = [
-  { label: 'About us', href: '/car-accessories/about' },
   { label: 'Store Location', href: '/car-accessories/store-location' },
 ];
 
 const pizzaSuggestionPages = [
-  { label: 'About us', href: '/pizza/about' },
   { label: 'Store Location', href: '/pizza/store-location' },
 ];
 
 const plantGardenSuggestionPages = [
-  { label: 'About us', href: '/plant-garden/about' },
   { label: 'Store Location', href: '/plant-garden/store-location' },
 ];
 
 const skinCareSuggestionPages = [
-  { label: 'About us', href: '/skin-care/about' },
   { label: 'Store Location', href: '/skin-care/store-location' },
 ];
 
 const jewellerySuggestionPages = [
-  { label: 'About us', href: '/pages/about' },
   { label: 'Store Location', href: '/pages/store-location' },
 ];
 
 const boutiqueSuggestionPages = [
-  { label: 'About us', href: '/boutique-fashion/about' },
   { label: 'Store Location', href: '/boutique-fashion/store-location' },
 ];
 
 const phoneCaseSuggestionPages = [
-  { label: 'About us', href: '/phone-case/about' },
   { label: 'Store Location', href: '/phone-case/store-location' },
 ];
 
 const smartWatchesSuggestionPages = [
-  { label: 'About us', href: '/smart-watches/about' },
   { label: 'Store Location', href: '/smart-watches/store-location' },
 ];
 
 const footwearSuggestionPages = [
-  { label: 'About us', href: '/footwear/about' },
   { label: 'Store Location', href: '/pages/store-location' },
 ];
 

@@ -89,8 +89,6 @@ export function PizzaShopHeader() {
             </div>
 
             <div className="ps-utility">
-              <Link href="/pizza/about" className="ps-utility-link">About Us</Link>
-              <span className="ps-utility-sep" aria-hidden="true">|</span>
               <Link href="/pizza/faq" className="ps-utility-link">FAQs</Link>
               <span className="ps-utility-sep" aria-hidden="true">|</span>
               <Link href="/pizza/store-location" className="ps-utility-link">Find a Store</Link>

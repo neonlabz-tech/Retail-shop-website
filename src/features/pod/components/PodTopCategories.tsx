@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation } from 'swiper/modules';
 import type { Swiper as SwiperType } from 'swiper';
+import { PodTopCategoriesSkeleton } from './PodTopCategoriesSkeleton';
 
 import 'swiper/css';
 
@@ -25,9 +26,11 @@ interface CategoryItem {
 export function PodTopCategories() {
   const swiperRef = useRef<SwiperType | null>(null);
   const [categoryItems, setCategoryItems] = useState<CategoryItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
+    setIsLoading(true);
     fetch('/api/categories')
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -50,12 +53,19 @@ export function PodTopCategories() {
           setCategoryItems(padded);
         }
       })
-      .catch((err) => console.error('Error fetching live categories from MongoDB:', err));
+      .catch((err) => console.error('Error fetching live categories from MongoDB:', err))
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
 
     return () => {
       isMounted = false;
     };
   }, []);
+
+  if (isLoading) {
+    return <PodTopCategoriesSkeleton />;
+  }
 
   if (categoryItems.length === 0) {
     return null;
@@ -147,6 +157,7 @@ export function PodTopCategories() {
           height: auto;
           border-radius: 50%;
           overflow: hidden;
+          isolation: isolate;
           background-color: #ebf0f5;
           border: none;
           box-shadow: 0 8px 16px -2px rgba(24, 62, 132, 0.12), 4px 6px 10px -2px rgba(24, 62, 132, 0.04), -4px 6px 10px -2px rgba(24, 62, 132, 0.04);
@@ -164,6 +175,7 @@ export function PodTopCategories() {
           object-position: center;
           transition: transform 400ms ease;
           display: block;
+          mix-blend-mode: multiply;
         }
         .pd-cat-item:hover .pd-cat-img { transform: scale(1.08); }
         .pd-cat-item:hover .pd-cat-circle {

@@ -183,10 +183,11 @@ export function DesktopNav() {
 
         if (item.id === 'nav-blog') return null;
 
-        const isAboutUs = item.id === 'nav-pages';
-        const itemLabel = isAboutUs ? 'About us' : item.label;
+        if (item.id === 'nav-pages') return null;
+
         const isProducts = item.id === 'nav-products';
-        const itemHref = isAboutUs ? '/pages/about' : (isProducts ? '/products' : item.href);
+        const itemLabel = item.label;
+        const itemHref = isProducts ? '/products' : item.href;
 
         return (
           <div
@@ -212,7 +213,7 @@ export function DesktopNav() {
             }}
           >
             {itemLabel}
-            {!isAboutUs && !isProducts && item.id !== 'nav-categories' && (item.type === 'dropdown' || item.type === 'megamenu') && (
+            {!isProducts && item.id !== 'nav-categories' && (item.type === 'dropdown' || item.type === 'megamenu') && (
               <span
                 className={`inline-flex transition-transform duration-300 ease-in-out ${
                   activeMenu === item.id ? 'rotate-180' : 'rotate-0'
@@ -268,7 +269,7 @@ export function DesktopNav() {
             />
           )}
 
-          {!isAboutUs && item.type === 'dropdown' && item.children && activeMenu === item.id && (
+          {item.type === 'dropdown' && item.children && activeMenu === item.id && (
             <DropdownMenu items={item.children} onClose={handleClose} />
           )}
         </div>

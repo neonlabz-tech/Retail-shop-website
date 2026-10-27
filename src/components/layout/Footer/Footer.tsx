@@ -108,7 +108,6 @@ export function Footer() {
     { label: 'Wishlist', href: '/wishlist' },
     { label: 'My account', href: '/profile' },
     { label: 'Cart', href: '/cart' },
-    { label: 'About us', href: '/pages/about' },
   ];
   const mapQuery = encodeURIComponent(`${STORE_ADDRESS}, Sri Lanka`);
   const mapUrl = `https://www.google.com/maps/search/?api=1&query=${mapQuery}`;
@@ -235,8 +234,12 @@ export function Footer() {
       {/* ═══ BOTTOM: Copyright Bar ═══ */}
       <div className="w-full bg-[#f9fafb] border-t border-[#f0f0f0] py-[14px]">
         <div className="container-main footer-container">
-          <p className="text-[13px] text-[#6b7280] text-center m-0 leading-normal tracking-wide">
-            &copy; 2026 <strong className="font-semibold text-[#111827]">RKF DISTRIBUTORS</strong> All rights reserved. | Developed by{' '}
+          <p className="text-[12px] sm:text-[13px] text-[#6b7280] text-center m-0 leading-relaxed tracking-normal flex flex-wrap items-center justify-center gap-x-1 gap-y-0.5">
+            <span>&copy; 2026</span>
+            <strong className="font-semibold text-[#111827]">RKF DISTRIBUTORS.</strong>
+            <span>All rights reserved.</span>
+            <span className="text-[#9ca3af] mx-0.5 hidden min-[480px]:inline">|</span>
+            <span>Developed by</span>
             <strong className="font-semibold text-[#111827]">NeonLabz (Pvt) Ltd.</strong>
           </p>
         </div>
@@ -262,36 +265,46 @@ export function Footer() {
           }
         }
 
-        /* ── Desktop (≥900px) — flex with space-between so columns sit gracefully across the bounded container ── */
+        /* ── Desktop (≥900px) — 4-column balanced grid with aligned map ── */
         @media (min-width: 900px) {
           .footer-grid {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            width: 100%;
-            gap: 32px;
+            display: grid !important;
+            grid-template-columns: 2fr 1fr 1fr 1.5fr !important;
+            gap: 36px 40px !important;
+            align-items: flex-start !important;
+            width: 100% !important;
           }
           .ft-col {
-            flex: 0 0 auto;
+            width: 100% !important;
           }
           .ft-col-about {
-            max-width: 320px;
+            max-width: 320px !important;
           }
           .ft-col-map {
-            width: 220px;
+            width: 100% !important;
+            max-width: 280px !important;
+            justify-self: end !important;
           }
           .ft-map-title {
-            margin: 0 0 8px;
-            font-size: 16px;
-            font-weight: 700;
-            color: #111827;
+            margin: 0 0 14px !important;
+            font-size: 16px !important;
+            font-weight: 700 !important;
+            color: #111827 !important;
+            letter-spacing: -0.01em !important;
           }
           .ft-map-link {
             display: block;
             overflow: hidden;
-            height: 130px;
+            width: 100%;
+            height: 140px;
             border: 1px solid #e5e7eb;
             border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            transition: border-color 200ms ease, box-shadow 200ms ease;
+          }
+          .ft-map-link:hover {
+            border-color: #cbd5e1;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
           }
           .ft-map-link iframe {
             display: block;
@@ -310,40 +323,43 @@ export function Footer() {
             cursor: default;
             letter-spacing: -0.01em;
           }
-          .ft-col-toggle { display: none; }
+          .ft-col-toggle { display: none !important; }
           .ft-col-body {
-            display: block;
-            overflow: visible;
+            display: block !important;
+            overflow: visible !important;
+            opacity: 1 !important;
+            visibility: visible !important;
           }
-          .ft-col-body-inner { padding: 0; }
+          .ft-col-body-inner { padding: 0 !important; }
         }
 
         /* ── Tablet (640px to 899px) — 2x2 grid with balanced spacing ── */
         @media (min-width: 640px) and (max-width: 899px) {
           .footer-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 28px 40px;
+            display: grid !important;
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 28px 40px !important;
           }
           .ft-col {
-            width: 100%;
+            width: 100% !important;
           }
           .ft-col-about {
-            max-width: 100%;
+            max-width: 100% !important;
           }
           .ft-col-map {
-            width: 100%;
+            width: 100% !important;
+            max-width: 320px !important;
           }
           .ft-map-title {
-            margin: 0 0 8px;
-            font-size: 16px;
-            font-weight: 700;
-            color: #111827;
+            margin: 0 0 12px !important;
+            font-size: 16px !important;
+            font-weight: 700 !important;
+            color: #111827 !important;
           }
           .ft-map-link {
             display: block;
             overflow: hidden;
-            height: 160px;
+            height: 150px;
             border: 1px solid #e5e7eb;
             border-radius: 8px;
           }
@@ -363,36 +379,40 @@ export function Footer() {
             margin-bottom: 12px;
             cursor: default;
           }
-          .ft-col-toggle { display: none; }
+          .ft-col-toggle { display: none !important; }
           .ft-col-body {
-            display: block;
-            overflow: visible;
+            display: block !important;
+            overflow: visible !important;
+            opacity: 1 !important;
+            visibility: visible !important;
           }
-          .ft-col-body-inner { padding: 0; }
+          .ft-col-body-inner { padding: 0 !important; }
         }
 
-        /* ── Mobile (<640px) — accordion navigation ── */
+        /* ── Mobile (<640px) — clean accordion with zero ghost gaps ── */
         @media (max-width: 639px) {
           .footer-grid {
-            display: flex;
-            flex-direction: column;
-            gap: 0;
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 0 !important;
           }
           .ft-col {
-            width: 100%;
+            width: 100% !important;
             border-bottom: 1px solid #f3f4f6;
             padding-bottom: 0;
+            margin: 0;
           }
           .ft-col-about {
-            max-width: 100%;
-            padding-bottom: 20px;
-            margin-bottom: 6px;
+            max-width: 100% !important;
+            padding-bottom: 18px;
+            margin-bottom: 4px;
           }
           .ft-col-map {
-            padding: 16px 0;
+            padding: 16px 0 6px !important;
+            border-bottom: none !important;
           }
           .ft-map-title {
-            margin: 0 0 8px;
+            margin: 0 0 10px;
             font-size: 16px;
             font-weight: 700;
             color: #111827;
@@ -400,7 +420,8 @@ export function Footer() {
           .ft-map-link {
             display: block;
             overflow: hidden;
-            height: 180px;
+            width: 100%;
+            height: 170px;
             border: 1px solid #e5e7eb;
             border-radius: 8px;
           }
@@ -421,13 +442,22 @@ export function Footer() {
             align-items: center;
             justify-content: space-between;
             margin: 0;
-            padding: 2px 0;
+            padding: 13px 0;
             cursor: pointer;
-            font-size: 16px;
+            font-size: 15px;
             font-weight: 600;
             color: #111827;
             background: transparent;
             border: 0;
+            outline: none !important;
+            -webkit-tap-highlight-color: transparent;
+          }
+          .ft-col-head:focus,
+          .ft-col-head:focus-visible,
+          .ft-col-head:active {
+            outline: none !important;
+            box-shadow: none !important;
+            border: none !important;
           }
           .ft-col-toggle {
             display: inline-flex;
@@ -436,19 +466,26 @@ export function Footer() {
           .ft-col-body {
             display: grid;
             grid-template-rows: 0fr;
+            overflow: hidden !important;
             opacity: 0;
+            visibility: hidden;
             transition:
-              grid-template-rows 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94),
-              opacity 250ms ease;
+              grid-template-rows 280ms cubic-bezier(0.25, 0.46, 0.45, 0.94),
+              opacity 200ms ease,
+              visibility 280ms;
           }
           .ft-col-body.is-open {
             grid-template-rows: 1fr;
             opacity: 1;
+            visibility: visible;
           }
           .ft-col-body-inner {
             overflow: hidden;
             min-height: 0;
-            padding: 8px 0 14px;
+            padding: 0;
+          }
+          .ft-col-body.is-open .ft-col-body-inner {
+            padding: 2px 0 14px;
           }
         }
       `}</style>

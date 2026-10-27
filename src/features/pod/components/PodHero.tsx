@@ -56,6 +56,18 @@ const wideBannerSlides = [
     image: '/pod/hero-slider/banner-home-party-essentials.png',
     href: '/products',
   },
+  {
+    id: 'banner-toys-games',
+    title: 'Toys & Games - Fun for Every Little Adventure',
+    image: '/pod/hero-slider/banner-toys-games.png',
+    href: '/products?category=Toys%20%26%20Games',
+  },
+  {
+    id: 'banner-home-kitchen',
+    title: 'Home & Kitchen - Smart Essentials for Stylish Living',
+    image: '/pod/hero-slider/banner-home-kitchen.png',
+    href: '/products?category=Home%20%26%20Living',
+  },
 ];
 
 export function PodHero() {
