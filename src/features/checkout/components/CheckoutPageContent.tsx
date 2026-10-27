@@ -1,9 +1,10 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { useCartStore } from '@/store/cartStore';
-import { useAuthStore } from '@/store/authStore';
+import { useAuthStore, checkAuthOrRedirect, isUserAuthenticated } from '@/store/authStore';
 import { formatPrice } from '@/utils/formatPrice';
 import { calculateShippingFee, parseWeightInGrams } from '@/utils/weight';
 
@@ -11,18 +12,7 @@ const ACCENT = '#c96742';
 const DARK = '#111111';
 
 const COUNTRIES = [
-  { value: '', label: '---' },
-  { value: 'US', label: 'United States' },
-  { value: 'GB', label: 'United Kingdom' },
-  { value: 'CA', label: 'Canada' },
-  { value: 'AU', label: 'Australia' },
-  { value: 'BD', label: 'Bangladesh' },
-  { value: 'DE', label: 'Germany' },
-  { value: 'FR', label: 'France' },
-  { value: 'IN', label: 'India' },
-  { value: 'JP', label: 'Japan' },
-  { value: 'SG', label: 'Singapore' },
-  { value: 'AE', label: 'United Arab Emirates' },
+  { value: 'Sri Lanka', label: 'Sri Lanka' },
 ];
 
 type PaymentMethod = 'bank' | 'cod';
@@ -36,12 +26,13 @@ function IcoCheck() {
 }
 
 export function CheckoutPageContent() {
+  const router = useRouter();
   const { items, getSubtotal, clearCart } = useCartStore();
   const { user, isAuthenticated, checkAuth } = useAuthStore();
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [country, setCountry] = useState('');
+  const [country, setCountry] = useState('Sri Lanka');
   const [city, setCity] = useState('');
   const [address, setAddress] = useState('');
   const [phone, setPhone] = useState('');
@@ -78,6 +69,12 @@ export function CheckoutPageContent() {
     checkAuth();
   }, [checkAuth]);
 
+  useEffect(() => {
+    if (!isUserAuthenticated()) {
+      checkAuthOrRedirect(router, '/checkout');
+    }
+  }, [router]);
+
   // Sync authenticated user info when logged in, or reset fields if not logged in
   useEffect(() => {
     if (isAuthenticated && user) {
@@ -110,7 +107,7 @@ export function CheckoutPageContent() {
       setLastName('');
       setEmail('');
       setPhone('');
-      setCountry('');
+      setCountry('Sri Lanka');
       setCity('');
       setAddress('');
       setNotes('');
@@ -421,20 +418,19 @@ export function CheckoutPageContent() {
               </div>
             </div>
           ) : user ? (
-            <div className="mb-[2rem] p-[1.2rem_1.8rem] bg-emerald-50 border border-emerald-200 rounded-[1.2rem] shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-[1.2rem]">
-              <div className="flex items-center gap-[1.2rem]">
-                <div className="w-[2.8rem] h-[2.8rem] rounded-full bg-emerald-600 text-white flex items-center justify-center text-[1.4rem] font-bold shrink-0">
-                  ✓
-                </div>
-                <div>
-                  <p className="text-[1.35rem] text-emerald-950 font-medium">
-                    Logged in as <strong className="font-bold">{user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email}</strong> ({user.email})
-                  </p>
-                  <p className="text-[1.2rem] text-emerald-700">Your order will be linked to your registered account.</p>
-                </div>
+            <div className="mb-[2.4rem] pb-[1.4rem] border-b border-gray-200/90 flex flex-wrap items-center justify-between gap-[1rem] text-[1.35rem]">
+              <div className="flex items-center gap-[0.8rem] text-gray-600">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400">
+                  <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+                <span>Logged in as <strong className="font-semibold text-gray-900">{user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email}</strong> <span className="text-gray-400">({user.email})</span></span>
               </div>
-              <Link href="/profile" className="text-[1.25rem] text-emerald-800 hover:text-emerald-950 font-semibold underline underline-offset-2 shrink-0">
-                My Profile
+              <Link
+                href="/profile"
+                className="text-[1.25rem] text-gray-500 hover:text-gray-900 hover:underline transition-colors font-medium"
+              >
+                My Profile &rarr;
               </Link>
             </div>
           ) : null}
@@ -643,7 +639,6 @@ export function CheckoutPageContent() {
                 {(
                   [
                     { value: 'cod' as PaymentMethod, label: 'Cash on delivery' },
-                    { value: 'bank' as PaymentMethod, label: 'Direct bank transfer' },
                   ] as const
                 ).map(({ value, label }) => (
                   <label

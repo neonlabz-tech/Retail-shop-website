@@ -2,6 +2,8 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { checkAuthOrRedirect } from '@/store/authStore';
 import { useState, type ReactNode } from 'react';
 import { useCartStore } from '@/store/cartStore';
 import { QuantitySelector } from '@/components/ui/QuantitySelector';
@@ -179,6 +181,7 @@ function AccordionSection({
 }
 
 export function CartPageContent() {
+  const router = useRouter();
   const {
     items,
     removeItem,
@@ -312,9 +315,17 @@ export function CartPageContent() {
 
               <p className="cp-tax-note">Taxes and delivery fee calculated at checkout</p>
 
-              <Link href="/checkout" className="cp-checkout-btn inline-flex items-center justify-center gap-[8px] no-underline">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (!checkAuthOrRedirect(router, '/checkout')) return;
+                  router.push('/checkout');
+                }}
+                className="cp-checkout-btn w-full inline-flex items-center justify-center gap-[8px] no-underline cursor-pointer border-none"
+              >
                 <IcoLock /> Secure Checkout
-              </Link>
+              </button>
             </div>
 
           </div>

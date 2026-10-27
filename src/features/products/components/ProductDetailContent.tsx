@@ -863,7 +863,7 @@ export function ProductDetailContent({
       `Could you please help me with more details?`,
     ].filter(Boolean).join('\n');
 
-    window.open(`https://wa.me/94707992740?text=${encodeURIComponent(messageLines)}`, '_blank', 'noopener,noreferrer');
+    window.open(`https://wa.me/94789915587?text=${encodeURIComponent(messageLines)}`, '_blank', 'noopener,noreferrer');
   };
 
   const SHOW_EXTRA_SECTIONS = false;

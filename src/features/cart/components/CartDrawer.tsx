@@ -3,7 +3,8 @@
 import { useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { checkAuthOrRedirect } from '@/store/authStore';
 import { useCartStore } from '@/store/cartStore';
 import { formatPrice } from '@/utils/formatPrice';
 import { getStorefrontFromPath, getStorefrontOfSlug, productHrefBaseFor, shopHrefFor } from '@/utils/storefront';
@@ -81,6 +82,7 @@ function IconArrowRight({ size = 15, className = '' }: { size?: number; classNam
 
 export function CartDrawer() {
   const { items: allItems, isDrawerOpen, closeDrawer, removeItem, updateQuantity } = useCartStore();
+  const router = useRouter();
   const pathname = usePathname();
   const storefront = getStorefrontFromPath(pathname);
   const items = allItems.filter((i) => getStorefrontOfSlug(i.slug) === storefront);
@@ -318,14 +320,19 @@ export function CartDrawer() {
               >
                 View cart
               </Link>
-              <Link
-                href="/checkout"
-                onClick={closeDrawer}
-                className="h-[40px] flex items-center justify-center gap-[6px] bg-[#F15B41] hover:bg-[#d94a32] text-white rounded-lg text-[1.35rem] font-semibold shadow-sm hover:shadow active:scale-[0.98] transition-all text-center"
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  closeDrawer();
+                  if (!checkAuthOrRedirect(router, '/checkout')) return;
+                  router.push('/checkout');
+                }}
+                className="h-[40px] flex items-center justify-center gap-[6px] bg-[#F15B41] hover:bg-[#d94a32] text-white rounded-lg text-[1.35rem] font-semibold shadow-sm hover:shadow active:scale-[0.98] transition-all text-center cursor-pointer border-none"
               >
                 <span>Check out</span>
                 <IconArrowRight size={14} />
-              </Link>
+              </button>
             </div>
 
             {/* Trust Badges */}
