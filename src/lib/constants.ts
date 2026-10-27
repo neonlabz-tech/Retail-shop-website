@@ -1,5 +1,5 @@
 export const SITE_NAME = 'RKF Distributer';
-export const SITE_DESCRIPTION = 'RKF Distributer — Premium ecommerce and distribution store.';
+export const SITE_DESCRIPTION = 'RKF Distributors — Premium ecommerce and distribution store.';
 export const SITE_URL = 'https://ambaz-nextjs-project.vercel.app';
 
 export const FREE_SHIPPING_THRESHOLD = 0;

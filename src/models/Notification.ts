@@ -21,6 +21,7 @@ export interface INotification extends Document {
   read: boolean;
   isRead?: boolean;
   dismissed: boolean;
+  emailSent?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -40,12 +41,12 @@ const NotificationItemSchema = new Schema<INotificationItem>(
 const NotificationSchema = new Schema<INotification>(
   {
     customer: { type: Schema.Types.ObjectId, ref: 'Customer', index: true },
-    customerEmail: { type: String, required: true, lowercase: true, trim: true, index: true },
+    customerEmail: { type: String, required: false, lowercase: true, trim: true, index: true },
     orderId: { type: Schema.Types.ObjectId, ref: 'Order', index: true },
-    orderNumber: { type: String, required: true, index: true },
+    orderNumber: { type: String, required: false, index: true },
     type: {
       type: String,
-      enum: ['order_delivered', 'order_update', 'general'],
+      // enum removed for admin notification compatibility
       default: 'order_delivered',
     },
     title: { type: String, required: true, trim: true },
@@ -54,6 +55,7 @@ const NotificationSchema = new Schema<INotification>(
     read: { type: Boolean, default: false, index: true },
     isRead: { type: Boolean, default: false },
     dismissed: { type: Boolean, default: false, index: true },
+    emailSent: { type: Boolean, default: false },
   },
   {
     timestamps: true,

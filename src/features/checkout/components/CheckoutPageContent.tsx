@@ -179,14 +179,14 @@ export function CheckoutPageContent() {
     return sum + itemWeight * (Number(item.quantity) || 1);
   }, 0);
 
-  // Shipping fee: default 350 for all; 500 when order exceeds 500g (0 if cart is empty)
-  const shippingFee = calculateShippingFee(totalWeight, items.length);
+  // Shipping fee is calculated by admin upon dispatch (0 at initial checkout)
+  const shippingFee = 0;
 
   // Tax removed as requested
   const tax = 0;
   const DISCOUNT_RATE = 0.0;
   const discount = Math.round(subtotal * DISCOUNT_RATE);
-  const total = Math.max(0, subtotal - discount + shippingFee);
+  const total = Math.max(0, subtotal - discount);
 
   const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -352,18 +352,37 @@ export function CheckoutPageContent() {
                     <span>Items Subtotal:</span>
                     <span>{formatPrice(orderSuccess.subtotal)}</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.6rem', color: '#4b5563' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.8rem', color: '#4b5563' }}>
                     <span>Discount (0%):</span>
                     <span>{formatPrice(orderSuccess.discount)}</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.8rem', color: '#4b5563' }}>
-                    <span>Shipping Fee:</span>
-                    <span>{formatPrice(orderSuccess.shippingFee)}</span>
-                  </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '0.8rem', borderTop: '1px dashed #d1d5db', fontSize: '1.6rem', fontWeight: 700, color: '#111827' }}>
-                    <span>Total Amount:</span>
+                    <div>
+                      <span>Total Amount:</span>
+                      <span style={{ display: 'block', fontSize: '1.15rem', fontWeight: 400, color: '#6b7280' }}>(Excluding shipping fee)</span>
+                    </div>
                     <span style={{ color: '#003b95' }}>{formatPrice(orderSuccess.total)}</span>
                   </div>
+                </div>
+                <div style={{
+                  marginTop: '1.4rem',
+                  padding: '1.2rem 1.4rem',
+                  backgroundColor: '#fffbeb',
+                  border: '1px solid #fde68a',
+                  borderRadius: '0.8rem',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '0.8rem',
+                  textAlign: 'left',
+                }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: '0.2rem' }}>
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="16" x2="12" y2="12" />
+                    <line x1="12" y1="8" x2="12.01" y2="8" />
+                  </svg>
+                  <p style={{ margin: 0, fontSize: '1.25rem', color: '#92400e', lineHeight: 1.5 }}>
+                    <strong>Notice:</strong> Shipping fee is calculated by admin upon dispatch. When your order is shipped, you will receive an email containing the final total cost (product total + shipping fee).
+                  </p>
                 </div>
               </div>
             </div>
@@ -609,17 +628,24 @@ export function CheckoutPageContent() {
                     <span className="co-breakdown-label">Discount (0%)</span>
                     <span className="co-breakdown-val">{formatPrice(discount)}</span>
                   </div>
+                </div>
 
-                  <div className="co-breakdown-row">
-                    <span className="co-breakdown-label">Shipping Fee</span>
-                    <span className="co-breakdown-val">{formatPrice(shippingFee)}</span>
-                  </div>
+                {/* Shipping Fee Notice */}
+                <div className="co-shipping-notice">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: '0.2rem' }}>
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="16" x2="12" y2="12" />
+                    <line x1="12" y1="8" x2="12.01" y2="8" />
+                  </svg>
+                  <span>
+                    Shipping fee is calculated by admin upon dispatch. When your order is shipped, you will receive an email containing the final total cost (product total + shipping fee).
+                  </span>
                 </div>
 
                 <div className="co-breakdown-total">
                   <div className="co-total-left">
                     <span className="co-total-label">Total Amount</span>
-                    <span className="co-total-subnote">Shipping fee included</span>
+                    <span className="co-total-subnote">Excluding shipping fee</span>
                   </div>
                   <div className="co-total-right">
                     <span className="co-total-val">{formatPrice(total)}</span>
@@ -1027,6 +1053,19 @@ const coStyles = `
   .co-val-discount {
     color: #059669 !important;
     font-weight: 700;
+  }
+  .co-shipping-notice {
+    margin: 1.1rem 0;
+    padding: 1rem 1.2rem;
+    background-color: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 0.8rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.8rem;
+    font-size: 1.2rem;
+    color: #92400e;
+    line-height: 1.45;
   }
   .co-breakdown-total {
     display: flex;

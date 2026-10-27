@@ -5,7 +5,6 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 
-
 function EyeIcon() {
   return (
     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -72,6 +71,9 @@ export function RegisterPageContent() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [redirectPath, setRedirectPath] = useState<string>('/');
+  const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
+  const [resendStatus, setResendStatus] = useState<string | null>(null);
+  const [isResending, setIsResending] = useState(false);
 
   // Read redirect query parameter
   useEffect(() => {
@@ -124,6 +126,12 @@ export function RegisterPageContent() {
         return;
       }
 
+      if (data.requiresVerification) {
+        setRegisteredEmail(email.toLowerCase().trim());
+        setIsLoading(false);
+        return;
+      }
+
       if (data.user) {
         useAuthStore.getState().setUser(data.user);
       }
@@ -137,6 +145,81 @@ export function RegisterPageContent() {
       setIsLoading(false);
     }
   };
+
+  const handleResendActivation = async () => {
+    if (!registeredEmail) return;
+    setIsResending(true);
+    setResendStatus(null);
+    try {
+      const res = await fetch('/api/auth/activate/resend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: registeredEmail }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setResendStatus('A new activation link has been sent to your email.');
+      } else {
+        setResendStatus(data.error || 'Failed to resend activation email.');
+      }
+    } catch {
+      setResendStatus('Failed to send request. Please try again.');
+    } finally {
+      setIsResending(false);
+    }
+  };
+
+  if (registeredEmail) {
+    return (
+      <div className="bg-slate-50 min-h-[calc(100vh-68px)] flex items-center justify-center w-full py-[3rem] sm:py-[4.5rem] px-[1.2rem] sm:px-[1.6rem] box-border">
+        <div className="w-full max-w-[500px] mx-auto bg-white border border-slate-200/80 rounded-[1.4rem] p-[3rem_2rem] sm:p-[3.6rem_3rem] shadow-[0_4px_24px_-4px_rgba(15,23,42,0.06)] text-center">
+          <div className="w-[6rem] h-[6rem] bg-[#fdf3ef] text-[#c96742] rounded-full flex items-center justify-center mx-auto mb-[1.8rem] text-[2.8rem]">
+            ✉️
+          </div>
+          <span className="inline-block bg-[#fdf3ef] text-[#c96742] text-[1.05rem] font-bold tracking-[0.06em] px-[0.85rem] py-[0.2rem] rounded-[2rem] mb-[0.8rem] uppercase">
+            REGISTRATION COMPLETE
+          </span>
+          <h1 className="text-[2.2rem] font-bold text-[#0f172a] mb-[1rem]">
+            Verify Your Email
+          </h1>
+          <p className="text-[1.4rem] text-[#475569] leading-[1.6] mb-[2rem]">
+            We&apos;ve sent an activation link to <strong className="text-[#0f172a]">{registeredEmail}</strong>.
+            Please check your email and click the link to activate your account.
+          </p>
+
+          <div className="bg-[#f8fafc] border border-slate-200/80 rounded-[1rem] p-[1.6rem] text-left mb-[2.4rem]">
+            <p className="text-[1.25rem] text-[#64748b] m-0 leading-[1.5]">
+              💡 <strong>Next step:</strong> Once you click the link in your email, your account will be verified and you can log in to start shopping.
+            </p>
+          </div>
+
+          {resendStatus && (
+            <div className="bg-[#f0fdf4] border border-[#dcfce7] text-[#166534] p-[1rem_1.4rem] rounded-[0.8rem] text-[1.25rem] mb-[1.8rem]">
+              {resendStatus}
+            </div>
+          )}
+
+          <div className="flex flex-col gap-[1.2rem]">
+            <Link
+              href={redirectPath !== '/' ? `/login?redirect=${encodeURIComponent(redirectPath)}` : '/login'}
+              className="w-full h-[4.6rem] bg-[#111111] hover:bg-[#2a2a2a] text-white text-[1.45rem] font-semibold rounded-[0.75rem] flex items-center justify-center transition-colors shadow-[0_3px_8px_rgba(0,0,0,0.08)]"
+            >
+              Go to Login
+            </Link>
+
+            <button
+              type="button"
+              onClick={handleResendActivation}
+              disabled={isResending}
+              className="w-full h-[4.4rem] bg-white border border-[#cbd5e1] hover:bg-slate-50 text-[#0f172a] text-[1.35rem] font-medium rounded-[0.75rem] transition-colors disabled:opacity-60 cursor-pointer"
+            >
+              {isResending ? 'Sending activation email...' : 'Resend activation email'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-slate-50 min-h-[calc(100vh-68px)] flex items-center justify-center w-full py-[3rem] sm:py-[4.5rem] px-[1.2rem] sm:px-[1.6rem] box-border">
@@ -174,20 +257,23 @@ export function RegisterPageContent() {
             </div>
           )}
 
-          <form className="flex flex-col gap-[1.2rem]" onSubmit={handleSubmit}>
-            {/* Row 1: First + Last Name */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-[1.2rem]">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-[1.3rem]" noValidate>
+            {/* Name Fields (2 Columns) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-[1rem]">
               <div className="flex flex-col gap-[0.4rem]">
-                <label className="text-[1.25rem] sm:text-[1.3rem] font-semibold text-[#1e293b]" htmlFor="reg-first-name">
+                <label className="text-[1.25rem] font-semibold text-[#1e293b]" htmlFor="register-firstname">
                   First Name <span className="text-[#ef4444]">*</span>
                 </label>
                 <div className="relative flex items-center w-full">
-                  <span className="absolute left-[1.2rem] text-[#94a3b8] flex items-center pointer-events-none"><IconUser /></span>
+                  <span className="absolute left-[1.2rem] text-[#94a3b8] flex items-center pointer-events-none">
+                    <IconUser />
+                  </span>
                   <input
-                    id="reg-first-name"
+                    id="register-firstname"
                     type="text"
+                    autoComplete="given-name"
+                    placeholder="John"
                     required
-                    placeholder="First name"
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
                     className="w-full h-[4.4rem] pl-[3.8rem] pr-[1.2rem] bg-white border border-[#cbd5e1] rounded-[0.75rem] text-[1.6rem] sm:text-[1.35rem] text-[#0f172a] placeholder-[#94a3b8] outline-none transition-all focus:border-[#c96742] focus:ring-2 focus:ring-[#c96742]/15 disabled:bg-[#f8fafc] disabled:cursor-not-allowed"
@@ -197,15 +283,18 @@ export function RegisterPageContent() {
               </div>
 
               <div className="flex flex-col gap-[0.4rem]">
-                <label className="text-[1.25rem] sm:text-[1.3rem] font-semibold text-[#1e293b]" htmlFor="reg-last-name">
+                <label className="text-[1.25rem] font-semibold text-[#1e293b]" htmlFor="register-lastname">
                   Last Name
                 </label>
                 <div className="relative flex items-center w-full">
-                  <span className="absolute left-[1.2rem] text-[#94a3b8] flex items-center pointer-events-none"><IconUser /></span>
+                  <span className="absolute left-[1.2rem] text-[#94a3b8] flex items-center pointer-events-none">
+                    <IconUser />
+                  </span>
                   <input
-                    id="reg-last-name"
+                    id="register-lastname"
                     type="text"
-                    placeholder="Last name"
+                    autoComplete="family-name"
+                    placeholder="Doe"
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
                     className="w-full h-[4.4rem] pl-[3.8rem] pr-[1.2rem] bg-white border border-[#cbd5e1] rounded-[0.75rem] text-[1.6rem] sm:text-[1.35rem] text-[#0f172a] placeholder-[#94a3b8] outline-none transition-all focus:border-[#c96742] focus:ring-2 focus:ring-[#c96742]/15 disabled:bg-[#f8fafc] disabled:cursor-not-allowed"
@@ -215,60 +304,66 @@ export function RegisterPageContent() {
               </div>
             </div>
 
-            {/* Row 2: Email + Phone */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-[1.2rem]">
-              <div className="flex flex-col gap-[0.4rem]">
-                <label className="text-[1.25rem] sm:text-[1.3rem] font-semibold text-[#1e293b]" htmlFor="reg-email">
-                  Email Address <span className="text-[#ef4444]">*</span>
-                </label>
-                <div className="relative flex items-center w-full">
-                  <span className="absolute left-[1.2rem] text-[#94a3b8] flex items-center pointer-events-none"><IconMail /></span>
-                  <input
-                    id="reg-email"
-                    type="email"
-                    required
-                    placeholder="name@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full h-[4.4rem] pl-[3.8rem] pr-[1.2rem] bg-white border border-[#cbd5e1] rounded-[0.75rem] text-[1.6rem] sm:text-[1.35rem] text-[#0f172a] placeholder-[#94a3b8] outline-none transition-all focus:border-[#c96742] focus:ring-2 focus:ring-[#c96742]/15 disabled:bg-[#f8fafc] disabled:cursor-not-allowed"
-                    disabled={isLoading}
-                  />
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-[0.4rem]">
-                <label className="text-[1.25rem] sm:text-[1.3rem] font-semibold text-[#1e293b]" htmlFor="reg-phone">
-                  Phone Number <span className="text-[#ef4444]">*</span>
-                </label>
-                <div className="relative flex items-center w-full">
-                  <span className="absolute left-[1.2rem] text-[#94a3b8] flex items-center pointer-events-none"><IconPhone /></span>
-                  <input
-                    id="reg-phone"
-                    type="tel"
-                    required
-                    placeholder="+94 77 123 4567"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="w-full h-[4.4rem] pl-[3.8rem] pr-[1.2rem] bg-white border border-[#cbd5e1] rounded-[0.75rem] text-[1.6rem] sm:text-[1.35rem] text-[#0f172a] placeholder-[#94a3b8] outline-none transition-all focus:border-[#c96742] focus:ring-2 focus:ring-[#c96742]/15 disabled:bg-[#f8fafc] disabled:cursor-not-allowed"
-                    disabled={isLoading}
-                  />
-                </div>
+            {/* Email Field */}
+            <div className="flex flex-col gap-[0.4rem]">
+              <label className="text-[1.25rem] font-semibold text-[#1e293b]" htmlFor="register-email">
+                Email Address <span className="text-[#ef4444]">*</span>
+              </label>
+              <div className="relative flex items-center w-full">
+                <span className="absolute left-[1.2rem] text-[#94a3b8] flex items-center pointer-events-none">
+                  <IconMail />
+                </span>
+                <input
+                  id="register-email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="name@example.com"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full h-[4.4rem] pl-[3.8rem] pr-[1.4rem] bg-white border border-[#cbd5e1] rounded-[0.75rem] text-[1.6rem] sm:text-[1.35rem] text-[#0f172a] placeholder-[#94a3b8] outline-none transition-all focus:border-[#c96742] focus:ring-2 focus:ring-[#c96742]/15 disabled:bg-[#f8fafc] disabled:cursor-not-allowed"
+                  disabled={isLoading}
+                />
               </div>
             </div>
 
-            {/* Row 3: Password */}
+            {/* Phone Field */}
             <div className="flex flex-col gap-[0.4rem]">
-              <label className="text-[1.25rem] sm:text-[1.3rem] font-semibold text-[#1e293b]" htmlFor="reg-password">
+              <label className="text-[1.25rem] font-semibold text-[#1e293b]" htmlFor="register-phone">
+                Phone Number (optional)
+              </label>
+              <div className="relative flex items-center w-full">
+                <span className="absolute left-[1.2rem] text-[#94a3b8] flex items-center pointer-events-none">
+                  <IconPhone />
+                </span>
+                <input
+                  id="register-phone"
+                  type="tel"
+                  autoComplete="tel"
+                  placeholder="+94 7X XXX XXXX"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="w-full h-[4.4rem] pl-[3.8rem] pr-[1.4rem] bg-white border border-[#cbd5e1] rounded-[0.75rem] text-[1.6rem] sm:text-[1.35rem] text-[#0f172a] placeholder-[#94a3b8] outline-none transition-all focus:border-[#c96742] focus:ring-2 focus:ring-[#c96742]/15 disabled:bg-[#f8fafc] disabled:cursor-not-allowed"
+                  disabled={isLoading}
+                />
+              </div>
+            </div>
+
+            {/* Password Field */}
+            <div className="flex flex-col gap-[0.4rem]">
+              <label className="text-[1.25rem] font-semibold text-[#1e293b]" htmlFor="register-password">
                 Password <span className="text-[#ef4444]">*</span>
               </label>
               <div className="relative flex items-center w-full">
-                <span className="absolute left-[1.2rem] text-[#94a3b8] flex items-center pointer-events-none"><IconLock /></span>
+                <span className="absolute left-[1.2rem] text-[#94a3b8] flex items-center pointer-events-none">
+                  <IconLock />
+                </span>
                 <input
-                  id="reg-password"
+                  id="register-password"
                   type={showPassword ? 'text' : 'password'}
-                  required
-                  minLength={6}
+                  autoComplete="new-password"
                   placeholder="At least 6 characters"
+                  required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full h-[4.4rem] pl-[3.8rem] pr-[4.2rem] bg-white border border-[#cbd5e1] rounded-[0.75rem] text-[1.6rem] sm:text-[1.35rem] text-[#0f172a] placeholder-[#94a3b8] outline-none transition-all focus:border-[#c96742] focus:ring-2 focus:ring-[#c96742]/15 disabled:bg-[#f8fafc] disabled:cursor-not-allowed"
@@ -286,21 +381,20 @@ export function RegisterPageContent() {
               </div>
             </div>
 
-            {/* Terms checkbox */}
-            <div className="flex items-center -mt-[0.2rem]">
-              <label className="inline-flex items-center gap-[0.8rem] text-[1.25rem] text-[#475569] cursor-pointer select-none py-[0.3rem]">
-                <input
-                  type="checkbox"
-                  checked={agreeTerms}
-                  onChange={(e) => setAgreeTerms(e.target.checked)}
-                  className="w-[1.7rem] h-[1.7rem] accent-[#c96742] cursor-pointer shrink-0"
-                />
-                <span>
-                  I agree to the{' '}
-                  <Link href="/pages/privacy-policy" className="text-[#c96742] underline underline-offset-2 hover:text-[#a84e2c]">Privacy Policy</Link>
-                  {' '}and{' '}
-                  <Link href="/pages/terms-of-service" className="text-[#c96742] underline underline-offset-2 hover:text-[#a84e2c]">Terms</Link>
-                </span>
+            {/* Terms and conditions */}
+            <div className="flex items-start gap-[0.8rem] mt-[0.2rem]">
+              <input
+                id="agree-terms"
+                type="checkbox"
+                checked={agreeTerms}
+                onChange={(e) => setAgreeTerms(e.target.checked)}
+                className="w-[1.6rem] h-[1.6rem] accent-[#c96742] cursor-pointer mt-[0.25rem] shrink-0"
+              />
+              <label htmlFor="agree-terms" className="text-[1.2rem] text-[#475569] leading-[1.4] cursor-pointer select-none">
+                I agree to the{' '}
+                <Link href="/pages/privacy-policy" className="text-[#c96742] underline underline-offset-2 hover:text-[#a84e2c]">Privacy Policy</Link>
+                {' '}and{' '}
+                <Link href="/pages/terms-of-service" className="text-[#c96742] underline underline-offset-2 hover:text-[#a84e2c]">Terms</Link>
               </label>
             </div>
 
@@ -335,4 +429,3 @@ export function RegisterPageContent() {
     </div>
   );
 }
-

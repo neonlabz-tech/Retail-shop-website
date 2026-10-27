@@ -139,6 +139,14 @@ function getNotificationBadge(notif: NotificationData) {
       icon: '🛵',
     };
   }
+  if (title.includes('placed') && title.includes('processing')) {
+    return {
+      bg: 'bg-[#fffbeb] text-[#b45309] border-[#fde68a]',
+      dot: 'bg-[#f59e0b]',
+      label: 'Placed & Processing',
+      icon: '⚙️',
+    };
+  }
   if (title.includes('processing')) {
     return {
       bg: 'bg-[#fffbeb] text-[#b45309] border-[#fde68a]',

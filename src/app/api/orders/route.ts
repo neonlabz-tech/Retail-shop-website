@@ -10,6 +10,8 @@ import { generateNextOrderNumber } from '@/lib/orderNumber';
 import { calculateShippingFee, parseWeightInGrams } from '@/utils/weight';
 import { getStorefrontOfProductId, getStorefrontOfSlug, productHrefBaseFor } from '@/utils/storefront';
 import { FALLBACK_IMAGE_SRC, normalizeImageSrc } from '@/lib/imageFallback';
+import { sendEmail, emailTemplates } from '@/lib/email';
+import { formatPrice } from '@/utils/formatPrice';
 
 async function resolveOrderItemImage(item: IOrderItem): Promise<string> {
   const embeddedProduct =
@@ -204,7 +206,7 @@ export async function POST(request: NextRequest) {
       items = [],
       subtotal = 0,
       discount = 0,
-      shippingFee = 350,
+      shippingFee = 0,
       tax = 0,
       total,
     } = body;
@@ -412,11 +414,10 @@ export async function POST(request: NextRequest) {
       })
     );
 
-    // Shipping fee: 500 when order exceeds 500g, default 350 for all orders (0 if cart is empty)
-    const calculatedShippingFee = calculateShippingFee(totalOrderWeightGrams, items.length);
+    // Shipping fee is calculated by admin upon dispatch (default 0 at checkout)
     const finalShippingFee = typeof shippingFee === 'number' && !isNaN(shippingFee) && shippingFee > 0
       ? Number(shippingFee)
-      : calculatedShippingFee;
+      : 0;
 
     // Tax is removed as requested
     const finalTax = 0;
@@ -461,12 +462,12 @@ export async function POST(request: NextRequest) {
       totalWeight: totalOrderWeightGrams,
       paymentStatus: 'pending',
       paymentMethod: paymentMethod === 'bank' ? 'bank_transfer' : 'cod',
-      status: 'pending',
+      status: 'processing',
       statusHistory: [
         {
-          status: 'pending',
+          status: 'processing',
           changedAt: new Date(),
-          note: 'Order placed by customer via store website',
+          note: 'Order placed by customer via store website (Processing)',
         },
       ],
       notes: typeof notes === 'string' ? notes.trim() : '',
@@ -544,14 +545,153 @@ export async function POST(request: NextRequest) {
 
     try {
       if (cleanEmail) {
+        // Send Order Confirmation Email via Resend (Status: Processing)
+        try {
+          void sendEmail({
+            to: cleanEmail,
+            subject: `Order Received & Processing: #${order.orderNumber.replace(/^#/, '')} ⚙️`,
+            html: emailTemplates.orderConfirmation({
+              orderNumber: order.orderNumber,
+              total: order.total,
+              subtotal: order.subtotal,
+              discount: order.discount,
+              shippingFee: order.shippingFee,
+              paymentMethod: order.paymentMethod,
+              customerSnapshot: {
+                name: fullName,
+                email: cleanEmail,
+                phone: phone.trim(),
+              },
+              shippingAddress: {
+                fullName,
+                line1: address.trim(),
+                city: city.trim(),
+                country: country.trim(),
+                phone: phone.trim(),
+              },
+              items: (order.items || []).map((it) => ({
+                name: it.name,
+                quantity: it.quantity,
+                price: it.price,
+                color: it.color,
+                size: it.size,
+              })),
+              createdAt: order.createdAt,
+            }),
+          });
+        } catch (emailErr) {
+          console.error('Failed to send order confirmation email via Resend:', emailErr);
+        }
+
+        // Send New Order Alert Email to Admin via Resend
+        const recipientEmails = new Set<string>();
+
+        // 1. Check Store Settings email in MongoDB
+        try {
+          const settings = await mongoose.connection.collection('settings').findOne();
+          if (settings?.storeEmail && typeof settings.storeEmail === 'string' && settings.storeEmail.includes('@') && !settings.storeEmail.endsWith('@example.com')) {
+            recipientEmails.add(settings.storeEmail.trim().toLowerCase());
+          }
+        } catch (settingsErr) {
+          console.error('Failed to query store settings for admin email:', settingsErr);
+        }
+
+        // 2. Check active Admins in MongoDB
+        try {
+          const activeAdmins = await mongoose.connection.collection('admins').find({
+            isActive: { $ne: false },
+            role: { $in: ['super_admin', 'admin', 'order_manager'] }
+          }).project({ email: 1 }).toArray();
+
+          for (const a of activeAdmins) {
+            if (a.email && typeof a.email === 'string' && a.email.includes('@') && !a.email.endsWith('@example.com')) {
+              recipientEmails.add(a.email.trim().toLowerCase());
+            }
+          }
+        } catch (adminErr) {
+          console.error('Failed to query admin users for notification:', adminErr);
+        }
+
+        // 3. Environment variable override
+        const envAdminEmail = process.env.ADMIN_ORDER_NOTIFICATION_EMAIL || process.env.ADMIN_EMAIL;
+        if (envAdminEmail && envAdminEmail.includes('@') && !envAdminEmail.endsWith('@example.com')) {
+          recipientEmails.add(envAdminEmail.trim().toLowerCase());
+        }
+
+        // 4. Default fallback if no admin email found
+        if (recipientEmails.size === 0) {
+          recipientEmails.add('thigamparanneonlabz@gmail.com');
+        }
+
+        const adminRecipients = Array.from(recipientEmails);
+
+        if (adminRecipients.length > 0) {
+          try {
+            void sendEmail({
+              to: adminRecipients.length === 1 ? adminRecipients[0] : adminRecipients,
+              subject: `🔔 New Order: #${order.orderNumber.replace(/^#/, '')} - ${fullName} (${formatPrice(order.total)})`,
+              html: emailTemplates.adminNewOrderNotification({
+                orderNumber: order.orderNumber,
+                total: order.total,
+                subtotal: order.subtotal,
+                discount: order.discount,
+                shippingFee: order.shippingFee,
+                paymentMethod: order.paymentMethod,
+                customerSnapshot: {
+                  name: fullName,
+                  email: cleanEmail,
+                  phone: phone.trim(),
+                },
+                shippingAddress: {
+                  fullName,
+                  line1: address.trim(),
+                  city: city.trim(),
+                  country: country.trim(),
+                  phone: phone.trim(),
+                },
+                items: (order.items || []).map((it) => ({
+                  name: it.name,
+                  quantity: it.quantity,
+                  price: it.price,
+                  color: it.color,
+                  size: it.size,
+                })),
+                createdAt: order.createdAt,
+                notes: typeof notes === 'string' ? notes.trim() : '',
+              }),
+              replyTo: cleanEmail,
+            });
+          } catch (adminEmailErr) {
+            console.error('Failed to dispatch admin order notification email via Resend:', adminEmailErr);
+          }
+        }
+
+        // Create Admin Dashboard notification in shared collection
+        try {
+          await mongoose.connection.collection('notifications').insertOne({
+            type: 'new_order',
+            title: 'New order received',
+            message: `Order #${order.orderNumber.replace(/^#/, '')} was placed for ${formatPrice(order.total)}.`,
+            relatedId: order._id.toString(),
+            relatedType: 'order',
+            link: `/dashboard/orders?search=${order.orderNumber.replace(/^#/, '')}`,
+            read: false,
+            isRead: false,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          });
+        } catch (adminNotifErr) {
+          console.error('Failed to create admin notification in MongoDB:', adminNotifErr);
+        }
+
         await Notification.create({
           customer: customer?._id || undefined,
           customerEmail: cleanEmail,
           orderId: order._id,
           orderNumber: order.orderNumber,
           type: 'order_update',
-          title: `Order #${order.orderNumber} Placed! 🎉`,
-          message: `Thank you for your order! We received your order #${order.orderNumber} and it is now being prepared.`,
+          title: `Order #${order.orderNumber} Placed & Processing ⚙️`,
+          message: `Thank you for your order! We received your order #${order.orderNumber} and it is currently being prepared for dispatch.`,
           items: [],
           read: false,
         });
@@ -661,6 +801,16 @@ export async function PATCH(request: NextRequest) {
       order.paymentStatus = String(paymentStatus).toLowerCase().trim();
     }
 
+    // ── Update shipping fee if provided by admin (e.g. upon marking as Shipped) ──
+    const rawFee = typeof body.shippingFee !== 'undefined' ? body.shippingFee : body.deliveryFee;
+    if (typeof rawFee !== 'undefined' && rawFee !== null && rawFee !== '') {
+      const fee = Number(rawFee);
+      if (!isNaN(fee) && fee >= 0) {
+        order.shippingFee = fee;
+        order.total = Math.max(0, (Number(order.subtotal) || 0) - (Number(order.discount) || 0) + fee);
+      }
+    }
+
     await order.save();
 
     // ── Create customer notification for status updates and reviews ──
@@ -682,17 +832,56 @@ export async function PATCH(request: NextRequest) {
           snapshotEmail ||
           '';
 
-        if (customerEmail) {
+        if (customerEmail && (previousStatus !== newStatus || status)) {
+          let reviewableItems: any[] = [];
+          if (newStatus === 'delivered') {
+            reviewableItems = await buildReviewNotificationItems(
+              order.items || [],
+              order.orderNumber
+            );
+          }
+
+          // Send Order Status Update Email via Resend (Shipped, Delivered, Processing, etc.)
+          try {
+            const customerName = order.customerSnapshot?.name || order.shippingAddress?.fullName || 'Customer';
+            const cleanNum = order.orderNumber.replace(/^#/, '');
+            let subject = `Order #${cleanNum} Status: ${newStatus.toUpperCase()}`;
+            if (newStatus === 'shipped') {
+              subject = `Your Order #${cleanNum} Has Shipped! 🚚`;
+            } else if (newStatus === 'delivered') {
+              subject = `Your Order #${cleanNum} Has Been Delivered! 📦`;
+            } else if (newStatus === 'processing') {
+              subject = `Your Order #${cleanNum} Is In Processing ⚙️`;
+            }
+
+            void sendEmail({
+              to: customerEmail,
+              subject,
+              html: emailTemplates.orderStatusUpdate(
+                order.orderNumber,
+                newStatus,
+                customerName,
+                note,
+                reviewableItems,
+                {
+                  subtotal: order.subtotal,
+                  shippingFee: order.shippingFee,
+                  discount: order.discount,
+                  total: order.total,
+                  paymentMethod: order.paymentMethod,
+                  items: order.items,
+                }
+              ),
+            });
+          } catch (statusEmailErr) {
+            console.error('Failed to dispatch status email via Resend:', statusEmailErr);
+          }
+
           if (newStatus === 'delivered') {
             const existingNotif = await Notification.findOne({
               orderNumber: order.orderNumber,
               type: 'order_delivered',
             });
-
-            const reviewableItems = await buildReviewNotificationItems(
-              order.items || [],
-              order.orderNumber
-            );
             if (existingNotif) {
               existingNotif.customer = notificationCustomer || existingNotif.customer;
               existingNotif.customerEmail = customerEmail;
@@ -742,8 +931,8 @@ export async function PATCH(request: NextRequest) {
               title = `Order #${order.orderNumber} Shipped! 🚚`;
               message = `Great news! Your package for order #${order.orderNumber} is on its way.`;
             } else if (newStatus === 'processing') {
-              title = `Order #${order.orderNumber} Processing ⚙️`;
-              message = `Your order #${order.orderNumber} is confirmed and is currently being prepared for dispatch.`;
+              title = `Order #${order.orderNumber} Placed & Processing ⚙️`;
+              message = `Thank you for your order! We received your order #${order.orderNumber} and it is currently being prepared for dispatch.`;
             } else if (newStatus === 'confirmed') {
               title = `Order #${order.orderNumber} Confirmed ✅`;
               message = `Your order #${order.orderNumber} has been confirmed.`;

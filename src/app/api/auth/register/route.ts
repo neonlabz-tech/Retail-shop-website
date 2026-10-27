@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import crypto from 'crypto';
 import { connectDB } from '@/lib/db';
 import { User } from '@/models/User';
-import { hashPassword, signToken, AUTH_COOKIE_NAME, USER_COOKIE_NAME, ONE_DAY_SECONDS } from '@/lib/auth';
+import { hashPassword } from '@/lib/auth';
+import { sendEmail, emailTemplates } from '@/lib/email';
+import { SITE_NAME } from '@/lib/constants';
 
 export async function POST(request: NextRequest) {
   try {
@@ -56,7 +59,11 @@ export async function POST(request: NextRequest) {
 
     const fullName = `${firstName.trim()} ${typeof lastName === 'string' ? lastName.trim() : ''}`.trim() || cleanEmail.split('@')[0];
 
-    // Create user in customers collection
+    // Generate secure email activation token (valid for 24 hours)
+    const activationToken = crypto.randomBytes(32).toString('hex');
+    const activationTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    // Create user in customers collection (unverified until email activation)
     const user = await User.create({
       name: fullName,
       firstName: firstName.trim(),
@@ -67,58 +74,38 @@ export async function POST(request: NextRequest) {
       addresses: [],
       isVerified: false,
       isActive: true,
+      activationToken,
+      activationTokenExpires,
       totalOrders: 0,
       totalSpent: 0,
       role: 'customer',
     });
 
-    // Generate JWT token
-    const token = await signToken({
-      userId: user._id.toString(),
-      email: user.email,
-      role: user.role,
-      name: user.name || `${user.firstName} ${user.lastName}`.trim(),
-    });
+    // Determine activation link URL
+    const origin = request.nextUrl.origin || 'https://rkfdistributors.lk';
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || origin;
+    const activationUrl = `${baseUrl}/activate?token=${activationToken}`;
 
-    const userData = {
-      id: user._id.toString(),
-      firstName: user.firstName,
-      lastName: user.lastName,
-      email: user.email,
-      phone: user.phone || '',
-      role: user.role,
-      createdAt: user.createdAt,
-    };
+    // Send Activation Email via Resend
+    try {
+      void sendEmail({
+        to: cleanEmail,
+        subject: `Activate Your ${SITE_NAME || 'RKF Distributors'} Account`,
+        html: emailTemplates.accountActivation(user.firstName || fullName, activationUrl),
+      });
+    } catch (emailErr) {
+      console.error('Failed to dispatch activation email via Resend:', emailErr);
+    }
 
-    const response = NextResponse.json(
+    return NextResponse.json(
       {
         success: true,
-        message: 'Account created successfully',
-        user: userData,
-        token,
+        message: 'Account created successfully! Please check your email and click the activation link to verify your account.',
+        requiresVerification: true,
+        email: cleanEmail,
       },
       { status: 201 }
     );
-
-    // 1. HTTP-Only Auth Cookie for session verification (1 day = 86,400s)
-    response.cookies.set(AUTH_COOKIE_NAME, token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: ONE_DAY_SECONDS,
-    });
-
-    // 2. Client-accessible User Cookie (1 day = 86,400s)
-    response.cookies.set(USER_COOKIE_NAME, JSON.stringify(userData), {
-      httpOnly: false,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: ONE_DAY_SECONDS,
-    });
-
-    return response;
   } catch (error: unknown) {
     console.error('Registration error:', error);
     const message = error instanceof Error ? error.message : 'Internal server error';

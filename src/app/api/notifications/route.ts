@@ -9,6 +9,7 @@ import Review from '@/models/Review';
 import { verifyToken, AUTH_COOKIE_NAME } from '@/lib/auth';
 import { getStorefrontOfProductId, getStorefrontOfSlug, productHrefBaseFor } from '@/utils/storefront';
 import { FALLBACK_IMAGE_SRC, normalizeImageSrc } from '@/lib/imageFallback';
+import { sendEmail, emailTemplates } from '@/lib/email';
 
 const lastOrderSyncMap = new Map<string, number>();
 
@@ -31,8 +32,8 @@ function getStatusNotification(status: string, orderNumber: string) {
   if (status === 'processing') {
     return {
       type: 'order_update' as const,
-      title: `Order #${orderNumber} Processing ⚙️`,
-      message: `Your order #${orderNumber} is confirmed and is currently being prepared for dispatch.`,
+      title: `Order #${orderNumber} Placed & Processing ⚙️`,
+      message: `Thank you for your order! We received your order #${orderNumber} and it is currently being prepared for dispatch.`,
     };
   }
   if (status === 'confirmed') {
@@ -252,7 +253,7 @@ export async function GET(request: NextRequest) {
       ? await Order.find({ $or: orderConditions })
           .where('status')
           .nin(['', 'pending'])
-          .select('orderNumber status customer customerSnapshot items updatedAt statusHistory')
+          .select('orderNumber status customer customerSnapshot items updatedAt statusHistory subtotal discount shippingFee total paymentMethod')
           .sort({ updatedAt: -1 })
           .lean()
       : [];
@@ -301,6 +302,22 @@ export async function GET(request: NextRequest) {
       if (!status || status === 'pending') continue;
 
       const cleanOrderNumber = String(order.orderNumber || '').trim().replace(/^#/, '');
+
+      // Skip creating a new notification if status is processing and customer already has a placed / processing notification
+      if (status === 'processing') {
+        const hasExistingPlacement = storedNotifications.some((n) => {
+          const ordNum = String(n.orderNumber || '').trim().replace(/^#/, '').toLowerCase();
+          const title = String(n.title || '').toLowerCase();
+          return (
+            ordNum === cleanOrderNumber.toLowerCase() &&
+            (title.includes('placed') || title.includes('processing'))
+          );
+        });
+        if (hasExistingPlacement) {
+          continue;
+        }
+      }
+
       const notificationContent = getStatusNotification(status, cleanOrderNumber);
       const lookupKey = `${cleanOrderNumber.toLowerCase()}:${notificationContent.title.trim().toLowerCase()}`;
       const statusChangedAt = getStatusChangedAt(order);
@@ -334,9 +351,105 @@ export async function GET(request: NextRequest) {
         dismissed: false,
       });
 
+      // Send Order Status Update Email via Resend when order transitions to Shipped, Delivered, etc.
+      if (orderCustomerEmail && ['shipped', 'delivered', 'out_for_delivery', 'cancelled'].includes(status)) {
+        try {
+          const customerName = order.customerSnapshot?.name || 'Customer';
+          const cleanNum = cleanOrderNumber;
+          let subject = `Order #${cleanNum} Status: ${status.toUpperCase()}`;
+          if (status === 'shipped') {
+            subject = `Your Order #${cleanNum} Has Shipped! 🚚`;
+          } else if (status === 'delivered') {
+            subject = `Your Order #${cleanNum} Has Been Delivered! 📦`;
+          } else if (status === 'processing') {
+            subject = `Your Order #${cleanNum} Is In Processing ⚙️`;
+          }
+
+          void sendEmail({
+            to: orderCustomerEmail,
+            subject,
+            html: emailTemplates.orderStatusUpdate(
+              cleanNum,
+              status,
+              customerName,
+              undefined,
+              items,
+              {
+                subtotal: order.subtotal,
+                shippingFee: order.shippingFee,
+                discount: order.discount,
+                total: order.total,
+                paymentMethod: order.paymentMethod,
+                items: order.items,
+              }
+            ),
+          }).then((res) => {
+            if (res.success) {
+              Notification.updateOne({ _id: created._id }, { emailSent: true }).exec();
+            }
+          });
+        } catch (emailErr) {
+          console.error('Failed to dispatch status update email in notifications sync:', emailErr);
+        }
+      }
+
       const createdObj = (created as any).toObject ? (created as any).toObject() : created;
       setLatestNotification(lookupKey, createdObj);
       storedNotifications.unshift(createdObj);
+    }
+
+    // Consolidate "placed" and "processing" notifications for the same order into a single "Placed & Processing ⚙️" notification
+    const placedProcessingByOrder = new Map<string, (typeof storedNotifications)[number][]>();
+    for (const notification of storedNotifications) {
+      const orderNumber = String(notification.orderNumber || '').trim().replace(/^#/, '').toLowerCase();
+      const title = String(notification.title || '').toLowerCase();
+      if (orderNumber && (title.includes('placed') || title.includes('processing'))) {
+        if (!placedProcessingByOrder.has(orderNumber)) {
+          placedProcessingByOrder.set(orderNumber, []);
+        }
+        placedProcessingByOrder.get(orderNumber)!.push(notification);
+      }
+    }
+
+    const mergedOutIds: any[] = [];
+    for (const [ordNum, notifs] of placedProcessingByOrder.entries()) {
+      if (notifs.length > 1) {
+        // Sort newest first
+        notifs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        const primary = notifs[0];
+        const displayOrderNum = primary.orderNumber ? String(primary.orderNumber).replace(/^#/, '') : ordNum.toUpperCase();
+        const targetTitle = `Order #${displayOrderNum} Placed & Processing ⚙️`;
+        const targetMessage = `Thank you for your order! We received your order #${displayOrderNum} and it is currently being prepared for dispatch.`;
+        primary.title = targetTitle;
+        primary.message = targetMessage;
+        void Notification.updateOne(
+          { _id: primary._id },
+          { $set: { title: targetTitle, message: targetMessage } }
+        ).catch(() => {});
+
+        for (let i = 1; i < notifs.length; i++) {
+          mergedOutIds.push(notifs[i]._id);
+        }
+      } else if (notifs.length === 1) {
+        const single = notifs[0];
+        const displayOrderNum = single.orderNumber ? String(single.orderNumber).replace(/^#/, '') : ordNum.toUpperCase();
+        const targetTitle = `Order #${displayOrderNum} Placed & Processing ⚙️`;
+        const targetMessage = `Thank you for your order! We received your order #${displayOrderNum} and it is currently being prepared for dispatch.`;
+        if (single.title !== targetTitle) {
+          single.title = targetTitle;
+          single.message = targetMessage;
+          void Notification.updateOne(
+            { _id: single._id },
+            { $set: { title: targetTitle, message: targetMessage } }
+          ).catch(() => {});
+        }
+      }
+    }
+
+    if (mergedOutIds.length > 0) {
+      await Notification.deleteMany({ _id: { $in: mergedOutIds } });
+      const mergedOutSet = new Set(mergedOutIds.map((id) => String(id)));
+      storedNotifications = storedNotifications.filter((n) => !mergedOutSet.has(String(n._id)));
     }
 
     const uniqueNotifications = new Map<string, (typeof storedNotifications)[number]>();

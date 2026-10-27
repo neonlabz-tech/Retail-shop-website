@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
+import { sendEmail, emailTemplates } from '@/lib/email';
+import { STORE_EMAIL } from '@/lib/constants';
 
 export async function POST(request: NextRequest) {
   try {
@@ -37,6 +39,18 @@ export async function POST(request: NextRequest) {
     };
 
     await db.collection('contact_messages').insertOne(doc);
+
+    // Send email notification to store owner via Resend
+    try {
+      void sendEmail({
+        to: STORE_EMAIL,
+        subject: `[Contact Inquiry] ${doc.subject} - from ${doc.name}`,
+        html: emailTemplates.contactNotification(doc),
+        replyTo: doc.email,
+      });
+    } catch (emailErr) {
+      console.error('Failed to send contact notification email via Resend:', emailErr);
+    }
 
     return NextResponse.json({
       success: true,
