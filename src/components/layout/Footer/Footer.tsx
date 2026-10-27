@@ -116,7 +116,7 @@ export function Footer() {
   return (
     <footer className="w-full bg-[#f9fafb] border-t border-[#f0f0f0] mt-auto">
       {/* ═══ TOP: Brand, links, and map columns ═══ */}
-      <div className="container-main footer-container py-[32px] lg:py-[40px]">
+      <div className="container-main footer-container pt-[24px] pb-[16px] lg:pt-[28px] lg:pb-[18px]">
         <div className="footer-grid">
           {/* Column 1: RKF Brand */}
           <div className="ft-col ft-col-about">
@@ -232,7 +232,7 @@ export function Footer() {
       </div>
 
       {/* ═══ BOTTOM: Copyright Bar ═══ */}
-      <div className="w-full bg-[#f9fafb] border-t border-[#f0f0f0] py-[14px]">
+      <div className="w-full bg-[#f9fafb] border-t border-[#f0f0f0] py-[10px] sm:py-[12px]">
         <div className="container-main footer-container">
           <p className="text-[12px] sm:text-[13px] text-[#6b7280] text-center m-0 leading-relaxed tracking-normal flex flex-wrap items-center justify-center gap-x-1 gap-y-0.5">
             <span>&copy; 2026</span>
@@ -296,7 +296,7 @@ export function Footer() {
             display: block;
             overflow: hidden;
             width: 100%;
-            height: 140px;
+            height: 110px;
             border: 1px solid #e5e7eb;
             border-radius: 8px;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
@@ -359,7 +359,7 @@ export function Footer() {
           .ft-map-link {
             display: block;
             overflow: hidden;
-            height: 150px;
+            height: 120px;
             border: 1px solid #e5e7eb;
             border-radius: 8px;
           }
@@ -421,7 +421,7 @@ export function Footer() {
             display: block;
             overflow: hidden;
             width: 100%;
-            height: 170px;
+            height: 130px;
             border: 1px solid #e5e7eb;
             border-radius: 8px;
           }
