@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { SHIPPING_POLICY_TEXT } from '@/data/termsAndConditions';
 
 export default function ShippingPolicyPage() {
   return (
@@ -18,24 +19,26 @@ export default function ShippingPolicyPage() {
 
       <div className="container-main fa-sp-content-wrap">
         <div className="fa-sp-prose">
-          <p style={para}>Thank you for visiting and shopping with us. The following terms and conditions constitute our Shipping Policy.</p>
+          <p style={para}>Thank you for visiting and shopping with RKF Distributors. The following terms and conditions constitute our Shipping Policy.</p>
 
           <h2 className="fa-sp-h2">Shipment Processing Time</h2>
-          <p style={para}>All orders are processed within 1-2 business days. Orders are not shipped or delivered on weekends or holidays.</p>
+          <p style={para}>All orders are processed within 1-2 business days. Orders are not shipped or delivered on weekends or public holidays.</p>
           <p style={para}>If we are experiencing a high volume of orders, shipments may be delayed by a few days. Please allow additional days in transit for delivery. If there will be a significant delay in shipment of your order, we will contact you via email or telephone.</p>
 
           <h2 className="fa-sp-h2">Shipping Rates &amp; Delivery Estimates</h2>
-          <p style={para}>Shipping charges for your order will be calculated and displayed at checkout. Standard shipping across Sri Lanka is flat rate LKR 350.00.</p>
-          <p style={para}>Standard Delivery: 2-4 business days.</p>
+          <p style={para}>{SHIPPING_POLICY_TEXT}</p>
 
-          <h2 className="fa-sp-h2">Shipment Confirmation &amp; Order Tracking</h2>
-          <p style={para}>You will receive a Shipment Confirmation email once your order has shipped containing your tracking number(s). The tracking number will be active within 24 hours.</p>
+          <h2 className="fa-sp-h2">Shipment Confirmation &amp; Order Notification</h2>
+          <p style={para}>Customers will receive an email notification when their order status is updated to Shipped, including tracking details and any applicable shipping charges.</p>
 
-          <h2 className="fa-sp-h2">Customs, Duties and Taxes</h2>
-          <p style={para}>We are not responsible for any customs and taxes applied to your order. All fees imposed during or after shipping are the responsibility of the customer.</p>
-
-          <h2 className="fa-sp-h2">Damages</h2>
-          <p style={{ marginBottom: '0' }}>If you received your order damaged, please contact us immediately to file a claim. Please save all packaging materials and damaged goods before filing a claim.</p>
+          <h2 className="fa-sp-h2">Terms and Conditions</h2>
+          <p style={{ marginBottom: '0' }}>
+            For more details regarding our store policies, cancellations, and order details, please refer to our full{' '}
+            <Link href="/pages/terms-of-service" style={{ color: '#c96742', textDecoration: 'underline' }}>
+              Terms and Conditions
+            </Link>
+            .
+          </p>
         </div>
       </div>
 

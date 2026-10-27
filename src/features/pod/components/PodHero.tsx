@@ -16,52 +16,22 @@ function IconArrowRightS({ size = 22 }: { size?: number }) {
   return (<svg viewBox="0 0 24 24" fill="currentColor" width={size} height={size}><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z" /></svg>);
 }
 
-/* =========================================================================
-   PREVIOUS 3-CARD HERO IMPLEMENTATION (COMMENTED OUT AS REQUESTED)
-   To restore the 3-card dynamic popular products slider, re-enable this block
-   and restore the activeSlides Swiper markup below.
-   =========================================================================
-
-import { useProducts } from '@/features/products/hooks/useProducts';
-
-const ambientSlidesMeta = [
-  {
-    bgGradient: 'linear-gradient(150deg, #e8ebf0 0%, #dce1e9 50%, #d0d7e3 100%)',
-    badge: '🔥 #1 BEST SELLER',
-    tagline: 'Most loved by our customers',
-  },
-  {
-    bgGradient: 'linear-gradient(150deg, #e5e8ed 0%, #d7dce4 50%, #cad1dd 100%)',
-    badge: '⭐ TOP TRENDING',
-    tagline: 'Hot selling this week',
-  },
-  {
-    bgGradient: 'linear-gradient(150deg, #e9ecf2 0%, #dde2eb 50%, #d2d9e4 100%)',
-    badge: '✨ CUSTOMER FAVORITE',
-    tagline: 'Handpicked top recommendation',
-  },
-  {
-    bgGradient: 'linear-gradient(150deg, #e3e7ee 0%, #d5dbe4 50%, #c7cfdc 100%)',
-    badge: '💥 POPULAR CHOICE',
-    tagline: 'Fast moving customer pick',
-  },
-];
-========================================================================= */
-
 // Active slim landscape banner slides
 const wideBannerSlides = [
-  {
-    id: 'banner-home-party-essentials',
-    title: 'Home & Party Essentials - Ladders, Storage Racks, Stools, Dinner Sets & More',
-    image: '/pod/hero-slider/banner-home-party-essentials.png',
-    href: '/products',
-  },
   {
     id: 'banner-toys-games',
     title: 'Toys & Games - Fun for Every Little Adventure',
     image: '/pod/hero-slider/banner-toys-games.png',
     href: '/products?category=Toys%20%26%20Games',
   },
+
+  {
+    id: 'banner-home-party-essentials',
+    title: 'Home & Party Essentials - Ladders, Storage Racks, Stools, Dinner Sets & More',
+    image: '/pod/hero-slider/banner-home-party-essentials.png',
+    href: '/products',
+  },
+
   {
     id: 'banner-home-kitchen',
     title: 'Home & Kitchen - Smart Essentials for Stylish Living',
@@ -102,7 +72,7 @@ export function PodHero() {
   ========================================================================= */
 
   return (
-    <section className="pdhero-section pt-[12px] min-[750px]:pt-[20px]">
+    <section className="pdhero-section pt-0">
       <div className="container-main">
         <div className="pdhero-wrapper group relative">
           <Swiper
@@ -191,8 +161,8 @@ export function PodHero() {
         .pdhero-slide {
           position: relative;
           width: 100%;
-          aspect-ratio: 2609 / 602;
-          height: auto;
+          aspect-ratio: 2609 / 602 !important;
+          height: auto !important;
           background-color: #ffffff;
           overflow: hidden;
         }

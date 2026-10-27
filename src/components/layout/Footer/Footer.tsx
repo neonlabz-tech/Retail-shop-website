@@ -108,6 +108,7 @@ export function Footer() {
     { label: 'Wishlist', href: '/wishlist' },
     { label: 'My account', href: '/profile' },
     { label: 'Cart', href: '/cart' },
+    { label: 'Terms & Conditions', href: '/pages/terms-of-service' },
   ];
   const mapQuery = encodeURIComponent(`${STORE_ADDRESS}, Sri Lanka`);
   const mapUrl = `https://www.google.com/maps/search/?api=1&query=${mapQuery}`;

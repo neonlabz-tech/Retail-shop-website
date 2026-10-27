@@ -70,6 +70,7 @@ export const FOOTER_LINKS = {
     { label: 'Wishlist', href: '/wishlist' },
     { label: 'My account', href: '/profile' },
     { label: 'Cart', href: '/cart' },
+    { label: 'Terms and Conditions', href: '/pages/terms-of-service' },
   ],
 } as const;
 

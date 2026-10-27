@@ -166,7 +166,7 @@ export function RegisterPageContent() {
     }
 
     if (!agreeTerms) {
-      setError('Please agree to the privacy policy & terms of service.');
+      setError('Please agree to the Terms and Conditions.');
       return;
     }
 
@@ -368,12 +368,12 @@ export function RegisterPageContent() {
                   checked={agreeTerms}
                   onChange={(e) => setAgreeTerms(e.target.checked)}
                   className="w-[1.7rem] h-[1.7rem] accent-[#c96742] cursor-pointer shrink-0"
-                />
-                <span>
-                  I agree to the{' '}
-                  <Link href="/pages/privacy-policy" className="text-[#c96742] underline underline-offset-2 hover:text-[#a84e2c]">Privacy Policy</Link>
-                  {' '}and{' '}
-                  <Link href="/pages/terms-of-service" className="text-[#c96742] underline underline-offset-2 hover:text-[#a84e2c]">Terms</Link>
+                />
+                <span>
+                  I agree to the{' '}
+                  <Link href="/pages/terms-of-service" className="text-[#c96742] underline underline-offset-2 hover:text-[#a84e2c] font-medium">
+                    Terms and Conditions
+                  </Link>
                 </span>
               </label>
             </div>

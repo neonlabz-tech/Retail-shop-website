@@ -45,7 +45,7 @@ export function PodTopCategories() {
               label: c.name,
               image: (c.image && typeof c.image === 'string' && c.image.trim() !== '')
                 ? c.image
-                : '/pod/shop-by-categories-slider/shop-by-categories-1.webp',
+                : '/placeholder.svg',
               href: `/shop?category=${encodeURIComponent(c.name)}`,
             };
           });

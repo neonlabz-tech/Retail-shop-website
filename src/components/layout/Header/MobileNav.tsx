@@ -9,29 +9,10 @@ import { useUIStore } from '@/store/uiStore';
 import { useWishlistStore } from '@/store/wishlistStore';
 import { useAuthStore } from '@/store/authStore';
 import { getStorefrontFromPath, isGrocerySlug, isPetFoodSlug, isNutritionSlug, isMegastoreSlug, isPhoneCaseSlug, isSmartWatchesSlug, type Storefront } from '@/utils/storefront';
-import { ALL_CATEGORIES } from './AllCategoriesButton';
-import { MEGASTORE_CATEGORIES } from './MegastoreAllCategoriesButton';
 import { formatPrice } from '@/utils/formatPrice';
 import { HeaderLanguageCurrency } from './HeaderLanguageCurrency';
 
 import navigationFashion from '@/data/navigation.json';
-import navigationGrocery from '@/data/navigation-grocery.json';
-import navigationPetFood from '@/data/navigation-pet-food.json';
-import navigationNutrition from '@/data/navigation-nutrition.json';
-import navigationMegastore from '@/data/navigation-megastore.json';
-import navigationPhoneCase from '@/data/navigation-phone-case.json';
-import navigationSmartWatches from '@/data/navigation-smart-watches.json';
-import navigationFootwear from '@/data/navigation-footwear.json';
-import navigationGlasses from '@/data/navigation-glasses.json';
-import navigationPlumbingSupplies from '@/data/navigation-plumbing-supplies.json';
-import navigationBook from '@/data/navigation-book.json';
-import navigationJewelry2 from '@/data/navigation-jewelry-2.json';
-import navigationCoffee from '@/data/navigation-coffee.json';
-import navigationCraftDecore from '@/data/navigation-craft-and-decore.json';
-import navigationToys from '@/data/navigation-toys.json';
-import navigationSocks from '@/data/navigation-socks.json';
-import navigationPod from '@/data/navigation-pod.json';
-import { HOME_DEMO_COLUMNS } from '@/data/homeDemoMenu';
 
 import type { NavigationItem, MegaMenuColumn } from '@/types/common';
 
@@ -107,26 +88,8 @@ function IconClose({ size = 22 }: { size?: number }) {
   );
 }
 
-function pickNav(storefront: Storefront): NavigationItem[] {
-  switch (storefront) {
-    case 'grocery':        return navigationGrocery as NavigationItem[];
-    case 'pet-food':       return navigationPetFood as NavigationItem[];
-    case 'nutrition':      return navigationNutrition as NavigationItem[];
-    case 'megastore':      return navigationMegastore as NavigationItem[];
-    case 'phone-case':     return navigationPhoneCase as NavigationItem[];
-    case 'smart-watches':  return navigationSmartWatches as NavigationItem[];
-    case 'footwear':       return navigationFootwear as NavigationItem[];
-    case 'glasses':        return navigationGlasses as NavigationItem[];
-    case 'plumbing-supplies': return navigationPlumbingSupplies as NavigationItem[];
-    case 'book':           return navigationBook as NavigationItem[];
-    case 'jewelry-2':      return navigationJewelry2 as NavigationItem[];
-    case 'coffee':         return navigationCoffee as NavigationItem[];
-    case 'craft-and-decore': return navigationCraftDecore as NavigationItem[];
-    case 'toys':            return navigationToys as NavigationItem[];
-    case 'socks':           return navigationSocks as NavigationItem[];
-    case 'pod':             return navigationPod as NavigationItem[];
-    default:               return navigationFashion as NavigationItem[];
-  }
+function pickNav(_storefront?: Storefront): NavigationItem[] {
+  return navigationFashion as NavigationItem[];
 }
 
 function storefrontAccent(storefront: Storefront) {
@@ -337,8 +300,7 @@ export function MobileNav() {
     megaColumns?: { heading: string; items: Array<{ label: string; href: string }> }[];
     subItems?: Array<{ label: string; href: string; children?: Array<{ label: string; href: string }> }>;
   };
-  const categoriesData: AnyCategoryEntry[] =
-    storefront === 'megastore' ? (MEGASTORE_CATEGORIES as AnyCategoryEntry[]) : (ALL_CATEGORIES as AnyCategoryEntry[]);
+  const categoriesData: AnyCategoryEntry[] = [];
   const catTheme = categoriesTheme(storefront);
 
   function getCatL2(cat: AnyCategoryEntry) {

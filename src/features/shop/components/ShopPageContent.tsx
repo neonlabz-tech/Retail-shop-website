@@ -5,12 +5,9 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useProducts } from '@/features/products/hooks/useProducts';
 import { HomeProductCard } from '@/features/home/components/HomeProductCard';
-import { GroceryProductCard } from '@/features/grocery-shop/components/GroceryProductCard';
 import { FeaturedSlider, type FeaturedCardTheme } from '@/features/home/components/FeaturedSlider';
 import { MobileFilterDrawer, IconFilter } from './MobileFilterDrawer';
 import { PriceRangeSlider } from './PriceRangeSlider';
-import { GroceryFeaturedSlider } from '@/features/grocery-shop/components/GroceryFeaturedSlider';
-import { GroceryShopFAQ } from '@/features/grocery-shop/components/GroceryShopFAQ';
 import { SORT_OPTIONS, PRODUCTS_PER_PAGE } from '@/lib/constants';
 import type { FiltersData } from '@/types/common';
 import type { Product } from '@/types/product';
@@ -441,7 +438,7 @@ function ShopPagination({ currentPage, totalPages, onPageChange }: { currentPage
   });
 
   return (
-    <div className="flex items-center justify-center gap-[12px] mt-[50px] pb-[10px]">
+    <div className="flex items-center justify-center gap-[10px] min-[750px]:gap-[12px] mt-[24px] min-[750px]:mt-[44px] pb-0">
       {unique.map((p, i) => p === '...' ? (
         <span key={`dots-${i}`} className="text-[16px] tracking-[2px]" style={{ color: theme.mutedColor }}>...</span>
       ) : (
@@ -699,7 +696,7 @@ export function ShopPageContent({
           </div>
         </div>
 
-        <div className="shop-main-row flex gap-[40px] pb-[60px]">
+        <div className="shop-main-row flex gap-[40px] pb-[16px] min-[750px]:pb-[40px]">
           <div className="shop-sidebar w-[290px] shrink-0">
             <FilterSidebar
               filters={data?.filters || filtersDataRef.current}
@@ -734,8 +731,6 @@ export function ShopPageContent({
                 : data?.products.map((product, i) => (
                     renderCard ? (
                       <div key={product.id} className="min-w-0">{renderCard(product, i)}</div>
-                    ) : cardVariant === 'grocery' ? (
-                      <GroceryProductCard key={product.id} product={product} index={i} hrefBase={productHrefBase} />
                     ) : (
                       <HomeProductCard
                         key={product.id}
@@ -760,21 +755,16 @@ export function ShopPageContent({
         </div>
       </div>
 
-      <div className="pt-[60px] pb-[80px]">
-        {cardVariant === 'grocery' ? (
-          <GroceryFeaturedSlider />
-        ) : (
-          <FeaturedSlider
-            apiEndpoint={apiEndpoint}
-            cardVariant={cardVariant}
-            productHrefBase={productHrefBase}
-            cardTheme={cardTheme}
-            count={apiEndpoint === '/api/megastore-products' ? 6 : undefined}
-          />
-        )}
+      <div className="pt-[16px] pb-[20px] min-[750px]:pt-[36px] min-[750px]:pb-[48px]">
+        <FeaturedSlider
+          apiEndpoint={apiEndpoint}
+          cardVariant={cardVariant}
+          productHrefBase={productHrefBase}
+          cardTheme={cardTheme}
+        />
       </div>
 
-      {cardVariant === 'grocery' && <GroceryShopFAQ />}
+
 
       <MobileFilterDrawer
         open={mobileFilterOpen}

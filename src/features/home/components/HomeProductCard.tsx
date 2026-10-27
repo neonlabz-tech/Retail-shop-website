@@ -198,17 +198,19 @@ export function HomeProductCard({
             src={defaultImg1}
             alt={product.name}
             fill
+            priority={index < 4}
             onError={handleImageError}
             className={`object-contain object-center p-[8px] transition-[opacity,transform] duration-500 ease-out ${hovered ? 'scale-108' : 'scale-100'} ${activeColorImage ? 'opacity-0' : 'opacity-100'}`}
             sizes="(max-width: 749px) 50vw, 25vw"
           />
 
-          {Object.entries(colorImages).map(([colorName, imgSrc]) => (
+          {hovered && Object.entries(colorImages).map(([colorName, imgSrc]) => (
             <Image
               key={colorName}
               src={imgSrc}
               alt={`${product.name} ${colorName}`}
               fill
+              loading="lazy"
               onError={handleImageError}
               className={`object-contain object-center p-[8px] transition-[opacity,transform] duration-500 ease-out ${hovered ? 'scale-108' : 'scale-100'} ${
                 hoveredColor === colorName ? 'opacity-100 z-[2]' : 'opacity-0 z-[1]'

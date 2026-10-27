@@ -120,14 +120,17 @@ export function ProductCard({ product, className }: ProductCardProps) {
             className={cn('object-contain object-center transition-all duration-500 ease-out', isHovered ? 'opacity-0 scale-108' : 'opacity-100 scale-100')}
             sizes="(max-width: 749px) 50vw, (max-width: 991px) 50vw, 33vw"
           />
-          <Image
-            src={secondaryImage}
-            alt={`${product.name} alternate`}
-            fill
-            onError={handleImageError}
-            className={cn('object-contain object-center transition-all duration-500 ease-out', isHovered ? 'opacity-100 scale-108' : 'opacity-0 scale-100')}
-            sizes="(max-width: 749px) 50vw, (max-width: 991px) 50vw, 33vw"
-          />
+          {isHovered && (
+            <Image
+              src={secondaryImage}
+              alt={`${product.name} alternate`}
+              fill
+              loading="lazy"
+              onError={handleImageError}
+              className={cn('object-contain object-center transition-all duration-500 ease-out opacity-100 scale-108')}
+              sizes="(max-width: 749px) 50vw, (max-width: 991px) 50vw, 33vw"
+            />
+          )}
         </div>
 
         {isOutOfStock ? (

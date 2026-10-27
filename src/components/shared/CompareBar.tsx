@@ -7,16 +7,8 @@ import { usePathname } from 'next/navigation';
 import { useCompareStore } from '@/store/compareStore';
 import { getStorefrontFromPath, getStorefrontOfProductId } from '@/utils/storefront';
 
-function comparePathForStorefront(pathname: string | null): string {
-  switch (getStorefrontFromPath(pathname)) {
-    case 'grocery': return '/grocery/compare';
-    case 'pet-food': return '/pet-food/compare';
-    case 'nutrition': return '/nutrition/compare';
-    case 'megastore': return '/megastore/compare';
-    case 'car-accessories': return '/car-accessories/compare';
-    case 'pizza': return '/pizza/compare';
-    default: return '/compare';
-  }
+function comparePathForStorefront(_pathname: string | null): string {
+  return '/compare';
 }
 
 function IconClose() {

@@ -3,16 +3,7 @@ import mongoose from 'mongoose';
 import { connectDB } from '@/lib/db';
 import ProductModel from '@/models/Product';
 import { formatMongoProduct } from '@/lib/formatProduct';
-import { toysProducts } from '@/data/toys-products';
-import { craftAndDecoreProducts } from '@/data/craft-and-decore-products';
-import { groceryProducts } from '@/data/grocery-products';
 import type { Product } from '@/types/product';
-
-const STATIC_FALLBACK_PRODUCTS: Product[] = [
-  ...toysProducts,
-  ...craftAndDecoreProducts,
-  ...groceryProducts,
-];
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -91,22 +82,14 @@ export async function GET(request: NextRequest) {
       });
     }
   } catch (error) {
-    console.warn('MongoDB query unavailable in /api/recommendations/random, using fallback catalog:', (error as Error)?.message);
+    console.warn('MongoDB query unavailable in /api/recommendations/random:', (error as Error)?.message);
   }
-
-  // Graceful fallback: return random products from store catalog so UI never returns 500
-  const inStockOnly = searchParams.get('inStock') === 'true' || searchParams.get('availability') === 'in-stock';
-  const source = inStockOnly
-    ? STATIC_FALLBACK_PRODUCTS.filter((p) => p.availability !== 'out-of-stock' && (typeof p.stock !== 'number' || p.stock > 0))
-    : STATIC_FALLBACK_PRODUCTS;
-  const shuffled = [...source].sort(() => 0.5 - Math.random());
-  const fallback = shuffled.slice(0, limit);
 
   return NextResponse.json({
     success: true,
-    source: 'fallback',
-    count: fallback.length,
+    source: 'empty',
+    count: 0,
     limit,
-    products: fallback,
+    products: [],
   });
 }

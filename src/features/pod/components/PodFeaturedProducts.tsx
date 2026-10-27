@@ -38,7 +38,7 @@ export function PodFeaturedProducts() {
           }
         </div>
 
-        <div className="text-center mt-[24px] min-[750px]:mt-[36px]">
+        <div className="text-center mt-[12px] min-[750px]:mt-[20px]">
           <Link href="/shop" className="pdfp-shop-now">Shop Now</Link>
         </div>
       </div>
@@ -64,14 +64,20 @@ export function PodFeaturedProducts() {
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          padding: 12px 34px;
-          font-size: 15px;
+          padding: 8px 24px;
+          font-size: 13.5px;
           font-weight: 500;
           color: #222;
           border: 1.5px solid #222;
           border-radius: 4px;
           text-decoration: none;
           transition: background-color 250ms ease, color 250ms ease;
+        }
+        @media (min-width: 750px) {
+          .pdfp-shop-now {
+            padding: 12px 34px;
+            font-size: 15px;
+          }
         }
         .pdfp-shop-now:hover { background-color: #222; color: #fff; }
       `}</style>

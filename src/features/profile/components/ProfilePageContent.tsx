@@ -1898,7 +1898,7 @@ export function ProfilePageContent() {
                                   onClick={() => setExpandedOrderId(isExpanded ? null : order._id)}
                                   className="inline-flex items-center gap-[0.7rem] bg-slate-100 hover:bg-slate-200/80 text-slate-800 text-[1.3rem] font-semibold px-[1.6rem] py-[0.9rem] rounded-[0.8rem] transition-colors cursor-pointer border border-slate-200/60"
                                 >
-                                  <span>{isExpanded ? 'Hide Receipt' : 'View Receipt'}</span>
+                                  <span>{isExpanded ? 'Hide Details' : 'View Details'}</span>
                                   <svg
                                     width="14"
                                     height="14"

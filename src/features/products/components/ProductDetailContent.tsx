@@ -20,11 +20,10 @@ import { useProducts } from '@/features/products/hooks/useProducts';
 import { formatPrice } from '@/utils/formatPrice';
 import { calculateDiscount } from '@/utils/calculateDiscount';
 import { FeaturedSlider } from '@/features/home/components/FeaturedSlider';
-import { GroceryFeaturedSlider } from '@/features/grocery-shop/components/GroceryFeaturedSlider';
 import { TrustBadges } from '@/components/shared/TrustBadges';
 import { HomeProductCard } from '@/features/home/components/HomeProductCard';
-import { GroceryProductCard } from '@/features/grocery-shop/components/GroceryProductCard';
 import type { Product } from '@/types/product';
+import { SHIPPING_POLICY_TEXT, RETURN_POLICY_TEXT } from '@/data/termsAndConditions';
 
 function IconBag({ size = 18 }: { size?: number }) {
   return (<svg viewBox="0 0 24 24" fill="currentColor" width={size} height={size}><path d="M9 6H15C15 4.34315 13.6569 3 12 3C10.3431 3 9 4.34315 9 6ZM7 6C7 3.23858 9.23858 1 12 1C14.7614 1 17 3.23858 17 6H20C20.5523 6 21 6.44772 21 7V21C21 21.5523 20.5523 22 20 22H4C3.44772 22 3 21.5523 3 21V7C3 6.44772 3.44772 6 4 6H7ZM5 8V20H19V8H5ZM9 10C9 11.6569 10.3431 13 12 13C13.6569 13 15 11.6569 15 10H17C17 12.7614 14.7614 15 12 15C9.23858 15 7 12.7614 7 10H9Z" /></svg>);
@@ -440,7 +439,7 @@ function PairsWellWith({ products, productHrefBase = '/products' }: { products: 
                         : 0;
                       return (
                         <div className="flex items-baseline gap-[6px] flex-wrap">
-                          <span className="text-[14px] font-bold text-[#222]">{formatPrice(p.price)}</span>
+                          <span className="pdp-pairs-price text-[14px] font-bold text-[#e01117]">{formatPrice(p.price)}</span>
                           {pDiscount > 0 && (
                             <span className="text-[#F15B41] bg-[#fff0ed] text-[11px] font-bold px-[4px] py-[1px] rounded-[3px] leading-none">
                               -{pDiscount}%
@@ -542,6 +541,15 @@ export function ProductDetailContent({
   const [starCounts, setStarCounts] = useState<Record<number, number>>({ 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 });
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [likedReviewIds, setLikedReviewIds] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('rkf_liked_reviews');
+      if (stored) {
+        setLikedReviewIds(JSON.parse(stored));
+      }
+    } catch {}
+  }, []);
   const [isBreadcrumbExpanded, setIsBreadcrumbExpanded] = useState(false);
   const hasAutoOpenedReviewRef = useRef(false);
 
@@ -647,19 +655,30 @@ export function ProductDetailContent({
     }
   };
   const handleLikeReview = async (reviewId: string) => {
-    if (likedReviewIds[reviewId]) return;
-    setLikedReviewIds((prev) => ({ ...prev, [reviewId]: true }));
+    const isCurrentlyLiked = Boolean(likedReviewIds[reviewId]);
+    const nextLikedState = !isCurrentlyLiked;
+    const delta = nextLikedState ? 1 : -1;
+
+    setLikedReviewIds((prev) => {
+      const updated = { ...prev, [reviewId]: nextLikedState };
+      try {
+        localStorage.setItem('rkf_liked_reviews', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+
     setReviewsList((prev) =>
-      prev.map((r) => (r.id === reviewId ? { ...r, likes: (r.likes || 0) + 1 } : r))
+      prev.map((r) => (r.id === reviewId ? { ...r, likes: Math.max(0, (r.likes || 0) + delta) } : r))
     );
+
     try {
       await fetch('/api/reviews', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'like', reviewId }),
+        body: JSON.stringify({ action: nextLikedState ? 'like' : 'unlike', reviewId }),
       });
     } catch (e) {
-      console.error('Failed to like review:', e);
+      console.error('Failed to toggle review like:', e);
     }
   };
 
@@ -744,7 +763,20 @@ export function ProductDetailContent({
   }, []);
 
   if (isLoading || !product) {
-    return (<div className="container-main py-[60px] px-0 text-center text-[16px] text-[#888]">Loading product...</div>);
+    return (
+      <div className="container-main py-[40px]">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-[40px] items-start">
+          <div className="aspect-square w-full rounded-[12px] animate-shimmer" />
+          <div className="space-y-[16px] py-[20px]">
+            <div className="h-[28px] w-[65%] rounded-[6px] animate-shimmer" />
+            <div className="h-[22px] w-[35%] rounded-[6px] animate-shimmer" />
+            <div className="h-[16px] w-[85%] rounded-[6px] animate-shimmer" />
+            <div className="h-[16px] w-[70%] rounded-[6px] animate-shimmer" />
+            <div className="h-[48px] w-[180px] rounded-[30px] animate-shimmer mt-[24px]" />
+          </div>
+        </div>
+      </div>
+    );
   }
 
   const activeColor = selectedColor || product.colors?.[0]?.name || '';
@@ -1230,11 +1262,11 @@ export function ProductDetailContent({
                   },
                   {
                     title: 'Shipping and Returns',
-                    content: <p className="text-justify md:text-left">Island-wide delivery available across Sri Lanka. Standard shipping takes 2-4 business days. 7-day return policy on eligible items in original packaging.</p>,
+                    content: <p className="text-justify md:text-left">{SHIPPING_POLICY_TEXT}</p>,
                   },
                   {
                     title: 'Return Policies',
-                    content: <p className="text-justify md:text-left">Items must be returned in original condition with all tags attached within 30 days of delivery. Refunds will be processed within 5-7 business days after we receive the returned item.</p>,
+                    content: <p className="text-justify md:text-left">{RETURN_POLICY_TEXT}</p>,
                   },
                 ]} />
               </div>
@@ -1528,19 +1560,17 @@ export function ProductDetailContent({
                   <button
                     type="button"
                     onClick={() => handleLikeReview(review.id)}
-                    disabled={likedReviewIds[review.id]}
-                    className={`inline-flex items-center gap-[6px] py-[4px] px-[10px] rounded-[6px] border text-[13px] transition-colors ${
+                    title={likedReviewIds[review.id] ? 'Click to remove feedback' : 'Helpful review'}
+                    aria-label={likedReviewIds[review.id] ? 'Unlike review' : 'Like review'}
+                    className={`inline-flex items-center gap-[6px] py-[4px] px-[10px] rounded-[6px] border text-[13px] transition-all cursor-pointer ${
                       likedReviewIds[review.id]
-                        ? 'border-[#111827] bg-[#111827] text-white cursor-default'
-                        : 'border-[#e5e7eb] bg-white text-[#4b5563] hover:border-[#9ca3af] hover:text-[#111827] cursor-pointer'
+                        ? 'border-[#111827] bg-[#111827] text-white hover:bg-[#1f2937]'
+                        : 'border-[#e5e7eb] bg-white text-[#4b5563] hover:border-[#9ca3af] hover:text-[#111827]'
                     }`}
                   >
                     <span>👍</span>
                     <span className="font-medium">{review.likes || 0}</span>
                   </button>
-                  {likedReviewIds[review.id] && (
-                    <span className="text-[12px] text-[#16a34a] font-medium">Thank you for your feedback!</span>
-                  )}
                 </div>
               </div>
             ))}
@@ -1575,16 +1605,11 @@ export function ProductDetailContent({
       </div>
 
       <div className="pdp-related-section">
-        {cardVariant === 'grocery' ? (
-          <GroceryFeaturedSlider />
-        ) : (
-          <FeaturedSlider
-            apiEndpoint={relatedEndpoint ?? apiEndpoint}
-            cardVariant={cardVariant}
-            productHrefBase={productHrefBase}
-            count={(relatedEndpoint ?? apiEndpoint) === '/api/megastore-products' ? 6 : undefined}
-          />
-        )}
+        <FeaturedSlider
+          apiEndpoint={relatedEndpoint ?? apiEndpoint}
+          cardVariant={cardVariant}
+          productHrefBase={productHrefBase}
+        />
       </div>
 
       <div className="container-main pdp-recently-section">
@@ -1611,11 +1636,7 @@ export function ProductDetailContent({
               >
                 {recentList.map((p, i) => (
                   <SwiperSlide key={p.id}>
-                    {cardVariant === 'grocery' ? (
-                      <GroceryProductCard product={p} index={i} hrefBase={productHrefBase} />
-                    ) : (
-                      <HomeProductCard product={p} index={i} hrefBase={productHrefBase} />
-                    )}
+                    <HomeProductCard product={p} index={i} hrefBase={productHrefBase} />
                   </SwiperSlide>
                 ))}
               </Swiper>
@@ -1706,7 +1727,7 @@ export function ProductDetailContent({
               )}
             </select>
           ) : (
-            <div className="pdp-sticky-price flex items-baseline gap-[6px] text-[clamp(14px,1.3vw,16px)] font-bold text-[#222] py-[clamp(8px,1vw,10px)] px-[14px] bg-[#f8f8f8] rounded-[6px] border border-solid border-[#e5e5e5] whitespace-nowrap">
+            <div className="pdp-sticky-price flex items-baseline gap-[6px] text-[clamp(14px,1.3vw,16px)] font-bold text-[#e01117] py-[clamp(8px,1vw,10px)] px-[14px] bg-[#f8f8f8] rounded-[6px] border border-solid border-[#e5e5e5] whitespace-nowrap">
               <span>{formatPrice(product.price)}</span>
               {discount > 0 && (
                 <span className="text-[#F15B41] bg-[#fff0ed] text-[11px] font-bold px-[4px] py-[1px] rounded-[3px] leading-none">

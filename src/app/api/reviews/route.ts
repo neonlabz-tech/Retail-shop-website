@@ -91,14 +91,20 @@ export async function POST(request: NextRequest) {
     await connectDB();
     const body = await request.json();
 
-    // Check if this is a like action
-    if (body.action === 'like' && body.reviewId) {
+    // Check if this is a like or unlike action
+    if ((body.action === 'like' || body.action === 'unlike') && body.reviewId) {
+      const inc = body.action === 'unlike' ? -1 : 1;
       const updated = await Review.findByIdAndUpdate(
         body.reviewId,
-        { $inc: { likes: 1 } },
+        { $inc: { likes: inc } },
         { new: true }
       );
-      return NextResponse.json({ success: true, likes: updated?.likes || 1 });
+      let finalLikes = updated?.likes ?? 0;
+      if (finalLikes < 0) {
+        finalLikes = 0;
+        await Review.findByIdAndUpdate(body.reviewId, { $set: { likes: 0 } });
+      }
+      return NextResponse.json({ success: true, likes: finalLikes });
     }
 
     const { productId, productSlug, productName, rating, title, comment, images, orderId } = body;

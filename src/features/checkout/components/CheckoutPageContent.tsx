@@ -7,6 +7,8 @@ import { useCartStore } from '@/store/cartStore';
 import { useAuthStore, checkAuthOrRedirect, isUserAuthenticated } from '@/store/authStore';
 import { formatPrice } from '@/utils/formatPrice';
 import { calculateShippingFee, parseWeightInGrams } from '@/utils/weight';
+import { TermsAndConditionsContent } from '@/components/shared/TermsAndConditionsContent';
+import { TERMS_LAST_UPDATED } from '@/data/termsAndConditions';
 
 const ACCENT = '#c96742';
 const DARK = '#111111';
@@ -26,6 +28,8 @@ function IcoCheck() {
 }
 
 export function CheckoutPageContent() {
+  const [mounted, setMounted] = useState(false);
+  const [isCalculatingWeights, setIsCalculatingWeights] = useState(false);
   const router = useRouter();
   const { items, getSubtotal, clearCart } = useCartStore();
   const { user, isAuthenticated, checkAuth } = useAuthStore();
@@ -40,6 +44,7 @@ export function CheckoutPageContent() {
   const [notes, setNotes] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cod');
   const [agreeTerms, setAgreeTerms] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderError, setOrderError] = useState<string | null>(null);
   const [orderSuccess, setOrderSuccess] = useState<{
@@ -67,6 +72,7 @@ export function CheckoutPageContent() {
 
   useEffect(() => {
     checkAuth();
+    setMounted(true);
   }, [checkAuth]);
 
   useEffect(() => {
@@ -149,21 +155,35 @@ export function CheckoutPageContent() {
 
   useEffect(() => {
     const missing = items.filter((i) => typeof i.weight !== 'number');
-    if (missing.length === 0) return;
+    if (missing.length === 0) {
+      setIsCalculatingWeights(false);
+      return;
+    }
 
-    missing.forEach(async (item) => {
-      try {
-        const idOrSlug = item.productId || item.slug;
-        if (!idOrSlug) return;
-        const res = await fetch(`/api/products/${encodeURIComponent(idOrSlug)}`);
-        if (!res.ok) return;
-        const data = await res.json();
-        const w = data.product ? parseWeightInGrams(data.product) : 0;
-        if (w > 0) {
-          setProductWeights((prev) => ({ ...prev, [item.productId || item.slug]: w }));
-        }
-      } catch {}
+    setIsCalculatingWeights(true);
+    let active = true;
+
+    Promise.all(
+      missing.map(async (item) => {
+        try {
+          const idOrSlug = item.productId || item.slug;
+          if (!idOrSlug) return;
+          const res = await fetch(`/api/products/${encodeURIComponent(idOrSlug)}`);
+          if (!res.ok) return;
+          const data = await res.json();
+          const w = data.product ? parseWeightInGrams(data.product) : 0;
+          if (w > 0 && active) {
+            setProductWeights((prev) => ({ ...prev, [item.productId || item.slug]: w }));
+          }
+        } catch {}
+      })
+    ).finally(() => {
+      if (active) setIsCalculatingWeights(false);
     });
+
+    return () => {
+      active = false;
+    };
   }, [items]);
 
   const subtotal = getSubtotal();
@@ -321,9 +341,20 @@ export function CheckoutPageContent() {
 
   return (
     <>
-      {/* ── Hero Banner ── */}
-      <div className="co-hero">
-        <h1 className="co-hero-title">Check Out</h1>
+      {/* ── Page Header / Breadcrumb ── */}
+      <div className="border-b border-[#eef2f6] bg-[#f8fafc] py-[20px] sm:py-[24px]">
+        <div className="container-main flex flex-col items-center justify-center text-center">
+          <div className="flex items-center gap-[6px] text-[13px] text-[#64748b] mb-[6px]">
+            <Link href="/" className="hover:text-[#0f172a] transition-colors">Home</Link>
+            <span className="text-[#cbd5e1] text-[11px]">/</span>
+            <Link href="/cart" className="hover:text-[#0f172a] transition-colors">Cart</Link>
+            <span className="text-[#cbd5e1] text-[11px]">/</span>
+            <span className="text-[#0f172a] font-medium">Checkout</span>
+          </div>
+          <h1 className="text-[24px] sm:text-[30px] font-bold text-[#0f172a] tracking-tight">
+            Checkout
+          </h1>
+        </div>
       </div>
 
       {/* ── Main Content ── */}
@@ -416,22 +447,6 @@ export function CheckoutPageContent() {
                   Register Account
                 </Link>
               </div>
-            </div>
-          ) : user ? (
-            <div className="mb-[2.4rem] pb-[1.4rem] border-b border-gray-200/90 flex flex-wrap items-center justify-between gap-[1rem] text-[1.35rem]">
-              <div className="flex items-center gap-[0.8rem] text-gray-600">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400">
-                  <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
-                  <circle cx="12" cy="7" r="4" />
-                </svg>
-                <span>Logged in as <strong className="font-semibold text-gray-900">{user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email}</strong> <span className="text-gray-400">({user.email})</span></span>
-              </div>
-              <Link
-                href="/profile"
-                className="text-[1.25rem] text-gray-500 hover:text-gray-900 hover:underline transition-colors font-medium"
-              >
-                My Profile &rarr;
-              </Link>
             </div>
           ) : null}
 
@@ -568,7 +583,12 @@ export function CheckoutPageContent() {
 
               {/* Cart items card */}
               <div className="co-order-card">
-                {items.length === 0 ? (
+                {!mounted ? (
+                  <div className="space-y-[1.2rem] py-[1rem]">
+                    <div className="animate-shimmer h-[2rem] w-[90%] rounded-[0.4rem]" />
+                    <div className="animate-shimmer h-[2rem] w-[70%] rounded-[0.4rem]" />
+                  </div>
+                ) : items.length === 0 ? (
                   <div className="co-empty-state">
                     <p className="co-empty-text">Your shop cart is empty</p>
                     <Link href="/shop" className="co-explore-btn">Explore Products!</Link>
@@ -596,42 +616,58 @@ export function CheckoutPageContent() {
 
               {/* PAYMENT BREAKDOWN */}
               <div className="co-breakdown-card">
-                <div className="co-breakdown-head">
-                  <svg className="co-breakdown-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="2" y="4" width="20" height="16" rx="2" />
-                    <line x1="2" y1="10" x2="22" y2="10" />
-                    <line x1="7" y1="15" x2="7.01" y2="15" />
-                    <line x1="11" y1="15" x2="13" y2="15" />
-                  </svg>
-                  <span className="co-breakdown-title">PAYMENT BREAKDOWN</span>
-                </div>
+                {!mounted ? (
+                  <div className="space-y-[1.2rem] py-[1.2rem]">
+                    <div className="animate-shimmer h-[1.6rem] w-[50%] rounded-[0.4rem]" />
+                    <div className="animate-shimmer h-[1.6rem] w-[75%] rounded-[0.4rem]" />
+                    <div className="animate-shimmer h-[1.6rem] w-[60%] rounded-[0.4rem]" />
+                  </div>
+                ) : (
+                  <>
+                    <div className="co-breakdown-head">
+                      <svg className="co-breakdown-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="2" y="4" width="20" height="16" rx="2" />
+                        <line x1="2" y1="10" x2="22" y2="10" />
+                        <line x1="7" y1="15" x2="7.01" y2="15" />
+                        <line x1="11" y1="15" x2="13" y2="15" />
+                      </svg>
+                      <span className="co-breakdown-title">PAYMENT BREAKDOWN</span>
+                    </div>
 
-                <div className="co-breakdown-body">
-                  <div className="co-breakdown-row">
-                    <span className="co-breakdown-label">Items Subtotal</span>
-                    <span className="co-breakdown-val">{formatPrice(subtotal)}</span>
-                  </div>
+                    <div className="co-breakdown-body">
+                      <div className="co-breakdown-row">
+                        <span className="co-breakdown-label">Items Subtotal</span>
+                        <span className="co-breakdown-val">{formatPrice(subtotal)}</span>
+                      </div>
 
-                  <div className="co-breakdown-row">
-                    <span className="co-breakdown-label">Discount (0%)</span>
-                    <span className="co-breakdown-val">{formatPrice(discount)}</span>
-                  </div>
+                      <div className="co-breakdown-row">
+                        <span className="co-breakdown-label">Discount (0%)</span>
+                        <span className="co-breakdown-val">{formatPrice(discount)}</span>
+                      </div>
 
-                  <div className="co-breakdown-row">
-                    <span className="co-breakdown-label">Shipping Fee</span>
-                    <span className="co-breakdown-val">{formatPrice(shippingFee)}</span>
-                  </div>
-                </div>
+                      <div className="co-breakdown-row">
+                        <span className="co-breakdown-label">Shipping Fee</span>
+                        <span className="co-breakdown-val">
+                          {isCalculatingWeights ? (
+                            <span className="inline-block animate-shimmer w-[60px] h-[16px] rounded-[4px] align-middle" />
+                          ) : (
+                            formatPrice(shippingFee)
+                          )}
+                        </span>
+                      </div>
+                    </div>
 
-                <div className="co-breakdown-total">
-                  <div className="co-total-left">
-                    <span className="co-total-label">Total Amount</span>
-                    <span className="co-total-subnote">Shipping fee included</span>
-                  </div>
-                  <div className="co-total-right">
-                    <span className="co-total-val">{formatPrice(total)}</span>
-                  </div>
-                </div>
+                    <div className="co-breakdown-total">
+                      <div className="co-total-left">
+                        <span className="co-total-label">Total Amount</span>
+                        <span className="co-total-subnote">Shipping fee included</span>
+                      </div>
+                      <div className="co-total-right">
+                        <span className="co-total-val">{formatPrice(total)}</span>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Payment methods */}
@@ -662,17 +698,6 @@ export function CheckoutPageContent() {
                 ))}
               </div>
 
-              {/* Privacy text */}
-              <p className="co-privacy">
-                Your personal data will be used to process your order, support your
-                experience throughout this website, and for other purposes described in
-                our{' '}
-                <Link href="/pages/privacy-policy" className="co-link">
-                  privacy policy
-                </Link>
-                .
-              </p>
-
               {/* Terms checkbox */}
               <label className="co-terms">
                 <input
@@ -683,7 +708,16 @@ export function CheckoutPageContent() {
                 />
                 <span>
                   I have read and agree to the website{' '}
-                  <Link href="#" className="co-link">terms and conditions</Link>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setShowTermsModal(true);
+                    }}
+                    className="co-link underline bg-transparent border-none p-0 inline font-inherit text-[#c96742] hover:text-[#a84e2c] cursor-pointer font-medium"
+                  >
+                    terms and conditions
+                  </button>
                 </span>
               </label>
 
@@ -742,6 +776,64 @@ export function CheckoutPageContent() {
         </div>
       )}
 
+      {/* ── Terms and Conditions Interactive Modal ── */}
+      {showTermsModal && (
+        <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-[3px] flex items-center justify-center p-[16px] animate-fadeIn">
+          <div className="bg-white rounded-[14px] shadow-2xl max-w-[640px] w-full max-h-[85vh] flex flex-col overflow-hidden border border-gray-200">
+            {/* Modal Header */}
+            <div className="p-[16px_22px] border-b border-gray-100 flex items-center justify-between shrink-0 bg-[#f8fafc]">
+              <div>
+                <h3 className="text-[18px] sm:text-[20px] font-bold text-gray-900 m-0">Terms and Conditions</h3>
+                <p className="text-[12px] text-gray-500 m-0 mt-[2px]">Last Updated: {TERMS_LAST_UPDATED}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowTermsModal(false)}
+                className="w-[32px] h-[32px] rounded-full bg-gray-200/70 hover:bg-gray-300 text-gray-700 flex items-center justify-center cursor-pointer border-none transition-colors text-[16px]"
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-[20px_22px] overflow-y-auto text-[14px] leading-[1.7] text-gray-700">
+              <TermsAndConditionsContent variant="modal" />
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-[14px_22px] border-t border-gray-100 flex items-center justify-between shrink-0 bg-gray-50">
+              <Link
+                href="/pages/terms-of-service"
+                target="_blank"
+                className="text-[13px] text-gray-600 hover:text-gray-900 underline"
+              >
+                Open full page &rarr;
+              </Link>
+              <div className="flex items-center gap-[10px]">
+                <button
+                  type="button"
+                  onClick={() => setShowTermsModal(false)}
+                  className="px-[16px] py-[8px] rounded-[6px] border border-gray-300 text-gray-700 hover:bg-gray-100 text-[13px] font-semibold cursor-pointer"
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAgreeTerms(true);
+                    setShowTermsModal(false);
+                  }}
+                  className="px-[20px] py-[8px] rounded-[6px] bg-[#111111] hover:bg-[#c96742] text-white text-[13px] font-semibold cursor-pointer transition-colors shadow-sm"
+                >
+                  I Agree
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <style>{coStyles}</style>
     </>
   );
@@ -752,15 +844,7 @@ export function CheckoutPageContent() {
 const coStyles = `
   /* ── Hero ── */
   .co-hero {
-    background: linear-gradient(135deg, #ffffff 0%, #fdf4f0 50%, #fde8df 100%);
-    padding: 2.2rem 0;
-    text-align: center;
-  }
-  .co-hero-title {
-    font-size: 2.6rem;
-    font-weight: 500;
-    color: var(--color-heading);
-    letter-spacing: 0.01em;
+    display: none;
   }
 
   /* ── Two-column layout (50/50 Equal Width & Equal Height) ── */
