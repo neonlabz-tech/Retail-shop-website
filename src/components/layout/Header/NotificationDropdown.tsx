@@ -95,7 +95,8 @@ function formatRelativeTime(dateString: string): string {
   try {
     const date = new Date(dateString);
     const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
+    if (Number.isNaN(date.getTime())) return '';
+    const diffMs = Math.max(0, now.getTime() - date.getTime());
     const diffMinutes = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMinutes / 60);
     const diffDays = Math.floor(diffHours / 24);
@@ -137,6 +138,14 @@ function getNotificationBadge(notif: NotificationData) {
       dot: 'bg-[#a855f7]',
       label: 'Out for Delivery',
       icon: '🛵',
+    };
+  }
+  if (title.includes('placed') && title.includes('processing')) {
+    return {
+      bg: 'bg-[#fffbeb] text-[#b45309] border-[#fde68a]',
+      dot: 'bg-[#f59e0b]',
+      label: 'Placed & Processing',
+      icon: '⚙️',
     };
   }
   if (title.includes('processing')) {

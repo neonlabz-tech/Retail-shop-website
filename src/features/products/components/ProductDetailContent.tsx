@@ -564,21 +564,25 @@ export function ProductDetailContent({
 
   // Auto-open review form only once if accessed via ?writeReview=true
   useEffect(() => {
-    if (hasAutoOpenedReviewRef.current) return;
-    const isWriteReviewParam = searchParams?.get('writeReview') === 'true';
-
-    if (isWriteReviewParam) {
-      hasAutoOpenedReviewRef.current = true;
-      setShowReviewForm(true);
-      const timer = setTimeout(() => {
-        const el = document.getElementById('reviews');
-        if (el) {
-          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-      }, 350);
-      return () => clearTimeout(timer);
+    if (
+      hasAutoOpenedReviewRef.current ||
+      searchParams?.get('writeReview') !== 'true' ||
+      !product
+    ) {
+      return;
     }
-  }, [searchParams]);
+
+    hasAutoOpenedReviewRef.current = true;
+    setShowReviewForm(true);
+    const frame = requestAnimationFrame(() => {
+      document.getElementById('reviews')?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [product, searchParams]);
 
   const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault();

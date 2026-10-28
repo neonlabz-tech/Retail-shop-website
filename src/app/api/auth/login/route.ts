@@ -50,6 +50,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Require email verification for customer accounts
+    if (user.isVerified === false) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Please verify your email address to log in. Please check your inbox for the activation link.',
+          requiresVerification: true,
+          email: user.email,
+        },
+        { status: 403 }
+      );
+    }
+
     const token = await signToken({
       userId: user._id.toString(),
       email: user.email,
