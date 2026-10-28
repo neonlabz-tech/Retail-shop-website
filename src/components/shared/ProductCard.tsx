@@ -33,6 +33,11 @@ export function ProductCard({ product, className }: ProductCardProps) {
   const secondaryImage = product.images[1]?.src || primaryImage;
   const inWishlist = isInWishlist(product.id);
   const isOutOfStock = product.availability === 'out-of-stock' || (typeof product.stock === 'number' && product.stock <= 0) || (product.variants?.[0] && product.variants[0].available === false);
+  const hasMultiplePrices = Array.isArray(product.variants) && product.variants.length > 1 &&
+    new Set(product.variants.map(v => v.price)).size > 1;
+  const lowestPrice = hasMultiplePrices
+    ? Math.min(...product.variants.map(v => v.price))
+    : product.price;
   const discount = product.compareAtPrice && product.compareAtPrice > product.price
     ? Math.round(((product.compareAtPrice - product.price) / product.compareAtPrice) * 100)
     : 0;
@@ -43,21 +48,26 @@ export function ProductCard({ product, className }: ProductCardProps) {
     if (!checkAuthOrRedirect(router)) return;
     const variant = product.variants?.[0];
     const variantId = variant?.id || product.id || 'default';
+    const variantName = variant?.variantName || variant?.name || variant?.label || variant?.size || '';
     const image = variant?.image || primaryImage;
+    const vPrice = typeof variant?.salePrice === 'number' && variant.salePrice > 0
+      ? variant.salePrice
+      : (variant?.price ?? product.price);
     addItem({
       productId: product.id,
       variantId,
+      variantName,
       name: product.name,
       slug: product.slug,
       image,
       color: variant?.color || '',
       size: variant?.size || '',
-      price: product.price,
-      compareAtPrice: product.compareAtPrice,
+      price: vPrice,
+      compareAtPrice: variant?.compareAtPrice ?? product.compareAtPrice,
       quantity: 1,
       vendor: product.vendor,
-      weight: product.weight || 0,
-      stock: product.stock,
+      weight: variant?.weight || product.weight || 0,
+      stock: typeof variant?.stock === 'number' ? variant.stock : product.stock,
     });
   };
 
@@ -204,7 +214,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
 
         <div className="flex flex-col min-[750px]:flex-row min-[750px]:items-baseline min-[750px]:gap-[6px] mb-[0.6rem] min-h-[3.6rem] min-[750px]:min-h-[2.2rem]">
           <span className={cn("product-price-text text-[1.3rem] min-[400px]:text-[1.4rem] font-bold text-heading shrink-0", isOutOfStock && "text-[#94a3b8] opacity-60")}>
-            {formatPrice(product.price)}
+            {hasMultiplePrices ? `From ${formatPrice(lowestPrice)}` : formatPrice(product.price)}
           </span>
           {product.compareAtPrice && product.compareAtPrice > product.price ? (
             <div className="flex items-center min-[750px]:items-baseline gap-[5px] mt-[2px] min-[750px]:mt-0">

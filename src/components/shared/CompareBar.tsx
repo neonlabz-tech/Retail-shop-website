@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useCompareStore } from '@/store/compareStore';
 import { getStorefrontFromPath, getStorefrontOfProductId } from '@/utils/storefront';
+import { FALLBACK_IMAGE_SRC, handleImageError, normalizeImageSrc } from '@/lib/imageFallback';
 
 function comparePathForStorefront(_pathname: string | null): string {
   return '/compare';
@@ -142,9 +143,10 @@ export function CompareBar() {
               <div key={product.id} className="cb-thumb">
                 <div className="cb-thumb-img">
                   <Image
-                    src={product.images[0]?.src || ''}
+                    src={normalizeImageSrc(product.images[0]?.src) || FALLBACK_IMAGE_SRC}
                     alt={product.name}
                     fill
+                    onError={handleImageError}
                     style={{ objectFit: 'cover' }}
                     sizes="(max-width: 991px) 95px, 130px"
                   />

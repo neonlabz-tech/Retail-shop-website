@@ -9,6 +9,7 @@ import { useCartStore } from '@/store/cartStore';
 import { checkAuthOrRedirect } from '@/store/authStore';
 import { formatPrice } from '@/utils/formatPrice';
 import { getStorefrontOfSlug, productHrefBaseFor } from '@/utils/storefront';
+import { FALLBACK_IMAGE_SRC, handleImageError, normalizeImageSrc } from '@/lib/imageFallback';
 
 /* ── Icons ── */
 
@@ -44,6 +45,7 @@ export function QuickViewModal() {
   const { addItem, closeDrawer } = useCartStore();
   const [selectedColor, setSelectedColor] = useState('');
   const [selectedSize, setSelectedSize] = useState('');
+  const [selectedVariantId, setSelectedVariantId] = useState('');
   const [quantity, setQuantity] = useState(1);
 
   const product = quickViewProduct;
@@ -52,6 +54,8 @@ export function QuickViewModal() {
     if (product) {
       setSelectedColor(product.colors?.[0]?.name || '');
       setSelectedSize(product.sizes?.[0] || '');
+      const firstAvailable = product.variants?.find((v) => v.available && (typeof v.stock !== 'number' || v.stock > 0)) || product.variants?.[0];
+      setSelectedVariantId(firstAvailable?.id || '');
       setQuantity(1);
     }
   }, [product]);
@@ -74,15 +78,30 @@ export function QuickViewModal() {
 
   if (!product) return null;
 
+  const hasRealVariants = Boolean(
+    product &&
+    Array.isArray(product.variants) &&
+    product.variants.length > 0 &&
+    product.variants.some((v) => (v.name || v.label || v.size || '').trim().length > 0)
+  );
+
   const activeColor = selectedColor || product.colors?.[0]?.name || '';
   const activeSize = selectedSize || product.sizes?.[0] || '';
-  const activeVariant = product.variants?.find(
-    (v) => v.color === activeColor && v.size === activeSize
-  ) || product.variants?.[0];
-  const isOutOfStock = product.availability === 'out-of-stock' || (typeof product.stock === 'number' && product.stock <= 0) || (activeVariant ? !activeVariant.available : false);
-  const maxStock = typeof product.stock === 'number' && product.stock > 0 ? product.stock : (isOutOfStock ? 0 : 999);
-  const discount = product.compareAtPrice && product.compareAtPrice > product.price
-    ? Math.round(((product.compareAtPrice - product.price) / product.compareAtPrice) * 100)
+  const activeVariant = hasRealVariants
+    ? (selectedVariantId ? product.variants.find((v) => v.id === selectedVariantId) : product.variants[0]) || product.variants[0]
+    : product.variants?.find((v) => v.color === activeColor && v.size === activeSize) || product.variants?.[0];
+
+  const currentPrice = activeVariant
+    ? (typeof activeVariant.salePrice === 'number' && activeVariant.salePrice > 0 ? activeVariant.salePrice : activeVariant.price)
+    : (typeof product.salePrice === 'number' && product.salePrice > 0 ? product.salePrice : product.price);
+  const currentComparePrice = activeVariant ? activeVariant.compareAtPrice : product.compareAtPrice;
+  const currentStock = typeof activeVariant?.stock === 'number' ? activeVariant.stock : (typeof product.stock === 'number' ? product.stock : 999);
+  const isOutOfStock = activeVariant
+    ? (!activeVariant.available || currentStock <= 0)
+    : (product.availability === 'out-of-stock' || (typeof product.stock === 'number' && product.stock <= 0));
+  const maxStock = isOutOfStock ? 0 : Math.max(1, currentStock);
+  const discount = currentComparePrice && currentComparePrice > currentPrice
+    ? Math.round(((currentComparePrice - currentPrice) / currentComparePrice) * 100)
     : 0;
 
   const handleAddToCart = () => {
@@ -93,22 +112,24 @@ export function QuickViewModal() {
     }
     const variant = activeVariant;
     const variantId = variant?.id || product.id || 'default';
-    const image = variant?.image || product.images?.[0]?.src || '';
+    const variantName = variant?.variantName || variant?.name || variant?.label || variant?.size || '';
+    const image = normalizeImageSrc(variant?.image) || normalizeImageSrc(product.images?.[0]?.src) || FALLBACK_IMAGE_SRC;
 
     addItem({
       productId: product.id,
       variantId,
+      variantName,
       name: product.name,
       slug: product.slug,
       image,
-      color: activeColor,
-      size: activeSize,
-      price: product.price,
-      compareAtPrice: product.compareAtPrice,
+      color: activeVariant?.color || activeColor,
+      size: activeVariant?.size || activeSize,
+      price: currentPrice,
+      compareAtPrice: currentComparePrice,
       quantity: Math.min(maxStock, quantity),
       vendor: product.vendor,
-      weight: product.weight || 0,
-      stock: product.stock,
+      weight: activeVariant?.weight || product.weight || 0,
+      stock: currentStock,
     });
     closeQuickView();
   };
@@ -121,22 +142,24 @@ export function QuickViewModal() {
     }
     const variant = activeVariant;
     const variantId = variant?.id || product.id || 'default';
-    const image = variant?.image || product.images?.[0]?.src || '';
+    const variantName = variant?.variantName || variant?.name || variant?.label || variant?.size || '';
+    const image = normalizeImageSrc(variant?.image) || normalizeImageSrc(product.images?.[0]?.src) || FALLBACK_IMAGE_SRC;
 
     addItem({
       productId: product.id,
       variantId,
+      variantName,
       name: product.name,
       slug: product.slug,
       image,
-      color: activeColor,
-      size: activeSize,
-      price: product.price,
-      compareAtPrice: product.compareAtPrice,
+      color: activeVariant?.color || activeColor,
+      size: activeVariant?.size || activeSize,
+      price: currentPrice,
+      compareAtPrice: currentComparePrice,
       quantity: Math.min(maxStock, quantity),
       vendor: product.vendor,
-      weight: product.weight || 0,
-      stock: product.stock,
+      weight: activeVariant?.weight || product.weight || 0,
+      stock: currentStock,
     });
     closeQuickView();
     closeDrawer();
@@ -180,9 +203,10 @@ export function QuickViewModal() {
         {/* ═══ LEFT: Product Image ═══ */}
         <div className="qv-img-col">
           <Image
-            src={product.images[0]?.src || ''}
+            src={normalizeImageSrc(product.images[0]?.src) || FALLBACK_IMAGE_SRC}
             alt={product.name}
             fill
+            onError={handleImageError}
             style={{ objectFit: 'cover', objectPosition: 'center center' }}
             sizes="(max-width: 991px) min(600px, 95vw), 600px"
           />
@@ -226,7 +250,7 @@ export function QuickViewModal() {
                 width: '6px', height: '6px', borderRadius: '50%',
                 backgroundColor: isOutOfStock ? '#e01117' : '#10b981',
               }} />
-              {isOutOfStock ? 'Out of Stock' : (typeof product.stock === 'number' && product.stock <= 10 ? `Only ${product.stock} left in stock` : 'In Stock')}
+              {isOutOfStock ? 'Out of Stock' : 'In Stock'}
             </span>
           </div>
 
@@ -240,7 +264,11 @@ export function QuickViewModal() {
                 {product.colors.map((c) => (
                   <button
                     key={c.name}
-                    onClick={() => setSelectedColor(c.name)}
+                    onClick={() => {
+                      setSelectedColor(c.name);
+                      const match = product.variants?.find((v) => v.color?.toLowerCase() === c.name.toLowerCase());
+                      if (match) setSelectedVariantId(match.id);
+                    }}
                     className="qv-color-swatch"
                     style={{
                       width: '36px', height: '36px', borderRadius: '50%',
@@ -259,13 +287,17 @@ export function QuickViewModal() {
           {product.sizes.length > 0 && (
             <div style={{ marginBottom: '20px' }}>
               <p className="qv-selector-label" style={{ fontSize: '15px', color: '#222', marginBottom: '10px' }}>
-                <span style={{ fontWeight: 600 }}>Size:</span> {activeSize}
+                <span style={{ fontWeight: 600 }}>Option:</span> {activeSize}
               </p>
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 {product.sizes.map((s) => (
                   <button
                     key={s}
-                    onClick={() => setSelectedSize(s)}
+                    onClick={() => {
+                      setSelectedSize(s);
+                      const match = product.variants?.find((v) => (v.name || v.label || v.size) === s);
+                      if (match) setSelectedVariantId(match.id);
+                    }}
                     className="qv-size-btn"
                     style={{
                       minWidth: '44px', height: '44px', padding: '0 14px',

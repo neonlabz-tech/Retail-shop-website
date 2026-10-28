@@ -12,6 +12,7 @@ import { useCompareStore } from '@/store/compareStore';
 import { formatPrice } from '@/utils/formatPrice';
 import { getStorefrontOfSlug, isSameStoreScope, productHrefBaseFor, shopHrefFor, type Storefront } from '@/utils/storefront';
 import type { Product } from '@/types/product';
+import { FALLBACK_IMAGE_SRC, handleImageError, normalizeImageSrc } from '@/lib/imageFallback';
 
 function IconTrash({ size = 18 }: { size?: number }) {
   return (
@@ -223,8 +224,22 @@ function WishlistCard({ item, index, onRemove, onQuickAdd, onQuickView, onCompar
         href={`${productHrefBase}/${item.slug}`}
         className="wl-img-link block relative aspect-[3/4] overflow-hidden bg-[#f5f5f5] rounded-[4px] mb-[14px]"
       >
-        <Image src={item.image} alt={item.name} fill className={`object-cover transition-opacity duration-[500ms] ease-in-out ${hovered ? 'opacity-0' : 'opacity-100'}`} sizes="(max-width: 749px) 100vw, 25vw" />
-        <Image src={item.image2 || item.image} alt={`${item.name} hover`} fill className={`object-cover transition-opacity duration-[500ms] ease-in-out ${hovered ? 'opacity-100' : 'opacity-0'}`} sizes="(max-width: 749px) 100vw, 25vw" />
+        <Image
+          src={normalizeImageSrc(item.image) || FALLBACK_IMAGE_SRC}
+          alt={item.name}
+          fill
+          onError={handleImageError}
+          className={`object-cover transition-opacity duration-[500ms] ease-in-out ${hovered ? 'opacity-0' : 'opacity-100'}`}
+          sizes="(max-width: 749px) 100vw, 25vw"
+        />
+        <Image
+          src={normalizeImageSrc(item.image2 || item.image) || FALLBACK_IMAGE_SRC}
+          alt={`${item.name} hover`}
+          fill
+          onError={handleImageError}
+          className={`object-cover transition-opacity duration-[500ms] ease-in-out ${hovered ? 'opacity-100' : 'opacity-0'}`}
+          sizes="(max-width: 749px) 100vw, 25vw"
+        />
 
         {item.badge && (
           <span className={`absolute top-[12px] left-[12px] text-[#fff] text-[12px] font-semibold py-[4px] px-[12px] rounded-[3px] z-[3] capitalize ${item.badge === 'sale' ? 'bg-[#F15B41]' : 'bg-[#222]'}`}>

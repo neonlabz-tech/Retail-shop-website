@@ -5,6 +5,7 @@ import { persist } from 'zustand/middleware';
 import type { CartItem } from '@/types/cart';
 import { FREE_SHIPPING_THRESHOLD } from '@/lib/constants';
 import { checkAuthOrRedirect } from '@/store/authStore';
+import { FALLBACK_IMAGE_SRC, normalizeImageSrc } from '@/lib/imageFallback';
 
 interface CartState {
   items: CartItem[];
@@ -43,28 +44,39 @@ export const useCartStore = create<CartState>()(
           return;
         }
 
+        const sanitizedItem: CartItem = {
+          ...item,
+          image: normalizeImageSrc(item.image) || FALLBACK_IMAGE_SRC,
+        };
+
         set((state) => {
-          const maxStock = typeof item.stock === 'number' && item.stock > 0 ? item.stock : undefined;
-          const existing = state.items.find(
-            (i) => i.productId === item.productId && i.variantId === item.variantId
-          );
+          const maxStock = typeof sanitizedItem.stock === 'number' && sanitizedItem.stock > 0 ? sanitizedItem.stock : undefined;
+          const isItemMatch = (i: CartItem) =>
+            i.productId === sanitizedItem.productId &&
+            (
+              (sanitizedItem.variantName && i.variantName === sanitizedItem.variantName) ||
+              (sanitizedItem.variantId && i.variantId === sanitizedItem.variantId) ||
+              (!sanitizedItem.variantName && !sanitizedItem.variantId)
+            );
+
+          const existing = state.items.find(isItemMatch);
 
           if (existing) {
             const effectiveMax = maxStock !== undefined ? maxStock : (typeof existing.stock === 'number' && existing.stock > 0 ? existing.stock : undefined);
-            const rawQty = existing.quantity + item.quantity;
+            const rawQty = existing.quantity + sanitizedItem.quantity;
             const newQty = effectiveMax !== undefined ? Math.min(effectiveMax, rawQty) : rawQty;
             return {
               items: state.items.map((i) =>
-                i.productId === item.productId && i.variantId === item.variantId
-                  ? { ...i, stock: item.stock ?? i.stock, quantity: newQty }
+                isItemMatch(i)
+                  ? { ...i, ...sanitizedItem, stock: sanitizedItem.stock ?? i.stock, quantity: newQty }
                   : i
               ),
               isDrawerOpen: true,
             };
           }
 
-          const initialQty = maxStock !== undefined ? Math.min(maxStock, item.quantity) : item.quantity;
-          return { items: [...state.items, { ...item, quantity: initialQty }], isDrawerOpen: true };
+          const initialQty = maxStock !== undefined ? Math.min(maxStock, sanitizedItem.quantity) : sanitizedItem.quantity;
+          return { items: [...state.items, { ...sanitizedItem, quantity: initialQty }], isDrawerOpen: true };
         });
       },
 
@@ -155,6 +167,18 @@ export const useCartStore = create<CartState>()(
         couponCode: state.couponCode,
         discount: state.discount,
       }),
+      merge: (persistedState: any, currentState: CartState) => {
+        const persistedItems = Array.isArray(persistedState?.items) ? persistedState.items : [];
+        const sanitizedItems = persistedItems.map((item: any) => ({
+          ...item,
+          image: normalizeImageSrc(item?.image) || FALLBACK_IMAGE_SRC,
+        }));
+        return {
+          ...currentState,
+          ...persistedState,
+          items: sanitizedItems,
+        };
+      },
     }
   )
 );

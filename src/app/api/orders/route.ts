@@ -406,13 +406,18 @@ export async function POST(request: NextRequest) {
 
         totalOrderWeightGrams += itemWeight * qty;
 
+        const variantName = (item.variantName || '').trim();
         return {
           product: matchedProductDocId,
           productId: item.productId || (matchedProductDocId ? matchedProductDocId.toString() : ''),
+          variantId: item.variantId || '',
+          variantName: variantName,
           name: item.name || 'Product',
           slug: matchedProductSlug,
           image: item.image || '',
           sku: item.sku || '',
+          color: item.color || '',
+          size: item.size || '',
           price: Number(item.price) || 0,
           quantity: qty,
           subtotal: (Number(item.price) || 0) * qty,
@@ -540,15 +545,42 @@ export async function POST(request: NextRequest) {
           const currentStock = typeof productDoc.stock === 'number' ? productDoc.stock : 0;
           const newStock = Math.max(0, currentStock - qty);
 
-          await Product.updateOne(
-            { _id: productDoc._id },
-            {
-              $set: { stock: newStock },
-              $inc: { totalSold: qty },
-            }
-          );
+          const vName = (item.variantName || '').trim();
+          const vId = (item.variantId || '').trim();
+          let variantDeducted = false;
 
-          console.log(`[Inventory] Deducted ${qty} from "${productDoc.name}" (${productDoc.slug}). Stock: ${currentStock} -> ${newStock}, totalSold +${qty}`);
+          if (Array.isArray(productDoc.variants) && productDoc.variants.length > 0 && (vName || vId)) {
+            const vIndex = productDoc.variants.findIndex((v: any) =>
+              (vName && (v.name === vName || v.label === vName || v.size === vName)) ||
+              (vId && (v._id?.toString() === vId || v.id === vId))
+            );
+            if (vIndex >= 0) {
+              const vCurrentStock = typeof productDoc.variants[vIndex].stock === 'number' ? productDoc.variants[vIndex].stock : 0;
+              const vNewStock = Math.max(0, vCurrentStock - qty);
+              productDoc.variants[vIndex].stock = vNewStock;
+              variantDeducted = true;
+            }
+          }
+
+          if (variantDeducted) {
+            await Product.updateOne(
+              { _id: productDoc._id },
+              {
+                $set: { stock: newStock, variants: productDoc.variants },
+                $inc: { totalSold: qty },
+              }
+            );
+            console.log(`[Inventory] Deducted ${qty} from "${productDoc.name}" (${productDoc.slug}) variant "${item.variantName}". Stock: ${currentStock} -> ${newStock}, totalSold +${qty}`);
+          } else {
+            await Product.updateOne(
+              { _id: productDoc._id },
+              {
+                $set: { stock: newStock },
+                $inc: { totalSold: qty },
+              }
+            );
+            console.log(`[Inventory] Deducted ${qty} from "${productDoc.name}" (${productDoc.slug}). Stock: ${currentStock} -> ${newStock}, totalSold +${qty}`);
+          }
         } else {
           console.warn(`[Inventory] Product not found for stock deduction:`, {
             productId: item.productId,

@@ -24,6 +24,7 @@ import { TrustBadges } from '@/components/shared/TrustBadges';
 import { HomeProductCard } from '@/features/home/components/HomeProductCard';
 import type { Product } from '@/types/product';
 import { SHIPPING_POLICY_TEXT, RETURN_POLICY_TEXT } from '@/data/termsAndConditions';
+import { FALLBACK_IMAGE_SRC, handleImageError, normalizeImageSrc } from '@/lib/imageFallback';
 
 function IconBag({ size = 18 }: { size?: number }) {
   return (<svg viewBox="0 0 24 24" fill="currentColor" width={size} height={size}><path d="M9 6H15C15 4.34315 13.6569 3 12 3C10.3431 3 9 4.34315 9 6ZM7 6C7 3.23858 9.23858 1 12 1C14.7614 1 17 3.23858 17 6H20C20.5523 6 21 6.44772 21 7V21C21 21.5523 20.5523 22 20 22H4C3.44772 22 3 21.5523 3 21V7C3 6.44772 3.44772 6 4 6H7ZM5 8V20H19V8H5ZM9 10C9 11.6569 10.3431 13 12 13C13.6569 13 15 11.6569 15 10H17C17 12.7614 14.7614 15 12 15C9.23858 15 7 12.7614 7 10H9Z" /></svg>);
@@ -154,7 +155,14 @@ function ProductGallery({ images, onActiveChange }: { images: { id: string; src:
                   activeIndex === i ? 'border-[#222]' : 'border-transparent'
                 }`}
               >
-                <Image src={img.src} alt={img.alt} fill className="object-cover" sizes="(max-width: 749px) 100px, 90px" />
+                <Image
+                  src={normalizeImageSrc(img.src) || FALLBACK_IMAGE_SRC}
+                  alt={img.alt}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 749px) 100px, 90px"
+                  onError={handleImageError}
+                />
               </button>
             ))}
           </div>
@@ -197,8 +205,10 @@ function ProductGallery({ images, onActiveChange }: { images: { id: string; src:
               {images.map((img, idx) => (
                 <SwiperSlide key={img.id} className="w-full h-full">
                   <img
-                    src={img.src} alt={img.alt}
+                    src={normalizeImageSrc(img.src) || FALLBACK_IMAGE_SRC}
+                    alt={img.alt}
                     onClick={() => openLightbox(idx)}
+                    onError={handleImageError}
                     className="w-full h-full object-cover object-center block cursor-pointer"
                   />
                 </SwiperSlide>
@@ -206,14 +216,18 @@ function ProductGallery({ images, onActiveChange }: { images: { id: string; src:
             </Swiper>
           </div>
 
-          <button className="pdp-swiper-prev pdp-swiper-arrow" aria-label="Previous image"
-            onMouseEnter={() => setZooming(false)} onMouseLeave={() => setZooming(true)}>
-            <IconArrowLeft size={20} />
-          </button>
-          <button className="pdp-swiper-next pdp-swiper-arrow" aria-label="Next image"
-            onMouseEnter={() => setZooming(false)} onMouseLeave={() => setZooming(true)}>
-            <IconArrowRight size={20} />
-          </button>
+          {images.length > 1 && (
+            <>
+              <button className="pdp-swiper-prev pdp-swiper-arrow" aria-label="Previous image"
+                onMouseEnter={() => setZooming(false)} onMouseLeave={() => setZooming(true)}>
+                <IconArrowLeft size={20} />
+              </button>
+              <button className="pdp-swiper-next pdp-swiper-arrow" aria-label="Next image"
+                onMouseEnter={() => setZooming(false)} onMouseLeave={() => setZooming(true)}>
+                <IconArrowRight size={20} />
+              </button>
+            </>
+          )}
 
           {zooming && (
             <div
@@ -257,19 +271,23 @@ function ProductGallery({ images, onActiveChange }: { images: { id: string; src:
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
           </button>
 
-          <button
-            onClick={(e) => { e.stopPropagation(); lightboxPrev(); }}
-            className="pdp-lightbox-arrow absolute left-[20px] top-1/2 -translate-y-1/2 z-10 w-[50px] h-[50px] flex items-center justify-center bg-[rgba(255,255,255,0.1)] border-none rounded-full text-[#fff] cursor-pointer transition-colors duration-200 ease-in-out"
-          >
-            <IconArrowLeft size={22} />
-          </button>
+          {images.length > 1 && (
+            <>
+              <button
+                onClick={(e) => { e.stopPropagation(); lightboxPrev(); }}
+                className="pdp-lightbox-arrow absolute left-[20px] top-1/2 -translate-y-1/2 z-10 w-[50px] h-[50px] flex items-center justify-center bg-[rgba(255,255,255,0.1)] border-none rounded-full text-[#fff] cursor-pointer transition-colors duration-200 ease-in-out"
+              >
+                <IconArrowLeft size={22} />
+              </button>
 
-          <button
-            onClick={(e) => { e.stopPropagation(); lightboxNext(); }}
-            className="pdp-lightbox-arrow absolute right-[20px] top-1/2 -translate-y-1/2 z-10 w-[50px] h-[50px] flex items-center justify-center bg-[rgba(255,255,255,0.1)] border-none rounded-full text-[#fff] cursor-pointer transition-colors duration-200 ease-in-out"
-          >
-            <IconArrowRight size={22} />
-          </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); lightboxNext(); }}
+                className="pdp-lightbox-arrow absolute right-[20px] top-1/2 -translate-y-1/2 z-10 w-[50px] h-[50px] flex items-center justify-center bg-[rgba(255,255,255,0.1)] border-none rounded-full text-[#fff] cursor-pointer transition-colors duration-200 ease-in-out"
+              >
+                <IconArrowRight size={22} />
+              </button>
+            </>
+          )}
 
           <img
             key={images[lightboxIndex]?.id}
@@ -427,7 +445,14 @@ function PairsWellWith({ products, productHrefBase = '/products' }: { products: 
               {group.map((p) => (
                 <div key={p.id} className="pdp-pairs-row flex items-center gap-[14px] py-[16px] px-0 border-b border-solid border-[#f0f0f0]">
                   <Link href={`${productHrefBase}/${p.slug}`} className="w-[70px] h-[85px] relative overflow-hidden bg-[#f5f5f5] shrink-0 block">
-                    <Image src={p.images[0]?.src || ''} alt={p.name} fill className="object-cover" sizes="70px" />
+                    <Image
+                      src={normalizeImageSrc(p.images[0]?.src) || FALLBACK_IMAGE_SRC}
+                      alt={p.name}
+                      fill
+                      className="object-cover"
+                      sizes="70px"
+                      onError={handleImageError}
+                    />
                   </Link>
                   <div className="flex-1 min-w-0">
                     <Link href={`${productHrefBase}/${p.slug}`} className="text-[15px] font-semibold text-[#222] no-underline block mb-[4px]">
@@ -518,6 +543,7 @@ export function ProductDetailContent({
 
   const [selectedColor, setSelectedColor] = useState('');
   const [selectedSize, setSelectedSize] = useState('');
+  const [selectedVariantId, setSelectedVariantId] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [addingToCart, setAddingToCart] = useState(false);
   const [shareMenuOpen, setShareMenuOpen] = useState(false);
@@ -691,6 +717,12 @@ export function ProductDetailContent({
 
   useEffect(() => {
     if (!product) return;
+    if (Array.isArray(product.variants) && product.variants.length > 0) {
+      const firstAvailable = product.variants.find((v) => v.available && (typeof v.stock !== 'number' || v.stock > 0)) || product.variants[0];
+      if (firstAvailable) {
+        setSelectedVariantId(firstAvailable.id);
+      }
+    }
     setReviewsList(product.reviews || []);
     setReviewCount(product.reviewCount || (product.reviews?.length ?? 0));
     setAvgRating(product.rating || 5);
@@ -791,7 +823,18 @@ export function ProductDetailContent({
   const handleWishlistClick = () => {
     setWishlistLoading(true);
     setTimeout(() => {
-      toggleWishlist({ productId: product.id, name: product.name, price: product.price, compareAtPrice: product.compareAtPrice, image: product.images?.[0]?.src || '', image2: product.images?.[1]?.src || '', slug: product.slug, badge: product.badge, colors: product.colors?.map(c => ({ name: c.name, value: c.value })) || [], vendor: product.vendor });
+      toggleWishlist({
+        productId: product.id,
+        name: product.name,
+        price: product.price,
+        compareAtPrice: product.compareAtPrice,
+        image: normalizeImageSrc(product.images?.[0]?.src) || FALLBACK_IMAGE_SRC,
+        image2: normalizeImageSrc(product.images?.[1]?.src) || normalizeImageSrc(product.images?.[0]?.src) || FALLBACK_IMAGE_SRC,
+        slug: product.slug,
+        badge: product.badge,
+        colors: product.colors?.map(c => ({ name: c.name, value: c.value })) || [],
+        vendor: product.vendor,
+      });
       setWishlistLoading(false);
     }, 500);
   };
@@ -804,49 +847,72 @@ export function ProductDetailContent({
     }, 500);
   };
 
+  const hasRealVariants = Boolean(
+    product &&
+    Array.isArray(product.variants) &&
+    product.variants.length > 0 &&
+    product.variants.some((v) => (v.name || v.label || v.size || '').trim().length > 0)
+  );
+
   const getActiveVariant = () => {
-    if (!product) return null;
-    return (
-      product.variants?.find((v) => v.color === activeColor && v.size === activeSize) ||
-      product.variants?.[0] || {
-        id: `v-default-${product.id}`,
-        color: activeColor || '',
-        size: activeSize || '',
-        price: product.price,
-        compareAtPrice: product.compareAtPrice,
-        image: product.images?.[0]?.src || '',
-        available: product.availability === 'in-stock',
-        sku: product.sku || '',
-      }
-    );
+    if (!product || !product.variants || product.variants.length === 0) return null;
+    if (selectedVariantId) {
+      const match = product.variants.find((v) => v.id === selectedVariantId);
+      if (match) return match;
+    }
+    if (activeSize) {
+      const match = product.variants.find((v) => (v.name || v.label || v.size) === activeSize);
+      if (match) return match;
+    }
+    if (activeColor) {
+      const match = product.variants.find((v) => v.color?.toLowerCase() === activeColor.toLowerCase());
+      if (match) return match;
+    }
+    return product.variants.find((v) => v.available && (typeof v.stock !== 'number' || v.stock > 0)) || product.variants[0];
   };
 
   const activeVariant = getActiveVariant();
-  const isOutOfStock = product.availability === 'out-of-stock' || (typeof product.stock === 'number' && product.stock <= 0) || (activeVariant ? !activeVariant.available : false);
-  const maxStock = typeof product.stock === 'number' && product.stock > 0 ? product.stock : (isOutOfStock ? 0 : 999);
+  const currentPrice = activeVariant
+    ? (typeof activeVariant.salePrice === 'number' && activeVariant.salePrice > 0 ? activeVariant.salePrice : activeVariant.price)
+    : (typeof product.salePrice === 'number' && product.salePrice > 0 ? product.salePrice : product.price);
+  const currentComparePrice = activeVariant ? activeVariant.compareAtPrice : product.compareAtPrice;
+  const currentStock = typeof activeVariant?.stock === 'number'
+    ? activeVariant.stock
+    : (typeof product.stock === 'number' ? product.stock : 999);
+  const lowStockThreshold = typeof activeVariant?.lowStockThreshold === 'number'
+    ? activeVariant.lowStockThreshold
+    : (typeof product.lowStockThreshold === 'number' ? product.lowStockThreshold : 10);
+  const isOutOfStock = activeVariant
+    ? (!activeVariant.available || currentStock <= 0)
+    : (product.availability === 'out-of-stock' || (typeof product.stock === 'number' && product.stock <= 0));
+  const maxStock = isOutOfStock ? 0 : Math.max(1, currentStock);
+  const isLowStock = !isOutOfStock && typeof currentStock === 'number' && currentStock <= lowStockThreshold && currentStock > 0;
+  const currentDiscount = calculateDiscount(currentPrice, currentComparePrice);
 
   const handleAddToCart = () => {
     if (!product || isOutOfStock) return;
     if (!checkAuthOrRedirect(router)) return;
     const variant = getActiveVariant();
     const variantId = variant?.id || product.id || 'default';
-    const image = variant?.image || product.images?.[0]?.src || '';
+    const variantName = activeVariant?.variantName || activeVariant?.name || activeVariant?.label || activeVariant?.size || '';
+    const image = normalizeImageSrc(variant?.image) || normalizeImageSrc(product.images?.[0]?.src) || FALLBACK_IMAGE_SRC;
     setAddingToCart(true);
     setTimeout(() => {
       addItem({
         productId: product.id,
         variantId,
+        variantName,
         name: product.name,
         slug: product.slug,
         image,
-        color: activeColor,
-        size: activeSize,
-        price: product.price,
-        compareAtPrice: product.compareAtPrice,
+        color: activeVariant?.color || activeColor,
+        size: activeVariant?.label || activeVariant?.size || activeSize,
+        price: currentPrice,
+        compareAtPrice: currentComparePrice,
         quantity: Math.min(maxStock, quantity),
         vendor: product.vendor,
-        weight: product.weight || 0,
-        stock: product.stock,
+        weight: activeVariant?.weight || product.weight || 0,
+        stock: currentStock,
       });
       setAddingToCart(false);
     }, 400);
@@ -855,24 +921,26 @@ export function ProductDetailContent({
   const handleBuyNow = () => {
     if (!product || isOutOfStock) return;
     if (!checkAuthOrRedirect(router)) return;
-    const variant = product.variants?.find(v => v.color === activeColor && v.size === activeSize) || product.variants?.[0];
+    const variant = getActiveVariant();
     const variantId = variant?.id || product.id || 'default';
-    const image = variant?.image || product.images?.[0]?.src || '';
+    const variantName = activeVariant?.variantName || activeVariant?.name || activeVariant?.label || activeVariant?.size || '';
+    const image = normalizeImageSrc(variant?.image) || normalizeImageSrc(product.images?.[0]?.src) || FALLBACK_IMAGE_SRC;
 
     addItem({
       productId: product.id,
       variantId,
+      variantName,
       name: product.name,
       slug: product.slug,
       image,
-      color: activeColor,
-      size: activeSize,
-      price: product.price,
-      compareAtPrice: product.compareAtPrice,
+      color: activeVariant?.color || activeColor,
+      size: activeVariant?.label || activeVariant?.size || activeSize,
+      price: currentPrice,
+      compareAtPrice: currentComparePrice,
       quantity: Math.min(maxStock, quantity),
       vendor: product.vendor,
-      weight: product.weight || 0,
-      stock: product.stock,
+      weight: activeVariant?.weight || product.weight || 0,
+      stock: currentStock,
     });
     closeDrawer();
     router.push('/checkout');
@@ -1006,16 +1074,16 @@ export function ProductDetailContent({
 
               <div className="pdp-info-price-row flex items-baseline gap-[10px] mb-[20px] flex-wrap">
                 <span className="pdp-info-price product-price-text text-[28px] font-bold text-[#e01117] leading-tight" style={{ color: "#e01117" }}>
-                  {formatPrice(product.price)}
+                  {formatPrice(currentPrice)}
                 </span>
-                {discount > 0 && (
+                {currentDiscount > 0 && (
                   <span className="text-[#e01117] bg-[#fff0ed] text-[13px] font-bold px-[6px] py-[2px] rounded-[4px] leading-none">
-                    -{discount}%
+                    -{currentDiscount}%
                   </span>
                 )}
-                {product.compareAtPrice && (
+                {currentComparePrice && (
                   <span className="pdp-info-compare-at text-[16px] text-[#999] line-through font-normal">
-                    {formatPrice(product.compareAtPrice)}
+                    {formatPrice(currentComparePrice)}
                   </span>
                 )}
               </div>
@@ -1026,13 +1094,8 @@ export function ProductDetailContent({
                   isOutOfStock ? 'bg-red-50 text-[#e01117] border border-red-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                 }`}>
                   <span className={`w-[7px] h-[7px] rounded-full ${isOutOfStock ? 'bg-[#e01117]' : 'bg-emerald-500'}`} />
-                  {isOutOfStock ? 'Out of Stock' : (typeof product.stock === 'number' && product.stock <= 10 ? `Only ${product.stock} left in stock` : 'In Stock')}
+                  {isOutOfStock ? 'Out of Stock' : 'In Stock'}
                 </span>
-                {!isOutOfStock && typeof product.stock === 'number' && product.stock <= 10 && (
-                  <span className="text-[12px] font-semibold text-[#e01117] animate-pulse">
-                    (Order soon before it runs out!)
-                  </span>
-                )}
               </div>
 
               {product.colors.length > 0 && (
@@ -1042,7 +1105,11 @@ export function ProductDetailContent({
                     {product.colors.map((c) => (
                       <button
                         key={c.name}
-                        onClick={() => setSelectedColor(c.name)}
+                        onClick={() => {
+                          setSelectedColor(c.name);
+                          const match = product.variants?.find((v) => v.color?.toLowerCase() === c.name.toLowerCase());
+                          if (match) setSelectedVariantId(match.id);
+                        }}
                         className={`pdp-info-color-swatch w-[32px] h-[32px] rounded-full border-solid cursor-pointer transition-colors duration-200 ease-in-out ${
                           activeColor === c.name ? 'border-[3px] border-[#222]' : 'border-[2px] border-[#e0e0e0]'
                         }`}
@@ -1056,21 +1123,29 @@ export function ProductDetailContent({
 
               {product.sizes.length > 0 && (
                 <div className="pdp-info-size mb-[20px]">
-                  <p className="pdp-info-field-label text-[15px] font-semibold text-[#222] mb-[10px]">Size: <span className="font-normal text-[#555]">{activeSize}</span></p>
+                  <p className="pdp-info-field-label text-[15px] font-semibold text-[#222] mb-[10px]">Option: <span className="font-normal text-[#555]">{activeSize}</span></p>
                   <div className="flex gap-[8px] flex-wrap">
-                    {product.sizes.map((s) => (
-                      <button
-                        key={s}
-                        onClick={() => setSelectedSize(s)}
-                        className={`pdp-info-size-btn min-w-[44px] h-[44px] py-0 px-[14px] rounded-[4px] text-[14px] font-medium border-solid cursor-pointer transition-all duration-200 ease-in-out ${
-                          activeSize === s
-                            ? 'border-[2px] border-[#222] bg-[#222] text-[#fff]'
-                            : 'border border-[#e0e0e0] bg-[#fff] text-[#222]'
-                        }`}
-                      >
-                        {s}
-                      </button>
-                    ))}
+                    {product.sizes.map((s) => {
+                      const vMatch = product.variants?.find((v) => v.size === s || v.label === s || v.name === s);
+                      const isOptAvailable = vMatch ? (vMatch.available && (typeof vMatch.stock !== 'number' || vMatch.stock > 0)) : true;
+                      return (
+                        <button
+                          key={s}
+                          onClick={() => {
+                            setSelectedSize(s);
+                            if (vMatch) setSelectedVariantId(vMatch.id);
+                          }}
+                          className={`pdp-info-size-btn min-w-[44px] h-[44px] py-0 px-[14px] rounded-[4px] text-[14px] font-medium border-solid cursor-pointer transition-all duration-200 ease-in-out relative ${
+                            activeSize === s
+                              ? 'border-[2px] border-[#222] bg-[#222] text-[#fff] shadow-sm'
+                              : 'border border-[#e0e0e0] bg-[#fff] text-[#222] hover:border-[#111]'
+                          } ${!isOptAvailable ? 'opacity-50 line-through' : ''}`}
+                          title={!isOptAvailable ? `${s} (Out of stock)` : s}
+                        >
+                          {s}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -1181,7 +1256,14 @@ export function ProductDetailContent({
 
                     <div className="flex items-center gap-[12px] p-[12px] bg-[#f7f7f7] rounded-[6px] mb-[18px]">
                       <div className="w-[44px] h-[44px] rounded-[6px] overflow-hidden shrink-0 relative bg-[#eee]">
-                        <Image src={product.images[0]?.src || ''} alt={product.name} fill className="object-cover" sizes="44px" />
+                        <Image
+                          src={normalizeImageSrc(product.images[0]?.src) || FALLBACK_IMAGE_SRC}
+                          alt={product.name}
+                          fill
+                          className="object-cover"
+                          sizes="44px"
+                          onError={handleImageError}
+                        />
                       </div>
                       <div className="min-w-0">
                         <p className="text-[13px] font-semibold text-[#222] whitespace-nowrap overflow-hidden text-ellipsis">{product.name} - {formatPrice(product.price)}</p>
@@ -1674,11 +1756,12 @@ export function ProductDetailContent({
             <div className="w-[clamp(52px,6vw,80px)] h-[clamp(58px,7vw,90px)] overflow-hidden relative bg-[#f5f5f5] shrink-0 rounded-[4px] flex items-center justify-center">
               {(product.images[activeGalleryIndex]?.src || product.images[0]?.src) ? (
                 <Image
-                  src={product.images[activeGalleryIndex]?.src || product.images[0]?.src || ''}
+                  src={normalizeImageSrc(product.images[activeGalleryIndex]?.src || product.images[0]?.src) || FALLBACK_IMAGE_SRC}
                   alt={product.name}
                   fill
                   className="object-cover"
                   sizes="(max-width: 1200px) 70px, 80px"
+                  onError={handleImageError}
                 />
               ) : (
                 <span className="text-[11px] text-[#999]">No img</span>
@@ -1728,15 +1811,15 @@ export function ProductDetailContent({
             </select>
           ) : (
             <div className="pdp-sticky-price flex items-baseline gap-[6px] text-[clamp(14px,1.3vw,16px)] font-bold text-[#e01117] py-[clamp(8px,1vw,10px)] px-[14px] bg-[#f8f8f8] rounded-[6px] border border-solid border-[#e5e5e5] whitespace-nowrap">
-              <span>{formatPrice(product.price)}</span>
-              {discount > 0 && (
+              <span>{formatPrice(currentPrice)}</span>
+              {currentDiscount > 0 && (
                 <span className="text-[#F15B41] bg-[#fff0ed] text-[11px] font-bold px-[4px] py-[1px] rounded-[3px] leading-none">
-                  -{discount}%
+                  -{currentDiscount}%
                 </span>
               )}
-              {product.compareAtPrice && (
+              {currentComparePrice && (
                 <span className="text-[12px] text-[#999] line-through font-normal">
-                  {formatPrice(product.compareAtPrice)}
+                  {formatPrice(currentComparePrice)}
                 </span>
               )}
             </div>
