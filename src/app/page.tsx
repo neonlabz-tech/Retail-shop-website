@@ -13,7 +13,7 @@ const PodMarquee = dynamic(() => import('@/features/pod/components/PodMarquee').
 
 export const metadata: Metadata = {
   title: `${SITE_NAME}`,
-  description: 'RKF Distributer — Premium ecommerce and distribution store.',
+  description: 'RKF Distributors — Premium ecommerce and distribution store.',
 };
 
 export default function HomePage() {

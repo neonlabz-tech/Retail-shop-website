@@ -37,6 +37,10 @@ export interface IUser extends Document {
   wishlist: IWishlistItem[];
   isVerified: boolean;
   isActive: boolean;
+  resetPasswordToken?: string;
+  resetPasswordExpires?: Date;
+  activationToken?: string;
+  activationTokenExpires?: Date;
   totalOrders: number;
   totalSpent: number;
   createdAt: Date;
@@ -132,6 +136,22 @@ const UserSchema = new Schema<IUser>(
     isActive: {
       type: Boolean,
       default: true,
+    },
+    resetPasswordToken: {
+      type: String,
+      select: false,
+    },
+    resetPasswordExpires: {
+      type: Date,
+      select: false,
+    },
+    activationToken: {
+      type: String,
+      select: false,
+    },
+    activationTokenExpires: {
+      type: Date,
+      select: false,
     },
     totalOrders: {
       type: Number,

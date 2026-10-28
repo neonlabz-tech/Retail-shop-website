@@ -3,13 +3,11 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 import { useUIStore } from '@/store/uiStore';
 import { useSearch } from '@/features/products/hooks/useSearch';
 import { useDebounce } from '@/hooks/useDebounce';
 import { formatPrice } from '@/utils/formatPrice';
-import { POPULAR_SEARCHES, GROCERY_POPULAR_SEARCHES, PET_FOOD_POPULAR_SEARCHES, MEGASTORE_POPULAR_SEARCHES, PIZZA_POPULAR_SEARCHES, PLANT_GARDEN_POPULAR_SEARCHES, SKIN_CARE_POPULAR_SEARCHES, JEWELLERY_POPULAR_SEARCHES, PHONE_CASE_POPULAR_SEARCHES, SMART_WATCHES_POPULAR_SEARCHES, FOOTWEAR_POPULAR_SEARCHES } from '@/lib/constants';
-import { getStorefrontFromPath, productHrefBaseFor, shopHrefFor } from '@/utils/storefront';
+import { POPULAR_SEARCHES } from '@/lib/constants';
 import { FALLBACK_IMAGE_SRC, handleImageError, normalizeImageSrc } from '@/lib/imageFallback';
 
 function IconSearch({ size = 20 }: { size?: number }) {
@@ -39,9 +37,7 @@ function IconArrowRight({ size = 18 }: { size?: number }) {
 
 export function SearchDrawer() {
   const { searchOpen, closeSearch } = useUIStore();
-  const pathname = usePathname();
-  const storefront = getStorefrontFromPath(pathname);
-  const searchEndpoint = '/api/pod-search';
+  const searchEndpoint = '/api/search';
   const productHrefBase = '/products';
   const shopHref = '/shop';
   const popularTerms = POPULAR_SEARCHES;
