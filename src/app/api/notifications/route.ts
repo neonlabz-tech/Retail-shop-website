@@ -64,13 +64,12 @@ function getStatusNotification(status: string, orderNumber: string) {
   };
 }
 
-function getStatusChangedAt(order: Pick<IOrder, 'status' | 'statusHistory' | 'updatedAt'>): Date {
+function getStatusChangedAt(order: Pick<IOrder, 'status' | 'statusHistory' | 'createdAt'>): Date {
   const currentStatus = String(order.status || '').toLowerCase().trim();
   const latestMatchingChange = [...(order.statusHistory || [])]
     .reverse()
     .find((change) => String(change.status || '').toLowerCase().trim() === currentStatus);
-  const changedAt = latestMatchingChange?.changedAt || order.updatedAt;
-  const date = new Date(changedAt);
+  const date = new Date(latestMatchingChange?.changedAt || order.createdAt);
   return Number.isNaN(date.getTime()) ? new Date(0) : date;
 }
 
@@ -253,7 +252,7 @@ export async function GET(request: NextRequest) {
       ? await Order.find({ $or: orderConditions })
           .where('status')
           .nin(['', 'pending'])
-          .select('orderNumber status customer customerSnapshot items updatedAt statusHistory subtotal discount shippingFee total paymentMethod')
+          .select('orderNumber status customer customerSnapshot items createdAt updatedAt statusHistory subtotal discount shippingFee total paymentMethod')
           .sort({ updatedAt: -1 })
           .lean()
       : [];
@@ -302,10 +301,11 @@ export async function GET(request: NextRequest) {
       if (!status || status === 'pending') continue;
 
       const cleanOrderNumber = String(order.orderNumber || '').trim().replace(/^#/, '');
+      const statusChangedAt = getStatusChangedAt(order);
 
       // Skip creating a new notification if status is processing and customer already has a placed / processing notification
       if (status === 'processing') {
-        const hasExistingPlacement = storedNotifications.some((n) => {
+        const existingPlacements = storedNotifications.filter((n) => {
           const ordNum = String(n.orderNumber || '').trim().replace(/^#/, '').toLowerCase();
           const title = String(n.title || '').toLowerCase();
           return (
@@ -313,15 +313,38 @@ export async function GET(request: NextRequest) {
             (title.includes('placed') || title.includes('processing'))
           );
         });
-        if (hasExistingPlacement) {
+        for (const notification of existingPlacements) {
+          if (new Date(notification.createdAt).getTime() > statusChangedAt.getTime()) {
+            notification.createdAt = statusChangedAt;
+            await mongoose.connection.collection('notifications').updateOne(
+              { _id: notification._id },
+              { $set: { createdAt: statusChangedAt } }
+            );
+          }
+        }
+        if (existingPlacements.length > 0) {
           continue;
         }
       }
 
       const notificationContent = getStatusNotification(status, cleanOrderNumber);
       const lookupKey = `${cleanOrderNumber.toLowerCase()}:${notificationContent.title.trim().toLowerCase()}`;
-      const statusChangedAt = getStatusChangedAt(order);
       const existingNotification = existingMap.get(lookupKey);
+
+      if (
+        existingNotification &&
+        new Date(existingNotification.createdAt).getTime() > statusChangedAt.getTime()
+      ) {
+        existingNotification.createdAt = statusChangedAt;
+        await mongoose.connection.collection('notifications').updateOne(
+          { _id: existingNotification._id },
+          { $set: { createdAt: statusChangedAt } }
+        );
+        const storedNotification = storedNotifications.find(
+          (notification) => String(notification._id) === String(existingNotification._id)
+        );
+        if (storedNotification) storedNotification.createdAt = statusChangedAt;
+      }
 
       if (
         existingNotification &&
@@ -349,6 +372,8 @@ export async function GET(request: NextRequest) {
         read: false,
         isRead: false,
         dismissed: false,
+        createdAt: statusChangedAt,
+        updatedAt: statusChangedAt,
       });
 
       // Send Order Status Update Email via Resend when order transitions to Shipped, Delivered, etc.

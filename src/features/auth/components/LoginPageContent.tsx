@@ -299,6 +299,14 @@ export function LoginPageContent() {
               <span>Register an Account</span>
               <IconArrowRight />
             </Link>
+
+            <p className="text-[1.2rem] text-center text-[#64748b] mt-[1.2rem] m-0">
+              By logging in, you agree to our{' '}
+              <Link href="/pages/terms-of-service" className="text-[#c96742] underline underline-offset-2 hover:text-[#a84e2c] font-medium">
+                Terms and Conditions
+              </Link>
+              .
+            </p>
           </form>
         </div>
       </div>

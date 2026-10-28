@@ -1,28 +1,19 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { useCartStore } from '@/store/cartStore';
-import { useAuthStore } from '@/store/authStore';
+import { useAuthStore, checkAuthOrRedirect, isUserAuthenticated } from '@/store/authStore';
 import { formatPrice } from '@/utils/formatPrice';
-import { calculateShippingFee, parseWeightInGrams } from '@/utils/weight';
+import { TermsAndConditionsContent } from '@/components/shared/TermsAndConditionsContent';
+import { TERMS_LAST_UPDATED } from '@/data/termsAndConditions';
 
 const ACCENT = '#c96742';
 const DARK = '#111111';
 
 const COUNTRIES = [
-  { value: '', label: '---' },
-  { value: 'US', label: 'United States' },
-  { value: 'GB', label: 'United Kingdom' },
-  { value: 'CA', label: 'Canada' },
-  { value: 'AU', label: 'Australia' },
-  { value: 'BD', label: 'Bangladesh' },
-  { value: 'DE', label: 'Germany' },
-  { value: 'FR', label: 'France' },
-  { value: 'IN', label: 'India' },
-  { value: 'JP', label: 'Japan' },
-  { value: 'SG', label: 'Singapore' },
-  { value: 'AE', label: 'United Arab Emirates' },
+  { value: 'Sri Lanka', label: 'Sri Lanka' },
 ];
 
 type PaymentMethod = 'bank' | 'cod';
@@ -36,12 +27,14 @@ function IcoCheck() {
 }
 
 export function CheckoutPageContent() {
+  const [mounted, setMounted] = useState(false);
+  const router = useRouter();
   const { items, getSubtotal, clearCart } = useCartStore();
   const { user, isAuthenticated, checkAuth } = useAuthStore();
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [country, setCountry] = useState('');
+  const [country, setCountry] = useState('Sri Lanka');
   const [city, setCity] = useState('');
   const [address, setAddress] = useState('');
   const [phone, setPhone] = useState('');
@@ -49,6 +42,7 @@ export function CheckoutPageContent() {
   const [notes, setNotes] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cod');
   const [agreeTerms, setAgreeTerms] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderError, setOrderError] = useState<string | null>(null);
   const [orderSuccess, setOrderSuccess] = useState<{
@@ -76,7 +70,14 @@ export function CheckoutPageContent() {
 
   useEffect(() => {
     checkAuth();
+    setMounted(true);
   }, [checkAuth]);
+
+  useEffect(() => {
+    if (!isUserAuthenticated()) {
+      checkAuthOrRedirect(router, '/checkout');
+    }
+  }, [router]);
 
   // Sync authenticated user info when logged in, or reset fields if not logged in
   useEffect(() => {
@@ -110,7 +111,7 @@ export function CheckoutPageContent() {
       setLastName('');
       setEmail('');
       setPhone('');
-      setCountry('');
+      setCountry('Sri Lanka');
       setCity('');
       setAddress('');
       setNotes('');
@@ -147,39 +148,8 @@ export function CheckoutPageContent() {
     }
   };
 
-  // Track dynamically fetched product weights if missing from cart store
-  const [productWeights, setProductWeights] = useState<Record<string, number>>({});
-
-  useEffect(() => {
-    const missing = items.filter((i) => typeof i.weight !== 'number');
-    if (missing.length === 0) return;
-
-    missing.forEach(async (item) => {
-      try {
-        const idOrSlug = item.productId || item.slug;
-        if (!idOrSlug) return;
-        const res = await fetch(`/api/products/${encodeURIComponent(idOrSlug)}`);
-        if (!res.ok) return;
-        const data = await res.json();
-        const w = data.product ? parseWeightInGrams(data.product) : 0;
-        if (w > 0) {
-          setProductWeights((prev) => ({ ...prev, [item.productId || item.slug]: w }));
-        }
-      } catch {}
-    });
-  }, [items]);
-
   const subtotal = getSubtotal();
 
-  // Calculate total order weight in grams
-  const totalWeight = items.reduce((sum, item) => {
-    const itemWeight = typeof item.weight === 'number' && item.weight > 0
-      ? item.weight
-      : (productWeights[item.productId || item.slug] || 0);
-    return sum + itemWeight * (Number(item.quantity) || 1);
-  }, 0);
-
-  // Shipping fee is calculated by admin upon dispatch (0 at initial checkout)
   const shippingFee = 0;
 
   // Tax removed as requested
@@ -226,6 +196,17 @@ export function CheckoutPageContent() {
     }
     if (!agreeTerms) {
       setOrderError('Please agree to the website terms and conditions.');
+      return;
+    }
+
+    const overStockItem = items.find((i) => typeof i.stock === 'number' && i.stock > 0 && i.quantity > i.stock);
+    if (overStockItem) {
+      setOrderError(`The item "${overStockItem.name}" only has ${overStockItem.stock} in stock. Please adjust your cart quantity.`);
+      return;
+    }
+    const outOfStockItem = items.find((i) => typeof i.stock === 'number' && i.stock <= 0);
+    if (outOfStockItem) {
+      setOrderError(`The item "${outOfStockItem.name}" is out of stock. Please remove it from your cart.`);
       return;
     }
 
@@ -313,9 +294,20 @@ export function CheckoutPageContent() {
 
   return (
     <>
-      {/* ── Hero Banner ── */}
-      <div className="co-hero">
-        <h1 className="co-hero-title">Check Out</h1>
+      {/* ── Page Header / Breadcrumb ── */}
+      <div className="border-b border-[#eef2f6] bg-[#f8fafc] py-[20px] sm:py-[24px]">
+        <div className="container-main flex flex-col items-center justify-center text-center">
+          <div className="flex items-center gap-[6px] text-[13px] text-[#64748b] mb-[6px]">
+            <Link href="/" className="hover:text-[#0f172a] transition-colors">Home</Link>
+            <span className="text-[#cbd5e1] text-[11px]">/</span>
+            <Link href="/cart" className="hover:text-[#0f172a] transition-colors">Cart</Link>
+            <span className="text-[#cbd5e1] text-[11px]">/</span>
+            <span className="text-[#0f172a] font-medium">Checkout</span>
+          </div>
+          <h1 className="text-[24px] sm:text-[30px] font-bold text-[#0f172a] tracking-tight">
+            Checkout
+          </h1>
+        </div>
       </div>
 
       {/* ── Main Content ── */}
@@ -352,37 +344,14 @@ export function CheckoutPageContent() {
                     <span>Items Subtotal:</span>
                     <span>{formatPrice(orderSuccess.subtotal)}</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.8rem', color: '#4b5563' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.6rem', color: '#4b5563' }}>
                     <span>Discount (0%):</span>
                     <span>{formatPrice(orderSuccess.discount)}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '0.8rem', borderTop: '1px dashed #d1d5db', fontSize: '1.6rem', fontWeight: 700, color: '#111827' }}>
-                    <div>
-                      <span>Total Amount:</span>
-                      <span style={{ display: 'block', fontSize: '1.15rem', fontWeight: 400, color: '#6b7280' }}>(Excluding shipping fee)</span>
-                    </div>
+                    <span>Total Amount:</span>
                     <span style={{ color: '#003b95' }}>{formatPrice(orderSuccess.total)}</span>
                   </div>
-                </div>
-                <div style={{
-                  marginTop: '1.4rem',
-                  padding: '1.2rem 1.4rem',
-                  backgroundColor: '#fffbeb',
-                  border: '1px solid #fde68a',
-                  borderRadius: '0.8rem',
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: '0.8rem',
-                  textAlign: 'left',
-                }}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: '0.2rem' }}>
-                    <circle cx="12" cy="12" r="10" />
-                    <line x1="12" y1="16" x2="12" y2="12" />
-                    <line x1="12" y1="8" x2="12.01" y2="8" />
-                  </svg>
-                  <p style={{ margin: 0, fontSize: '1.25rem', color: '#92400e', lineHeight: 1.5 }}>
-                    <strong>Notice:</strong> Shipping fee is calculated by admin upon dispatch. When your order is shipped, you will receive an email containing the final total cost (product total + shipping fee).
-                  </p>
                 </div>
               </div>
             </div>
@@ -427,23 +396,6 @@ export function CheckoutPageContent() {
                   Register Account
                 </Link>
               </div>
-            </div>
-          ) : user ? (
-            <div className="mb-[2rem] p-[1.2rem_1.8rem] bg-emerald-50 border border-emerald-200 rounded-[1.2rem] shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-[1.2rem]">
-              <div className="flex items-center gap-[1.2rem]">
-                <div className="w-[2.8rem] h-[2.8rem] rounded-full bg-emerald-600 text-white flex items-center justify-center text-[1.4rem] font-bold shrink-0">
-                  ✓
-                </div>
-                <div>
-                  <p className="text-[1.35rem] text-emerald-950 font-medium">
-                    Logged in as <strong className="font-bold">{user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email}</strong> ({user.email})
-                  </p>
-                  <p className="text-[1.2rem] text-emerald-700">Your order will be linked to your registered account.</p>
-                </div>
-              </div>
-              <Link href="/profile" className="text-[1.25rem] text-emerald-800 hover:text-emerald-950 font-semibold underline underline-offset-2 shrink-0">
-                My Profile
-              </Link>
             </div>
           ) : null}
 
@@ -580,7 +532,12 @@ export function CheckoutPageContent() {
 
               {/* Cart items card */}
               <div className="co-order-card">
-                {items.length === 0 ? (
+                {!mounted ? (
+                  <div className="space-y-[1.2rem] py-[1rem]">
+                    <div className="animate-shimmer h-[2rem] w-[90%] rounded-[0.4rem]" />
+                    <div className="animate-shimmer h-[2rem] w-[70%] rounded-[0.4rem]" />
+                  </div>
+                ) : items.length === 0 ? (
                   <div className="co-empty-state">
                     <p className="co-empty-text">Your shop cart is empty</p>
                     <Link href="/shop" className="co-explore-btn">Explore Products!</Link>
@@ -608,49 +565,51 @@ export function CheckoutPageContent() {
 
               {/* PAYMENT BREAKDOWN */}
               <div className="co-breakdown-card">
-                <div className="co-breakdown-head">
-                  <svg className="co-breakdown-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="2" y="4" width="20" height="16" rx="2" />
-                    <line x1="2" y1="10" x2="22" y2="10" />
-                    <line x1="7" y1="15" x2="7.01" y2="15" />
-                    <line x1="11" y1="15" x2="13" y2="15" />
-                  </svg>
-                  <span className="co-breakdown-title">PAYMENT BREAKDOWN</span>
-                </div>
-
-                <div className="co-breakdown-body">
-                  <div className="co-breakdown-row">
-                    <span className="co-breakdown-label">Items Subtotal</span>
-                    <span className="co-breakdown-val">{formatPrice(subtotal)}</span>
+                {!mounted ? (
+                  <div className="space-y-[1.2rem] py-[1.2rem]">
+                    <div className="animate-shimmer h-[1.6rem] w-[50%] rounded-[0.4rem]" />
+                    <div className="animate-shimmer h-[1.6rem] w-[75%] rounded-[0.4rem]" />
+                    <div className="animate-shimmer h-[1.6rem] w-[60%] rounded-[0.4rem]" />
                   </div>
+                ) : (
+                  <>
+                    <div className="co-breakdown-head">
+                      <svg className="co-breakdown-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="2" y="4" width="20" height="16" rx="2" />
+                        <line x1="2" y1="10" x2="22" y2="10" />
+                        <line x1="7" y1="15" x2="7.01" y2="15" />
+                        <line x1="11" y1="15" x2="13" y2="15" />
+                      </svg>
+                      <span className="co-breakdown-title">PAYMENT BREAKDOWN</span>
+                    </div>
 
-                  <div className="co-breakdown-row">
-                    <span className="co-breakdown-label">Discount (0%)</span>
-                    <span className="co-breakdown-val">{formatPrice(discount)}</span>
-                  </div>
-                </div>
+                    <div className="co-breakdown-body">
+                      <div className="co-breakdown-row">
+                        <span className="co-breakdown-label">Items Subtotal</span>
+                        <span className="co-breakdown-val">{formatPrice(subtotal)}</span>
+                      </div>
 
-                {/* Shipping Fee Notice */}
-                <div className="co-shipping-notice">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: '0.2rem' }}>
-                    <circle cx="12" cy="12" r="10" />
-                    <line x1="12" y1="16" x2="12" y2="12" />
-                    <line x1="12" y1="8" x2="12.01" y2="8" />
-                  </svg>
-                  <span>
-                    Shipping fee is calculated by admin upon dispatch. When your order is shipped, you will receive an email containing the final total cost (product total + shipping fee).
-                  </span>
-                </div>
+                      <div className="co-breakdown-row">
+                        <span className="co-breakdown-label">Discount (0%)</span>
+                        <span className="co-breakdown-val">{formatPrice(discount)}</span>
+                      </div>
 
-                <div className="co-breakdown-total">
-                  <div className="co-total-left">
-                    <span className="co-total-label">Total Amount</span>
-                    <span className="co-total-subnote">Excluding shipping fee</span>
-                  </div>
-                  <div className="co-total-right">
-                    <span className="co-total-val">{formatPrice(total)}</span>
-                  </div>
-                </div>
+                    </div>
+
+                    <div className="co-breakdown-total">
+                      <div className="co-total-left">
+                        <span className="co-total-label">Total Amount</span>
+                      </div>
+                      <div className="co-total-right">
+                        <span className="co-total-val">{formatPrice(total)}</span>
+                      </div>
+                    </div>
+
+                    <p className="mt-[0.8rem] text-[1.25rem] leading-[1.5] text-red-600">
+                      Shipping fee is not included in this total. Our team will calculate it upon dispatch and email you the shipping fee.
+                    </p>
+                  </>
+                )}
               </div>
 
               {/* Payment methods */}
@@ -658,7 +617,6 @@ export function CheckoutPageContent() {
                 {(
                   [
                     { value: 'cod' as PaymentMethod, label: 'Cash on delivery' },
-                    { value: 'bank' as PaymentMethod, label: 'Direct bank transfer' },
                   ] as const
                 ).map(({ value, label }) => (
                   <label
@@ -682,17 +640,6 @@ export function CheckoutPageContent() {
                 ))}
               </div>
 
-              {/* Privacy text */}
-              <p className="co-privacy">
-                Your personal data will be used to process your order, support your
-                experience throughout this website, and for other purposes described in
-                our{' '}
-                <Link href="/pages/privacy-policy" className="co-link">
-                  privacy policy
-                </Link>
-                .
-              </p>
-
               {/* Terms checkbox */}
               <label className="co-terms">
                 <input
@@ -703,7 +650,16 @@ export function CheckoutPageContent() {
                 />
                 <span>
                   I have read and agree to the website{' '}
-                  <Link href="#" className="co-link">terms and conditions</Link>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setShowTermsModal(true);
+                    }}
+                    className="co-link underline bg-transparent border-none p-0 inline font-inherit text-[#c96742] hover:text-[#a84e2c] cursor-pointer font-medium"
+                  >
+                    terms and conditions
+                  </button>
                 </span>
               </label>
 
@@ -762,6 +718,64 @@ export function CheckoutPageContent() {
         </div>
       )}
 
+      {/* ── Terms and Conditions Interactive Modal ── */}
+      {showTermsModal && (
+        <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-[3px] flex items-center justify-center p-[16px] animate-fadeIn">
+          <div className="bg-white rounded-[14px] shadow-2xl max-w-[640px] w-full max-h-[85vh] flex flex-col overflow-hidden border border-gray-200">
+            {/* Modal Header */}
+            <div className="p-[16px_22px] border-b border-gray-100 flex items-center justify-between shrink-0 bg-[#f8fafc]">
+              <div>
+                <h3 className="text-[18px] sm:text-[20px] font-bold text-gray-900 m-0">Terms and Conditions</h3>
+                <p className="text-[12px] text-gray-500 m-0 mt-[2px]">Last Updated: {TERMS_LAST_UPDATED}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowTermsModal(false)}
+                className="w-[32px] h-[32px] rounded-full bg-gray-200/70 hover:bg-gray-300 text-gray-700 flex items-center justify-center cursor-pointer border-none transition-colors text-[16px]"
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-[20px_22px] overflow-y-auto text-[14px] leading-[1.7] text-gray-700">
+              <TermsAndConditionsContent variant="modal" />
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-[14px_22px] border-t border-gray-100 flex items-center justify-between shrink-0 bg-gray-50">
+              <Link
+                href="/pages/terms-of-service"
+                target="_blank"
+                className="text-[13px] text-gray-600 hover:text-gray-900 underline"
+              >
+                Open full page &rarr;
+              </Link>
+              <div className="flex items-center gap-[10px]">
+                <button
+                  type="button"
+                  onClick={() => setShowTermsModal(false)}
+                  className="px-[16px] py-[8px] rounded-[6px] border border-gray-300 text-gray-700 hover:bg-gray-100 text-[13px] font-semibold cursor-pointer"
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAgreeTerms(true);
+                    setShowTermsModal(false);
+                  }}
+                  className="px-[20px] py-[8px] rounded-[6px] bg-[#111111] hover:bg-[#c96742] text-white text-[13px] font-semibold cursor-pointer transition-colors shadow-sm"
+                >
+                  I Agree
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <style>{coStyles}</style>
     </>
   );
@@ -772,15 +786,7 @@ export function CheckoutPageContent() {
 const coStyles = `
   /* ── Hero ── */
   .co-hero {
-    background: linear-gradient(135deg, #ffffff 0%, #fdf4f0 50%, #fde8df 100%);
-    padding: 2.2rem 0;
-    text-align: center;
-  }
-  .co-hero-title {
-    font-size: 2.6rem;
-    font-weight: 500;
-    color: var(--color-heading);
-    letter-spacing: 0.01em;
+    display: none;
   }
 
   /* ── Two-column layout (50/50 Equal Width & Equal Height) ── */
@@ -1053,19 +1059,6 @@ const coStyles = `
   .co-val-discount {
     color: #059669 !important;
     font-weight: 700;
-  }
-  .co-shipping-notice {
-    margin: 1.1rem 0;
-    padding: 1rem 1.2rem;
-    background-color: #fffbeb;
-    border: 1px solid #fde68a;
-    border-radius: 0.8rem;
-    display: flex;
-    align-items: flex-start;
-    gap: 0.8rem;
-    font-size: 1.2rem;
-    color: #92400e;
-    line-height: 1.45;
   }
   .co-breakdown-total {
     display: flex;

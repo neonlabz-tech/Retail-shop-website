@@ -73,8 +73,9 @@ function CountdownTimer() {
 }
 
 export function PodDealBanner() {
-  const { data } = useProducts({ limit: 12, sale: true }, { endpoint: '/api/pod-products' });
-  const allProducts = data?.products && data.products.length > 0 ? data.products : [];
+  const { data } = useProducts({ limit: 12, sale: true, availability: 'in-stock' }, { endpoint: '/api/pod-products' });
+  const allProducts = (data?.products && data.products.length > 0 ? data.products : [])
+    .filter((p) => p.availability !== 'out-of-stock' && (typeof p.stock !== 'number' || p.stock > 0));
 
   // Filter and prioritize actual original products on sale
   const saleProducts = allProducts.filter(
@@ -104,7 +105,7 @@ export function PodDealBanner() {
   return (
     <section>
       <div className="container-main">
-        <div className="pddb-panel bg-[linear-gradient(135deg,#0b1c3d_0%,#112d62_55%,#183e84_100%)] rounded-[14px] py-[24px] px-[16px] min-[480px]:px-[20px] shadow-[0_10px_30px_rgba(11,28,61,0.16)] min-[992px]:h-[190px] min-[992px]:flex min-[992px]:items-center min-[992px]:py-0 min-[992px]:px-[clamp(28px,3.4vw,48px)]">
+        <div className="pddb-panel bg-[linear-gradient(135deg,#0b1c3d_0%,#112d62_55%,#183e84_100%)] rounded-[14px] py-[18px] px-[16px] min-[480px]:py-[22px] min-[480px]:px-[20px] shadow-[0_10px_30px_rgba(11,28,61,0.16)] min-[992px]:h-[190px] min-[992px]:flex min-[992px]:items-center min-[992px]:py-0 min-[992px]:px-[clamp(28px,3.4vw,48px)]">
           <div className="pddb-grid w-full flex flex-col items-center text-center gap-[clamp(20px,3vw,32px)] min-[992px]:flex-row min-[992px]:items-center min-[992px]:justify-between min-[992px]:text-left min-[992px]:gap-[clamp(28px,3.4vw,48px)]">
             <div className="pddb-left w-full flex flex-col items-center gap-[clamp(20px,3vw,32px)] min-[992px]:flex-row min-[992px]:items-center min-[992px]:w-auto min-[992px]:gap-[clamp(20px,2.4vw,32px)]">
               <div className="pddb-thumbs grid grid-cols-3 w-full gap-[10px] min-[480px]:gap-[14px] min-[992px]:flex min-[992px]:w-auto min-[992px]:gap-[16px]">

@@ -16,57 +16,27 @@ function IconArrowRightS({ size = 22 }: { size?: number }) {
   return (<svg viewBox="0 0 24 24" fill="currentColor" width={size} height={size}><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z" /></svg>);
 }
 
-/* =========================================================================
-   PREVIOUS 3-CARD HERO IMPLEMENTATION (COMMENTED OUT AS REQUESTED)
-   To restore the 3-card dynamic popular products slider, re-enable this block
-   and restore the activeSlides Swiper markup below.
-   =========================================================================
-
-import { useProducts } from '@/features/products/hooks/useProducts';
-
-const ambientSlidesMeta = [
-  {
-    bgGradient: 'linear-gradient(150deg, #e8ebf0 0%, #dce1e9 50%, #d0d7e3 100%)',
-    badge: '🔥 #1 BEST SELLER',
-    tagline: 'Most loved by our customers',
-  },
-  {
-    bgGradient: 'linear-gradient(150deg, #e5e8ed 0%, #d7dce4 50%, #cad1dd 100%)',
-    badge: '⭐ TOP TRENDING',
-    tagline: 'Hot selling this week',
-  },
-  {
-    bgGradient: 'linear-gradient(150deg, #e9ecf2 0%, #dde2eb 50%, #d2d9e4 100%)',
-    badge: '✨ CUSTOMER FAVORITE',
-    tagline: 'Handpicked top recommendation',
-  },
-  {
-    bgGradient: 'linear-gradient(150deg, #e3e7ee 0%, #d5dbe4 50%, #c7cfdc 100%)',
-    badge: '💥 POPULAR CHOICE',
-    tagline: 'Fast moving customer pick',
-  },
-];
-========================================================================= */
-
 // Active slim landscape banner slides
 const wideBannerSlides = [
   {
-    id: 'banner-luxury-dining',
-    title: 'Top Rated by Customers - Luxury Dining & Home Comfort',
-    image: '/pod/hero-slider/banner-luxury-dining.jpg',
+    id: 'banner-toys-games',
+    title: 'Toys & Games - Fun for Every Little Adventure',
+    image: '/pod/hero-slider/banner-toys-games.png',
+    href: '/products?category=Toys%20%26%20Games',
+  },
+
+  {
+    id: 'banner-home-party-essentials',
+    title: 'Home & Party Essentials - Ladders, Storage Racks, Stools, Dinner Sets & More',
+    image: '/pod/hero-slider/banner-home-party-essentials.png',
     href: '/products',
   },
+
   {
-    id: 'banner-festive-party',
-    title: 'Party & Entertainment - Festive Party & Fun Collection',
-    image: '/pod/hero-slider/banner-festive-party.jpg',
-    href: '/products',
-  },
-  {
-    id: 'banner-mega-deals',
-    title: 'Exclusive Promotion - Mega Deals & Weekly Discounts',
-    image: '/pod/hero-slider/banner-mega-deals.jpg',
-    href: '/products',
+    id: 'banner-home-kitchen',
+    title: 'Home & Kitchen - Smart Essentials for Stylish Living',
+    image: '/pod/hero-slider/banner-home-kitchen.png',
+    href: '/products?category=Home%20%26%20Living',
   },
 ];
 
@@ -102,7 +72,7 @@ export function PodHero() {
   ========================================================================= */
 
   return (
-    <section className="pdhero-section pt-[12px] min-[750px]:pt-[20px]">
+    <section className="pdhero-section pt-0">
       <div className="container-main">
         <div className="pdhero-wrapper group relative">
           <Swiper
@@ -128,9 +98,10 @@ export function PodHero() {
                       src={slide.image}
                       alt={slide.title}
                       fill
-                      sizes="(max-width: 749px) 100vw, 1530px"
+                      sizes="100vw"
                       priority={i === 0}
-                      className="pdhero-banner-img object-cover object-center"
+                      unoptimized
+                      className="pdhero-banner-img object-contain object-center"
                     />
                   </Link>
                 </div>
@@ -138,36 +109,39 @@ export function PodHero() {
             ))}
           </Swiper>
 
-          {/* Navigation Arrows — Hidden by default, smoothly appear when mouse hovers over banner */}
-          <button
-            type="button"
-            onClick={() => swiper?.slidePrev()}
-            aria-label="Previous banner"
-            className="pdhero-nav pdhero-nav-prev"
-          >
-            <IconArrowLeftS size={24} />
-          </button>
-          <button
-            type="button"
-            onClick={() => swiper?.slideNext()}
-            aria-label="Next banner"
-            className="pdhero-nav pdhero-nav-next"
-          >
-            <IconArrowRightS size={24} />
-          </button>
-
-          {/* Pagination Dots (Active dot expands into a pill) */}
-          <div className="pdhero-dots">
-            {wideBannerSlides.map((_, i) => (
+          {/* Navigation Arrows & Pagination Dots — Shown when there is more than 1 banner */}
+          {wideBannerSlides.length > 1 && (
+            <>
               <button
-                key={i}
                 type="button"
-                onClick={() => swiper?.slideToLoop(i)}
-                aria-label={`Go to slide ${i + 1}`}
-                className={`pdhero-dot ${activeIndex === i ? 'active' : ''}`}
-              />
-            ))}
-          </div>
+                onClick={() => swiper?.slidePrev()}
+                aria-label="Previous banner"
+                className="pdhero-nav pdhero-nav-prev"
+              >
+                <IconArrowLeftS size={24} />
+              </button>
+              <button
+                type="button"
+                onClick={() => swiper?.slideNext()}
+                aria-label="Next banner"
+                className="pdhero-nav pdhero-nav-next"
+              >
+                <IconArrowRightS size={24} />
+              </button>
+
+              <div className="pdhero-dots">
+                {wideBannerSlides.map((_, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => swiper?.slideToLoop(i)}
+                    aria-label={`Go to slide ${i + 1}`}
+                    className={`pdhero-dot ${activeIndex === i ? 'active' : ''}`}
+                  />
+                ))}
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -183,25 +157,14 @@ export function PodHero() {
           width: 100%;
         }
 
-        /* Standard Daraz-style banner height matching your highlighted size */
+        /* Exact aspect-ratio matching the banner dimensions perfectly with zero crop */
         .pdhero-slide {
           position: relative;
           width: 100%;
-          height: 344px;
-          background-color: #0b1a38;
+          aspect-ratio: 2609 / 602 !important;
+          height: auto !important;
+          background-color: #ffffff;
           overflow: hidden;
-        }
-
-        @media (min-width: 1200px) {
-          .pdhero-slide {
-            height: 344px;
-          }
-        }
-
-        @media (min-width: 750px) and (max-width: 1199px) {
-          .pdhero-slide {
-            height: clamp(240px, 28vw, 320px);
-          }
         }
 
 
@@ -285,11 +248,11 @@ export function PodHero() {
           box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
         }
 
-        /* Mobile Responsive — Exact 1024 / 287 aspect-ratio prevents cropping */
+        /* Mobile Responsive — Exact aspect-ratio prevents cropping */
         @media (max-width: 749px) {
           .pdhero-slide {
             height: auto !important;
-            aspect-ratio: 1024 / 287 !important;
+            aspect-ratio: 2609 / 602 !important;
             border-radius: 10px;
           }
           .pdhero-nav {

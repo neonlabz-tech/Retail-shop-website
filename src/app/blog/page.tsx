@@ -1,7 +1,0 @@
-import { BlogPageContent } from '@/features/blog/components/BlogPageContent';
-
-export const metadata = { title: 'Blog' };
-
-export default function BlogPage() {
-  return <BlogPageContent />;
-}

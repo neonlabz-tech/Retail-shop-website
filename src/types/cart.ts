@@ -11,4 +11,5 @@ export interface CartItem {
   quantity: number;
   vendor: string;
   weight?: number;
+  stock?: number;
 }

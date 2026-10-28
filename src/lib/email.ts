@@ -519,6 +519,16 @@ export const emailTemplates = {
     let reviewBlock = '';
     if (safeStatus === 'delivered') {
       const siteOrigin = process.env.NEXT_PUBLIC_APP_URL || 'https://rkfdistributors.lk';
+      const fallbackItem = pricing?.items?.[0];
+      const fallbackProductKey =
+        fallbackItem?.slug ||
+        fallbackItem?.product?.slug ||
+        fallbackItem?.productId ||
+        fallbackItem?.product?._id?.toString?.() ||
+        fallbackItem?.name;
+      const fallbackReviewUrl = fallbackProductKey
+        ? `${siteOrigin}/products/${encodeURIComponent(String(fallbackProductKey))}?writeReview=true&orderNumber=${encodeURIComponent(orderNumber)}#reviews`
+        : null;
       const itemsListHtml = (reviewItems && reviewItems.length > 0)
         ? reviewItems.map((item) => {
             const rawUrl = item.reviewUrl || '';
@@ -544,9 +554,9 @@ export const emailTemplates = {
           }).join('')
         : `
           <div style="margin-top: 14px;">
-            <a href="${siteOrigin}/profile" target="_blank" style="display: inline-block; background-color: #c96742; color: #ffffff; font-size: 14px; font-weight: 600; text-decoration: none; padding: 12px 28px; border-radius: 8px; box-shadow: 0 3px 6px rgba(201, 103, 66, 0.2);">
-              Leave a Review &rarr;
-            </a>
+            ${fallbackReviewUrl
+              ? `<a href="${escapeHtml(fallbackReviewUrl)}" target="_blank" style="display: inline-block; background-color: #c96742; color: #ffffff; font-size: 14px; font-weight: 600; text-decoration: none; padding: 12px 28px; border-radius: 8px; box-shadow: 0 3px 6px rgba(201, 103, 66, 0.2);">Leave a Review &rarr;</a>`
+              : '<span style="color: #4b5563; font-size: 13px;">Visit the product page to leave your review.</span>'}
           </div>
         `;
 
