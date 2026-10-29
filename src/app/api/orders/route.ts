@@ -7,9 +7,11 @@ import { Notification } from '@/models/Notification';
 import Product from '@/models/Product';
 import { verifyToken, AUTH_COOKIE_NAME } from '@/lib/auth';
 import { generateNextOrderNumber } from '@/lib/orderNumber';
-import { calculateShippingFee, parseWeightInGrams } from '@/utils/weight';
+import { parseWeightInGrams } from '@/utils/weight';
 import { getStorefrontOfProductId, getStorefrontOfSlug, productHrefBaseFor } from '@/utils/storefront';
 import { FALLBACK_IMAGE_SRC, normalizeImageSrc } from '@/lib/imageFallback';
+import { sendEmail, emailTemplates } from '@/lib/email';
+import { formatPrice } from '@/utils/formatPrice';
 
 async function resolveOrderItemImage(item: IOrderItem): Promise<string> {
   const embeddedProduct =
@@ -204,7 +206,6 @@ export async function POST(request: NextRequest) {
       items = [],
       subtotal = 0,
       discount = 0,
-      shippingFee = 350,
       tax = 0,
       total,
     } = body;
@@ -406,13 +407,18 @@ export async function POST(request: NextRequest) {
 
         totalOrderWeightGrams += itemWeight * qty;
 
+        const variantName = (item.variantName || '').trim();
         return {
           product: matchedProductDocId,
           productId: item.productId || (matchedProductDocId ? matchedProductDocId.toString() : ''),
+          variantId: item.variantId || '',
+          variantName: variantName,
           name: item.name || 'Product',
           slug: matchedProductSlug,
           image: item.image || '',
           sku: item.sku || '',
+          color: item.color || '',
+          size: item.size || '',
           price: Number(item.price) || 0,
           quantity: qty,
           subtotal: (Number(item.price) || 0) * qty,
@@ -431,11 +437,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Shipping fee: 500 when order exceeds 500g, default 350 for all orders (0 if cart is empty)
-    const calculatedShippingFee = calculateShippingFee(totalOrderWeightGrams, items.length);
-    const finalShippingFee = typeof shippingFee === 'number' && !isNaN(shippingFee) && shippingFee > 0
-      ? Number(shippingFee)
-      : calculatedShippingFee;
+    // Shipping is added by admin after dispatch, not at checkout.
+    const finalShippingFee = 0;
 
     // Tax is removed as requested
     const finalTax = 0;
@@ -540,15 +543,42 @@ export async function POST(request: NextRequest) {
           const currentStock = typeof productDoc.stock === 'number' ? productDoc.stock : 0;
           const newStock = Math.max(0, currentStock - qty);
 
-          await Product.updateOne(
-            { _id: productDoc._id },
-            {
-              $set: { stock: newStock },
-              $inc: { totalSold: qty },
-            }
-          );
+          const vName = (item.variantName || '').trim();
+          const vId = (item.variantId || '').trim();
+          let variantDeducted = false;
 
-          console.log(`[Inventory] Deducted ${qty} from "${productDoc.name}" (${productDoc.slug}). Stock: ${currentStock} -> ${newStock}, totalSold +${qty}`);
+          if (Array.isArray(productDoc.variants) && productDoc.variants.length > 0 && (vName || vId)) {
+            const vIndex = productDoc.variants.findIndex((v: any) =>
+              (vName && (v.name === vName || v.label === vName || v.size === vName)) ||
+              (vId && (v._id?.toString() === vId || v.id === vId))
+            );
+            if (vIndex >= 0) {
+              const vCurrentStock = typeof productDoc.variants[vIndex].stock === 'number' ? productDoc.variants[vIndex].stock : 0;
+              const vNewStock = Math.max(0, vCurrentStock - qty);
+              productDoc.variants[vIndex].stock = vNewStock;
+              variantDeducted = true;
+            }
+          }
+
+          if (variantDeducted) {
+            await Product.updateOne(
+              { _id: productDoc._id },
+              {
+                $set: { stock: newStock, variants: productDoc.variants },
+                $inc: { totalSold: qty },
+              }
+            );
+            console.log(`[Inventory] Deducted ${qty} from "${productDoc.name}" (${productDoc.slug}) variant "${item.variantName}". Stock: ${currentStock} -> ${newStock}, totalSold +${qty}`);
+          } else {
+            await Product.updateOne(
+              { _id: productDoc._id },
+              {
+                $set: { stock: newStock },
+                $inc: { totalSold: qty },
+              }
+            );
+            console.log(`[Inventory] Deducted ${qty} from "${productDoc.name}" (${productDoc.slug}). Stock: ${currentStock} -> ${newStock}, totalSold +${qty}`);
+          }
         } else {
           console.warn(`[Inventory] Product not found for stock deduction:`, {
             productId: item.productId,
@@ -563,6 +593,109 @@ export async function POST(request: NextRequest) {
 
     try {
       if (cleanEmail) {
+        const orderEmailData = {
+          orderNumber: order.orderNumber,
+          total: order.total,
+          subtotal: order.subtotal,
+          discount: order.discount,
+          shippingFee: order.shippingFee,
+          paymentMethod: order.paymentMethod,
+          customerSnapshot: {
+            name: fullName,
+            email: cleanEmail,
+            phone: phone.trim(),
+          },
+          shippingAddress: {
+            fullName,
+            line1: address.trim(),
+            city: city.trim(),
+            country: country.trim(),
+            phone: phone.trim(),
+          },
+          items: (order.items || []).map((item) => ({
+            name: item.name,
+            quantity: item.quantity,
+            price: item.price,
+            color: item.color,
+            size: item.size,
+          })),
+          createdAt: order.createdAt,
+        };
+
+        const customerEmailResult = await sendEmail({
+          to: cleanEmail,
+          subject: `Order Received & Processing: #${order.orderNumber.replace(/^#/, '')}`,
+          html: emailTemplates.orderConfirmation(orderEmailData),
+        });
+        if (!customerEmailResult.success) {
+          console.error('Failed to send order confirmation email:', customerEmailResult.error);
+        }
+
+        const recipientEmails = new Set<string>();
+
+        try {
+          const settings = await mongoose.connection.collection('settings').findOne();
+          if (
+            typeof settings?.storeEmail === 'string' &&
+            settings.storeEmail.includes('@') &&
+            !settings.storeEmail.endsWith('@example.com')
+          ) {
+            recipientEmails.add(settings.storeEmail.trim().toLowerCase());
+          }
+        } catch (settingsError) {
+          console.error('Failed to query store settings for admin email:', settingsError);
+        }
+
+        try {
+          const activeAdmins = await mongoose.connection
+            .collection('admins')
+            .find({
+              isActive: { $ne: false },
+              role: { $in: ['super_admin', 'admin', 'order_manager'] },
+            })
+            .project({ email: 1 })
+            .toArray();
+
+          for (const admin of activeAdmins) {
+            if (
+              typeof admin.email === 'string' &&
+              admin.email.includes('@') &&
+              !admin.email.endsWith('@example.com')
+            ) {
+              recipientEmails.add(admin.email.trim().toLowerCase());
+            }
+          }
+        } catch (adminError) {
+          console.error('Failed to query admin users for order email:', adminError);
+        }
+
+        const configuredAdminEmail =
+          process.env.ADMIN_ORDER_NOTIFICATION_EMAIL || process.env.ADMIN_EMAIL;
+        if (
+          configuredAdminEmail &&
+          configuredAdminEmail.includes('@') &&
+          !configuredAdminEmail.endsWith('@example.com')
+        ) {
+          recipientEmails.add(configuredAdminEmail.trim().toLowerCase());
+        }
+
+        if (recipientEmails.size === 0) {
+          recipientEmails.add('thigamparanneonlabz@gmail.com');
+        }
+
+        const adminEmailResult = await sendEmail({
+          to: Array.from(recipientEmails),
+          subject: `New Order: #${order.orderNumber.replace(/^#/, '')} - ${fullName} (${formatPrice(order.total)})`,
+          html: emailTemplates.adminNewOrderNotification({
+            ...orderEmailData,
+            notes: typeof notes === 'string' ? notes.trim() : '',
+          }),
+          replyTo: cleanEmail,
+        });
+        if (!adminEmailResult.success) {
+          console.error('Failed to send admin order notification email:', adminEmailResult.error);
+        }
+
         await Notification.create({
           customer: customer?._id || undefined,
           customerEmail: cleanEmail,

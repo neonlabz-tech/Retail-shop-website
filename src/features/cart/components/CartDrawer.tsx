@@ -8,6 +8,7 @@ import { checkAuthOrRedirect } from '@/store/authStore';
 import { useCartStore } from '@/store/cartStore';
 import { formatPrice } from '@/utils/formatPrice';
 import { getStorefrontFromPath, getStorefrontOfSlug, productHrefBaseFor, shopHrefFor } from '@/utils/storefront';
+import { FALLBACK_IMAGE_SRC, handleImageError, normalizeImageSrc } from '@/lib/imageFallback';
 
 /* ── Icons ── */
 
@@ -191,11 +192,12 @@ export function CartDrawer() {
                     className="w-[72px] h-[84px] sm:w-[78px] sm:h-[90px] rounded-lg overflow-hidden bg-neutral-50 border border-neutral-100 shrink-0 relative block transition-transform group-hover:scale-[1.02]"
                   >
                     <Image
-                      src={item.image}
+                      src={normalizeImageSrc(item.image) || FALLBACK_IMAGE_SRC}
                       alt={item.name}
                       fill
                       className="object-cover"
                       sizes="(max-width: 640px) 72px, 78px"
+                      onError={handleImageError}
                     />
                   </Link>
 
@@ -220,8 +222,14 @@ export function CartDrawer() {
                         </button>
                       </div>
 
-                      {/* Color & Size badges if present */}
-                      {(hasColor || hasSize) && (
+                      {/* Variant name badge */}
+                      {item.variantName ? (
+                        <div className="flex items-center gap-[4px] mt-[3px]">
+                          <span className="bg-neutral-100 text-neutral-800 text-[1.15rem] font-medium px-[6px] py-[1px] rounded">
+                            Variant: {item.variantName}
+                          </span>
+                        </div>
+                      ) : (hasColor || hasSize) ? (
                         <div className="flex flex-wrap items-center gap-[4px] mt-[3px] text-[1.15rem] text-neutral-500">
                           {hasColor && (
                             <span className="bg-neutral-100 text-neutral-700 px-[6px] py-[1px] rounded font-medium">
@@ -234,7 +242,7 @@ export function CartDrawer() {
                             </span>
                           )}
                         </div>
-                      )}
+                      ) : null}
 
                       {/* Price */}
                       <div className="mt-[4px]">

@@ -151,6 +151,11 @@ export function HomeProductCard({
   const hasScrollText = showScrollText ?? false;
   const productHref = `${hrefBase}/${product.slug}`;
   const isOutOfStock = product.availability === 'out-of-stock' || (typeof product.stock === 'number' && product.stock <= 0) || (product.variants?.[0] && product.variants[0].available === false);
+  const hasMultiplePrices = Array.isArray(product.variants) && product.variants.length > 1 &&
+    new Set(product.variants.map(v => v.price)).size > 1;
+  const lowestPrice = hasMultiplePrices
+    ? Math.min(...product.variants.map(v => v.price))
+    : product.price;
   const discount = product.compareAtPrice && product.compareAtPrice > product.price
     ? Math.round(((product.compareAtPrice - product.price) / product.compareAtPrice) * 100)
     : 0;
@@ -303,7 +308,7 @@ export function HomeProductCard({
             className="product-price-text text-[13px] min-[400px]:text-[14px] min-[750px]:text-[15px] font-bold text-[#e01117] leading-tight shrink-0"
             style={{ color: isOutOfStock ? '#94a3b8' : priceColor }}
           >
-            {formatPrice(product.price)}
+            {hasMultiplePrices ? `From ${formatPrice(lowestPrice)}` : formatPrice(product.price)}
           </span>
           {!isOutOfStock && product.compareAtPrice && product.compareAtPrice > product.price ? (
             <div className="flex items-center min-[750px]:items-baseline gap-[5px] mt-[2px] min-[750px]:mt-0">

@@ -68,6 +68,9 @@ export function LoginPageContent() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [redirectPath, setRedirectPath] = useState<string>('/');
+  const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
+  const [resendNotice, setResendNotice] = useState<string | null>(null);
+  const [isResending, setIsResending] = useState(false);
 
   // Read redirect query parameter
   useEffect(() => {
@@ -83,6 +86,8 @@ export function LoginPageContent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setUnverifiedEmail(null);
+    setResendNotice(null);
     setIsLoading(true);
 
     try {
@@ -97,6 +102,9 @@ export function LoginPageContent() {
       const data = await res.json();
 
       if (!res.ok || !data.success) {
+        if (data.requiresVerification) {
+          setUnverifiedEmail(data.email || email);
+        }
         setError(data.error || 'Invalid email or password');
         setIsLoading(false);
         return;
@@ -110,6 +118,31 @@ export function LoginPageContent() {
     } catch {
       setError('A network error occurred. Please try again.');
       setIsLoading(false);
+    }
+  };
+
+  const handleResendActivation = async () => {
+    const targetEmail = unverifiedEmail || email;
+    if (!targetEmail) return;
+    setIsResending(true);
+    setResendNotice(null);
+
+    try {
+      const res = await fetch('/api/auth/activate/resend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: targetEmail }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setResendNotice(data.message || 'Activation email sent! Please check your inbox.');
+      } else {
+        setResendNotice(data.error || 'Failed to resend activation email.');
+      }
+    } catch {
+      setResendNotice('Failed to send request. Please try again.');
+    } finally {
+      setIsResending(false);
     }
   };
 
@@ -131,13 +164,34 @@ export function LoginPageContent() {
           </div>
 
           {error && (
-            <div className="bg-[#fef2f2] border border-[#fee2e2] text-[#991b1b] p-[0.9rem_1.2rem] rounded-[0.8rem] text-[1.25rem] mb-[1.4rem] flex items-center gap-[0.8rem] leading-[1.4]" role="alert">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
-                <circle cx="12" cy="12" r="10" />
-                <line x1="12" y1="8" x2="12" y2="12" />
-                <line x1="12" y1="16" x2="12.01" y2="16" />
-              </svg>
-              <span>{error}</span>
+            <div className="bg-[#fef2f2] border border-[#fee2e2] text-[#991b1b] p-[1.1rem_1.3rem] rounded-[0.8rem] text-[1.25rem] mb-[1.4rem] flex flex-col gap-[0.8rem] leading-[1.4]" role="alert">
+              <div className="flex items-center gap-[0.8rem]">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="8" x2="12" y2="12" />
+                  <line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>
+                <span>{error}</span>
+              </div>
+              {unverifiedEmail && (
+                <div className="pt-[0.6rem] border-t border-[#fee2e2] flex items-center justify-between">
+                  <span className="text-[1.2rem] text-[#7f1d1d]">Didn&apos;t receive the email?</span>
+                  <button
+                    type="button"
+                    onClick={handleResendActivation}
+                    disabled={isResending}
+                    className="text-[1.2rem] font-bold text-[#c96742] hover:underline cursor-pointer disabled:opacity-60"
+                  >
+                    {isResending ? 'Sending...' : 'Resend link'}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {resendNotice && (
+            <div className="bg-[#f0fdf4] border border-[#dcfce7] text-[#166534] p-[0.9rem_1.2rem] rounded-[0.8rem] text-[1.25rem] mb-[1.4rem] leading-[1.4]">
+              {resendNotice}
             </div>
           )}
 

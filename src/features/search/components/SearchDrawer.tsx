@@ -3,13 +3,12 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 import { useUIStore } from '@/store/uiStore';
 import { useSearch } from '@/features/products/hooks/useSearch';
 import { useDebounce } from '@/hooks/useDebounce';
 import { formatPrice } from '@/utils/formatPrice';
-import { POPULAR_SEARCHES, GROCERY_POPULAR_SEARCHES, PET_FOOD_POPULAR_SEARCHES, MEGASTORE_POPULAR_SEARCHES, PIZZA_POPULAR_SEARCHES, PLANT_GARDEN_POPULAR_SEARCHES, SKIN_CARE_POPULAR_SEARCHES, JEWELLERY_POPULAR_SEARCHES, PHONE_CASE_POPULAR_SEARCHES, SMART_WATCHES_POPULAR_SEARCHES, FOOTWEAR_POPULAR_SEARCHES } from '@/lib/constants';
-import { getStorefrontFromPath, productHrefBaseFor, shopHrefFor } from '@/utils/storefront';
+import { POPULAR_SEARCHES } from '@/lib/constants';
+import { FALLBACK_IMAGE_SRC, handleImageError, normalizeImageSrc } from '@/lib/imageFallback';
 
 function IconSearch({ size = 20 }: { size?: number }) {
   return (
@@ -38,9 +37,7 @@ function IconArrowRight({ size = 18 }: { size?: number }) {
 
 export function SearchDrawer() {
   const { searchOpen, closeSearch } = useUIStore();
-  const pathname = usePathname();
-  const storefront = getStorefrontFromPath(pathname);
-  const searchEndpoint = '/api/pod-search';
+  const searchEndpoint = '/api/search';
   const productHrefBase = '/products';
   const shopHref = '/shop';
   const popularTerms = POPULAR_SEARCHES;
@@ -148,7 +145,14 @@ export function SearchDrawer() {
                     className="search-product-item flex items-center gap-[16px] py-[14px] px-0 border-b border-[#f0f0f0] no-underline text-inherit"
                   >
                     <div className="w-[60px] h-[70px] rounded-[4px] overflow-hidden bg-[#f5f5f5] shrink-0 relative">
-                      <Image src={product.images[0]?.src || ''} alt={product.name} fill className="object-cover" sizes="60px" />
+                      <Image
+                        src={normalizeImageSrc(product.images[0]?.src) || FALLBACK_IMAGE_SRC}
+                        alt={product.name}
+                        fill
+                        className="object-cover"
+                        sizes="60px"
+                        onError={handleImageError}
+                      />
                     </div>
                     <div>
                       <p className="text-[16px] font-semibold text-[#222] mb-[5px]">
@@ -221,7 +225,14 @@ export function SearchDrawer() {
                     className="search-product-item flex items-center gap-[16px] py-[14px] px-0 border-b border-[#f0f0f0] no-underline text-inherit"
                   >
                     <div className="w-[60px] h-[70px] rounded-[4px] overflow-hidden bg-[#f5f5f5] shrink-0 relative">
-                      <Image src={product.images[0]?.src || ''} alt={product.name} fill className="object-cover" sizes="60px" />
+                      <Image
+                        src={normalizeImageSrc(product.images[0]?.src) || FALLBACK_IMAGE_SRC}
+                        alt={product.name}
+                        fill
+                        className="object-cover"
+                        sizes="60px"
+                        onError={handleImageError}
+                      />
                     </div>
                     <div>
                       <p className="text-[12px] font-semibold text-[#888] tracking-[1.5px] uppercase mb-[4px]">

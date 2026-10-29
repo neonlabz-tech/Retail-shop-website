@@ -6,7 +6,6 @@ import { useState, useEffect } from 'react';
 import { useCartStore } from '@/store/cartStore';
 import { useAuthStore, checkAuthOrRedirect, isUserAuthenticated } from '@/store/authStore';
 import { formatPrice } from '@/utils/formatPrice';
-import { calculateShippingFee, parseWeightInGrams } from '@/utils/weight';
 import { TermsAndConditionsContent } from '@/components/shared/TermsAndConditionsContent';
 import { TERMS_LAST_UPDATED } from '@/data/termsAndConditions';
 
@@ -29,7 +28,6 @@ function IcoCheck() {
 
 export function CheckoutPageContent() {
   const [mounted, setMounted] = useState(false);
-  const [isCalculatingWeights, setIsCalculatingWeights] = useState(false);
   const router = useRouter();
   const { items, getSubtotal, clearCart } = useCartStore();
   const { user, isAuthenticated, checkAuth } = useAuthStore();
@@ -150,60 +148,15 @@ export function CheckoutPageContent() {
     }
   };
 
-  // Track dynamically fetched product weights if missing from cart store
-  const [productWeights, setProductWeights] = useState<Record<string, number>>({});
-
-  useEffect(() => {
-    const missing = items.filter((i) => typeof i.weight !== 'number');
-    if (missing.length === 0) {
-      setIsCalculatingWeights(false);
-      return;
-    }
-
-    setIsCalculatingWeights(true);
-    let active = true;
-
-    Promise.all(
-      missing.map(async (item) => {
-        try {
-          const idOrSlug = item.productId || item.slug;
-          if (!idOrSlug) return;
-          const res = await fetch(`/api/products/${encodeURIComponent(idOrSlug)}`);
-          if (!res.ok) return;
-          const data = await res.json();
-          const w = data.product ? parseWeightInGrams(data.product) : 0;
-          if (w > 0 && active) {
-            setProductWeights((prev) => ({ ...prev, [item.productId || item.slug]: w }));
-          }
-        } catch {}
-      })
-    ).finally(() => {
-      if (active) setIsCalculatingWeights(false);
-    });
-
-    return () => {
-      active = false;
-    };
-  }, [items]);
-
   const subtotal = getSubtotal();
 
-  // Calculate total order weight in grams
-  const totalWeight = items.reduce((sum, item) => {
-    const itemWeight = typeof item.weight === 'number' && item.weight > 0
-      ? item.weight
-      : (productWeights[item.productId || item.slug] || 0);
-    return sum + itemWeight * (Number(item.quantity) || 1);
-  }, 0);
-
-  // Shipping fee: default 350 for all; 500 when order exceeds 500g (0 if cart is empty)
-  const shippingFee = calculateShippingFee(totalWeight, items.length);
+  const shippingFee = 0;
 
   // Tax removed as requested
   const tax = 0;
   const DISCOUNT_RATE = 0.0;
   const discount = Math.round(subtotal * DISCOUNT_RATE);
-  const total = Math.max(0, subtotal - discount + shippingFee);
+  const total = Math.max(0, subtotal - discount);
 
   const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -275,7 +228,20 @@ export function CheckoutPageContent() {
           email: email.trim(),
           notes: notes.trim(),
           paymentMethod,
-          items,
+          items: items.map((i) => ({
+            productId: i.productId,
+            variantId: i.variantId,
+            variantName: i.variantName || '',
+            name: i.name,
+            slug: i.slug,
+            image: i.image,
+            color: i.color,
+            size: i.size,
+            price: i.price,
+            quantity: i.quantity,
+            weight: i.weight,
+            stock: i.stock,
+          })),
           subtotal,
           discount,
           shippingFee,
@@ -394,10 +360,6 @@ export function CheckoutPageContent() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.6rem', color: '#4b5563' }}>
                     <span>Discount (0%):</span>
                     <span>{formatPrice(orderSuccess.discount)}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.8rem', color: '#4b5563' }}>
-                    <span>Shipping Fee:</span>
-                    <span>{formatPrice(orderSuccess.shippingFee)}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '0.8rem', borderTop: '1px dashed #d1d5db', fontSize: '1.6rem', fontWeight: 700, color: '#111827' }}>
                     <span>Total Amount:</span>
@@ -645,27 +607,20 @@ export function CheckoutPageContent() {
                         <span className="co-breakdown-val">{formatPrice(discount)}</span>
                       </div>
 
-                      <div className="co-breakdown-row">
-                        <span className="co-breakdown-label">Shipping Fee</span>
-                        <span className="co-breakdown-val">
-                          {isCalculatingWeights ? (
-                            <span className="inline-block animate-shimmer w-[60px] h-[16px] rounded-[4px] align-middle" />
-                          ) : (
-                            formatPrice(shippingFee)
-                          )}
-                        </span>
-                      </div>
                     </div>
 
                     <div className="co-breakdown-total">
                       <div className="co-total-left">
                         <span className="co-total-label">Total Amount</span>
-                        <span className="co-total-subnote">Shipping fee included</span>
                       </div>
                       <div className="co-total-right">
                         <span className="co-total-val">{formatPrice(total)}</span>
                       </div>
                     </div>
+
+                    <p className="mt-[0.8rem] text-[1.25rem] leading-[1.5] text-red-600">
+                      Shipping fee is not included in this total. Our team will calculate it upon dispatch and email you the shipping fee.
+                    </p>
                   </>
                 )}
               </div>

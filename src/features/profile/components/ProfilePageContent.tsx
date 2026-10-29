@@ -1666,12 +1666,21 @@ export function ProfilePageContent() {
                           <div className="flex justify-between text-slate-600">
                             <span>Shipping Fee:</span>
                             <span className="font-semibold text-slate-900">
-                              {selectedTrackOrder.shippingFee === 0 ? 'Complimentary' : formatPrice(selectedTrackOrder.shippingFee)}
+                              {selectedTrackOrder.shippingFee > 0
+                                ? formatPrice(selectedTrackOrder.shippingFee)
+                                : ['processing', 'pending', 'confirmed'].includes(selectedTrackOrder.status)
+                                ? 'Calculated by Admin'
+                                : 'Complimentary'}
                             </span>
                           </div>
                           <div className="h-[1px] bg-slate-200 my-[0.8rem]" />
-                          <div className="flex justify-between text-[1.5rem] font-bold text-slate-900">
-                            <span>Grand Total:</span>
+                          <div className="flex justify-between items-baseline text-[1.5rem] font-bold text-slate-900">
+                            <div>
+                              <span>Grand Total:</span>
+                              {selectedTrackOrder.shippingFee === 0 && ['processing', 'pending', 'confirmed'].includes(selectedTrackOrder.status) && (
+                                <span className="block text-[1.1rem] font-normal text-slate-500">(Excl. delivery fee)</span>
+                              )}
+                            </div>
                             <span className="text-slate-900">{formatPrice(selectedTrackOrder.total)}</span>
                           </div>
                         </div>
@@ -1975,11 +1984,20 @@ export function ProfilePageContent() {
                                     <div className="flex justify-between">
                                       <span>Shipping Fee:</span>
                                       <span className="font-semibold text-slate-900">
-                                        {order.shippingFee === 0 ? 'Complimentary' : formatPrice(order.shippingFee)}
+                                        {order.shippingFee > 0
+                                          ? formatPrice(order.shippingFee)
+                                          : ['processing', 'pending', 'confirmed'].includes(order.status)
+                                          ? 'Calculated by Admin'
+                                          : 'Complimentary'}
                                       </span>
                                     </div>
-                                    <div className="flex justify-between font-bold text-slate-900 pt-[0.8rem] border-t border-slate-200 text-[1.45rem]">
-                                      <span>Grand Total:</span>
+                                    <div className="flex justify-between items-baseline font-bold text-slate-900 pt-[0.8rem] border-t border-slate-200 text-[1.45rem]">
+                                      <div>
+                                        <span>Grand Total:</span>
+                                        {order.shippingFee === 0 && ['processing', 'pending', 'confirmed'].includes(order.status) && (
+                                          <span className="block text-[1.1rem] font-normal text-slate-500">(Excl. delivery fee)</span>
+                                        )}
+                                      </div>
                                       <span>{formatPrice(order.total)}</span>
                                     </div>
                                   </div>
