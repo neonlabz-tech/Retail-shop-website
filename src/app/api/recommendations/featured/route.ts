@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     await connectDB();
 
     const baseFilter: Record<string, any> = {
-      status: { $ne: 'archived' },
+      status: 'active',
     };
 
     if (exclude && mongoose.Types.ObjectId.isValid(exclude)) {

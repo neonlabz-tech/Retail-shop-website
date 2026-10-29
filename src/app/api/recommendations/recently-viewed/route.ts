@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
       if (validObjectIds.length > 0) {
         const foundDocs = await ProductModel.find({
           _id: { $in: validObjectIds },
-          status: { $ne: 'archived' },
+          status: 'active',
           ...baseStockFilter,
         }).lean();
 
@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
           const excludeIds = orderedDocs.map((d) => d._id);
           const extraDocs = await ProductModel.find({
             _id: { $nin: excludeIds },
-            status: { $ne: 'archived' },
+            status: 'active',
             ...baseStockFilter,
           })
             .limit(limit - orderedDocs.length)
@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
 
     // Fallback if no history exists yet: provide trending products up to limit so the grid is full
     const fallbackDocs = await ProductModel.find({
-      status: { $ne: 'archived' },
+      status: 'active',
       ...baseStockFilter,
     })
       .limit(limit)

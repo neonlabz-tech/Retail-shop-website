@@ -30,17 +30,18 @@ export async function GET(
       orConditions.push({ _id: id });
     }
 
-    let mongoProduct = await Product.findOne({ $or: orConditions }).lean();
+    let mongoProduct = await Product.findOne({ status: 'active', $or: orConditions }).lean();
 
     if (!mongoProduct && !isMongoId) {
       const escaped = decodedId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/-/g, '[-–— ]');
       const flexibleRegex = new RegExp(`^${escaped}$`, 'i');
       mongoProduct = await Product.findOne({
+        status: 'active',
         $or: [{ slug: flexibleRegex }, { name: flexibleRegex }],
       }).lean();
     }
 
-    if (mongoProduct) {
+    if (mongoProduct && (mongoProduct as any).status === 'active') {
       const formatted = formatMongoProduct(mongoProduct);
       return NextResponse.json({ product: formatted });
     }

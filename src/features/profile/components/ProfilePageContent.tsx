@@ -319,6 +319,16 @@ export function ProfilePageContent() {
   const handleSaveProfile = async () => {
     setSavingProfile(true);
     setProfileError(null);
+
+    if (editPhone.trim()) {
+      const phoneRegex = /^(?:0\d{9}|\+\d{9,14}|[1-9]\d{8,9})$/;
+      if (!phoneRegex.test(editPhone.trim())) {
+        setProfileError('Please enter a valid phone number (e.g. 07XXXXXXXX).');
+        setSavingProfile(false);
+        return;
+      }
+    }
+
     try {
       const res = await fetch('/api/auth/me', {
         method: 'PATCH',
@@ -449,7 +459,7 @@ export function ProfilePageContent() {
               <span>/</span>
               <span className="text-slate-900 font-medium">Customer Account</span>
             </div>
-            
+
             <div className="flex items-center gap-[1.2rem] flex-wrap">
               <h1 className="text-[2.4rem] sm:text-[3rem] font-bold text-slate-900 tracking-tight">
                 Welcome back, {user.firstName || fullName.split(' ')[0]}
@@ -514,11 +524,10 @@ export function ProfilePageContent() {
               <button
                 type="button"
                 onClick={() => setActiveTab('track')}
-                className={`text-left p-[1.2rem_1rem] rounded-[1rem] border transition-all cursor-pointer group ${
-                  activeTab === 'track'
-                    ? 'bg-blue-50/60 border-blue-200 shadow-xs'
-                    : 'bg-slate-50/80 hover:bg-slate-100/80 border-slate-200/70'
-                }`}
+                className={`text-left p-[1.2rem_1rem] rounded-[1rem] border transition-all cursor-pointer group ${activeTab === 'track'
+                  ? 'bg-blue-50/60 border-blue-200 shadow-xs'
+                  : 'bg-slate-50/80 hover:bg-slate-100/80 border-slate-200/70'
+                  }`}
               >
                 <div className="flex items-center justify-between text-slate-500 mb-[0.4rem]">
                   <span className="text-[1.15rem] font-semibold group-hover:text-slate-900 transition-colors">In Transit</span>
@@ -537,11 +546,10 @@ export function ProfilePageContent() {
               <button
                 type="button"
                 onClick={() => setActiveTab('history')}
-                className={`text-left p-[1.2rem_1rem] rounded-[1rem] border transition-all cursor-pointer group ${
-                  activeTab === 'history'
-                    ? 'bg-emerald-50/60 border-emerald-200 shadow-xs'
-                    : 'bg-slate-50/80 hover:bg-slate-100/80 border-slate-200/70'
-                }`}
+                className={`text-left p-[1.2rem_1rem] rounded-[1rem] border transition-all cursor-pointer group ${activeTab === 'history'
+                  ? 'bg-emerald-50/60 border-emerald-200 shadow-xs'
+                  : 'bg-slate-50/80 hover:bg-slate-100/80 border-slate-200/70'
+                  }`}
               >
                 <div className="flex items-center justify-between text-slate-500 mb-[0.4rem]">
                   <span className="text-[1.15rem] font-semibold group-hover:text-slate-900 transition-colors">Delivered</span>
@@ -601,11 +609,10 @@ export function ProfilePageContent() {
               <button
                 type="button"
                 onClick={() => setActiveTab('overview')}
-                className={`py-[0.9rem] px-[1.6rem] rounded-[0.8rem] text-[1.35rem] font-semibold transition-all cursor-pointer whitespace-nowrap flex items-center gap-[0.7rem] ${
-                  activeTab === 'overview'
-                    ? 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/50 border border-transparent'
-                }`}
+                className={`py-[0.9rem] px-[1.6rem] rounded-[0.8rem] text-[1.35rem] font-semibold transition-all cursor-pointer whitespace-nowrap flex items-center gap-[0.7rem] ${activeTab === 'overview'
+                  ? 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/50 border border-transparent'
+                  }`}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
@@ -617,11 +624,10 @@ export function ProfilePageContent() {
               <button
                 type="button"
                 onClick={() => setActiveTab('track')}
-                className={`py-[0.9rem] px-[1.6rem] rounded-[0.8rem] text-[1.35rem] font-semibold transition-all cursor-pointer whitespace-nowrap flex items-center gap-[0.7rem] ${
-                  activeTab === 'track'
-                    ? 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/50 border border-transparent'
-                }`}
+                className={`py-[0.9rem] px-[1.6rem] rounded-[0.8rem] text-[1.35rem] font-semibold transition-all cursor-pointer whitespace-nowrap flex items-center gap-[0.7rem] ${activeTab === 'track'
+                  ? 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/50 border border-transparent'
+                  }`}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="1" y="3" width="15" height="13" />
@@ -641,11 +647,10 @@ export function ProfilePageContent() {
               <button
                 type="button"
                 onClick={() => setActiveTab('history')}
-                className={`py-[0.9rem] px-[1.6rem] rounded-[0.8rem] text-[1.35rem] font-semibold transition-all cursor-pointer whitespace-nowrap flex items-center gap-[0.7rem] ${
-                  activeTab === 'history'
-                    ? 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/50 border border-transparent'
-                }`}
+                className={`py-[0.9rem] px-[1.6rem] rounded-[0.8rem] text-[1.35rem] font-semibold transition-all cursor-pointer whitespace-nowrap flex items-center gap-[0.7rem] ${activeTab === 'history'
+                  ? 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/50 border border-transparent'
+                  }`}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
@@ -830,9 +835,26 @@ export function ProfilePageContent() {
                         <input
                           id="edit-phone"
                           type="tel"
+                          inputMode="tel"
                           value={editPhone}
-                          onChange={(e) => setEditPhone(e.target.value)}
-                          placeholder="e.g. 077 123 4567"
+                          onKeyDown={(e) => {
+                            if (
+                              e.key === 'Backspace' || e.key === 'Delete' || e.key === 'Tab' ||
+                              e.key === 'Escape' || e.key === 'Enter' || e.key.startsWith('Arrow') ||
+                              e.key === 'Home' || e.key === 'End' || e.ctrlKey || e.metaKey
+                            ) return;
+                            if (e.key === '+' && e.currentTarget.selectionStart === 0 && !e.currentTarget.value.includes('+')) return;
+                            if (!/^[0-9]$/.test(e.key)) e.preventDefault();
+                          }}
+                          onChange={(e) => {
+                            const raw = e.target.value;
+                            const startsWithPlus = raw.startsWith('+');
+                            const digits = raw.replace(/\D/g, '');
+                            const val = startsWithPlus ? `+${digits}` : digits;
+                            setEditPhone(val.slice(0, 13));
+                          }}
+                          placeholder="07XXXXXXXX"
+                          maxLength={13}
                           className="w-full bg-white border border-slate-300 rounded-[0.8rem] px-[1.2rem] py-[0.8rem] text-[1.45rem] font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
                         />
                       ) : (
@@ -939,11 +961,10 @@ export function ProfilePageContent() {
                                 key={lbl}
                                 type="button"
                                 onClick={() => setAddressForm((f) => ({ ...f, label: lbl }))}
-                                className={`px-[1.4rem] py-[0.6rem] rounded-full text-[1.25rem] font-semibold transition-all cursor-pointer ${
-                                  addressForm.label.toLowerCase() === lbl.toLowerCase()
-                                    ? 'bg-slate-900 text-white shadow-xs'
-                                    : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
-                                }`}
+                                className={`px-[1.4rem] py-[0.6rem] rounded-full text-[1.25rem] font-semibold transition-all cursor-pointer ${addressForm.label.toLowerCase() === lbl.toLowerCase()
+                                  ? 'bg-slate-900 text-white shadow-xs'
+                                  : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
+                                  }`}
                               >
                                 {lbl}
                               </button>
@@ -1097,11 +1118,10 @@ export function ProfilePageContent() {
                                         key={lbl}
                                         type="button"
                                         onClick={() => setAddressForm((f) => ({ ...f, label: lbl }))}
-                                        className={`px-[1.4rem] py-[0.6rem] rounded-full text-[1.25rem] font-semibold transition-all cursor-pointer ${
-                                          addressForm.label.toLowerCase() === lbl.toLowerCase()
-                                            ? 'bg-slate-900 text-white shadow-xs'
-                                            : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
-                                        }`}
+                                        className={`px-[1.4rem] py-[0.6rem] rounded-full text-[1.25rem] font-semibold transition-all cursor-pointer ${addressForm.label.toLowerCase() === lbl.toLowerCase()
+                                          ? 'bg-slate-900 text-white shadow-xs'
+                                          : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
+                                          }`}
                                       >
                                         {lbl}
                                       </button>
@@ -1225,11 +1245,10 @@ export function ProfilePageContent() {
                         return (
                           <div
                             key={idx}
-                            className={`border rounded-[1.2rem] p-[2rem_2.2rem] transition-all ${
-                              addr.isDefault
-                                ? 'bg-blue-50/20 border-blue-200 shadow-xs ring-1 ring-blue-100'
-                                : 'bg-slate-50/70 border-slate-200/80 hover:border-slate-300'
-                            }`}
+                            className={`border rounded-[1.2rem] p-[2rem_2.2rem] transition-all ${addr.isDefault
+                              ? 'bg-blue-50/20 border-blue-200 shadow-xs ring-1 ring-blue-100'
+                              : 'bg-slate-50/70 border-slate-200/80 hover:border-slate-300'
+                              }`}
                           >
                             <div className="flex items-center justify-between pb-[1.2rem] border-b border-slate-200/60 mb-[1.2rem] gap-[1rem] flex-wrap">
                               <div className="flex items-center gap-[0.8rem] flex-wrap">
@@ -1390,11 +1409,10 @@ export function ProfilePageContent() {
                               key={o._id}
                               type="button"
                               onClick={() => setSelectedTrackOrder(o)}
-                              className={`text-[1.2rem] px-[1.3rem] py-[0.55rem] rounded-full font-semibold transition-all cursor-pointer flex items-center gap-[0.6rem] ${
-                                isSelected
-                                  ? 'bg-slate-900 text-white shadow-xs'
-                                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200/80 border border-slate-200/60'
-                              }`}
+                              className={`text-[1.2rem] px-[1.3rem] py-[0.55rem] rounded-full font-semibold transition-all cursor-pointer flex items-center gap-[0.6rem] ${isSelected
+                                ? 'bg-slate-900 text-white shadow-xs'
+                                : 'bg-slate-100 text-slate-700 hover:bg-slate-200/80 border border-slate-200/60'
+                                }`}
                             >
                               <span className={`w-[0.65rem] h-[0.65rem] rounded-full ${isSelected ? 'bg-emerald-400' : 'bg-slate-400'}`} />
                               <span className="font-mono">#{o.orderNumber}</span>
@@ -1435,9 +1453,8 @@ export function ProfilePageContent() {
                             </svg>
                             <span>{copiedOrder ? 'Copied!' : 'Copy'}</span>
                           </button>
-                          <span className={`text-[1.15rem] font-bold px-[1.1rem] py-[0.3rem] rounded-full border uppercase tracking-wider flex items-center gap-[0.5rem] ${
-                            getStatusBadge(selectedTrackOrder.status).bg
-                          } ${getStatusBadge(selectedTrackOrder.status).text} ${getStatusBadge(selectedTrackOrder.status).border}`}>
+                          <span className={`text-[1.15rem] font-bold px-[1.1rem] py-[0.3rem] rounded-full border uppercase tracking-wider flex items-center gap-[0.5rem] ${getStatusBadge(selectedTrackOrder.status).bg
+                            } ${getStatusBadge(selectedTrackOrder.status).text} ${getStatusBadge(selectedTrackOrder.status).border}`}>
                             <span className={`w-[0.6rem] h-[0.6rem] rounded-full ${getStatusBadge(selectedTrackOrder.status).dot} animate-pulse`} />
                             {getStatusBadge(selectedTrackOrder.status).label}
                           </span>
@@ -1512,8 +1529,8 @@ export function ProfilePageContent() {
                                   width: step3Done
                                     ? '50%'
                                     : step2Done
-                                    ? '25%'
-                                    : '0%',
+                                      ? '25%'
+                                      : '0%',
                                 }}
                               />
 
@@ -1532,11 +1549,10 @@ export function ProfilePageContent() {
 
                               {/* Step 2: Processing */}
                               <div className="flex flex-col items-center text-center relative z-10">
-                                <div className={`w-[3.6rem] h-[3.6rem] sm:w-[4.4rem] sm:h-[4.4rem] rounded-full flex items-center justify-center font-bold shadow-xs ring-4 ring-white transition-all ${
-                                  step2Done
-                                    ? 'bg-slate-900 text-white'
-                                    : 'bg-white text-slate-400 border-2 border-slate-300'
-                                }`}>
+                                <div className={`w-[3.6rem] h-[3.6rem] sm:w-[4.4rem] sm:h-[4.4rem] rounded-full flex items-center justify-center font-bold shadow-xs ring-4 ring-white transition-all ${step2Done
+                                  ? 'bg-slate-900 text-white'
+                                  : 'bg-white text-slate-400 border-2 border-slate-300'
+                                  }`}>
                                   {step2Done ? (
                                     <svg className="w-[1.6rem] h-[1.6rem] sm:w-[1.8rem] sm:h-[1.8rem]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                       <polyline points="20 6 9 17 4 12" />
@@ -1557,11 +1573,10 @@ export function ProfilePageContent() {
 
                               {/* Step 3: Out for Delivery / In Transit */}
                               <div className="flex flex-col items-center text-center relative z-10">
-                                <div className={`w-[3.6rem] h-[3.6rem] sm:w-[4.4rem] sm:h-[4.4rem] rounded-full flex items-center justify-center font-bold shadow-xs ring-4 ring-white transition-all ${
-                                  step3Done
-                                    ? 'bg-slate-900 text-white'
-                                    : 'bg-white text-slate-400 border-2 border-slate-300'
-                                }`}>
+                                <div className={`w-[3.6rem] h-[3.6rem] sm:w-[4.4rem] sm:h-[4.4rem] rounded-full flex items-center justify-center font-bold shadow-xs ring-4 ring-white transition-all ${step3Done
+                                  ? 'bg-slate-900 text-white'
+                                  : 'bg-white text-slate-400 border-2 border-slate-300'
+                                  }`}>
                                   {step3Done ? (
                                     <svg className="w-[1.6rem] h-[1.6rem] sm:w-[1.8rem] sm:h-[1.8rem]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                       <polyline points="20 6 9 17 4 12" />
@@ -1669,8 +1684,8 @@ export function ProfilePageContent() {
                               {selectedTrackOrder.shippingFee > 0
                                 ? formatPrice(selectedTrackOrder.shippingFee)
                                 : ['processing', 'pending', 'confirmed'].includes(selectedTrackOrder.status)
-                                ? 'Calculated by Admin'
-                                : 'Complimentary'}
+                                  ? 'Calculated by Admin'
+                                  : 'Complimentary'}
                             </span>
                           </div>
                           <div className="h-[1px] bg-slate-200 my-[0.8rem]" />
@@ -1987,8 +2002,8 @@ export function ProfilePageContent() {
                                         {order.shippingFee > 0
                                           ? formatPrice(order.shippingFee)
                                           : ['processing', 'pending', 'confirmed'].includes(order.status)
-                                          ? 'Calculated by Admin'
-                                          : 'Complimentary'}
+                                            ? 'Calculated by Admin'
+                                            : 'Complimentary'}
                                       </span>
                                     </div>
                                     <div className="flex justify-between items-baseline font-bold text-slate-900 pt-[0.8rem] border-t border-slate-200 text-[1.45rem]">

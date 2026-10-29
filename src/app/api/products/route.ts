@@ -54,14 +54,8 @@ export async function GET(request: NextRequest) {
       const conn = await connectDB();
       const db = conn.connection.db;
 
-      const filter: Record<string, any> = {};
+      const filter: Record<string, any> = { status: 'active' };
       const andConditions: any[] = [];
-
-      if (status && status !== 'all') {
-        filter.status = status as 'active' | 'draft' | 'archived';
-      } else if (!status) {
-        filter.status = { $ne: 'archived' };
-      }
 
       if (isFeaturedParam === 'true') {
         filter.isFeatured = true;
@@ -74,7 +68,8 @@ export async function GET(request: NextRequest) {
       }
 
       if (query) {
-        const searchRegex = new RegExp(query, 'i');
+        const sanitized = query.replace(/[-[\]{}()*+?.,\\^$|#]/g, '\\$&').trim().replace(/\s+/g, '.*');
+        const searchRegex = new RegExp(sanitized, 'i');
         andConditions.push({
           $or: [
             { name: { $regex: searchRegex } },
@@ -226,7 +221,7 @@ export async function GET(request: NextRequest) {
       if (!computedFilters) {
         const [allMatchingForFacets, mongoCats] = await Promise.all([
           ProductModel.find(
-            status ? { status: status as 'active' | 'draft' | 'archived' } : { status: { $ne: 'archived' as const } },
+            { status: 'active' },
             'category subcategory price salePrice stock'
           ).lean(),
           db ? db.collection('categories').find({}).toArray() : Promise.resolve([]),

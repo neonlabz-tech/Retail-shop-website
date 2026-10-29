@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 import mongoose from 'mongoose';
 import { connectDB } from '@/lib/db';
 import ProductModel from '@/models/Product';
@@ -28,17 +29,18 @@ async function fetchProductBySlugOrId(slug: string): Promise<Product | null> {
       orConditions.push({ _id: slug });
     }
 
-    let doc = await ProductModel.findOne({ $or: orConditions }).lean();
+    let doc = await ProductModel.findOne({ status: 'active', $or: orConditions }).lean();
 
     if (!doc && !isMongoId) {
       const escaped = decodedSlug.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/-/g, '[-–— ]');
       const flexibleRegex = new RegExp(`^${escaped}$`, 'i');
       doc = await ProductModel.findOne({
+        status: 'active',
         $or: [{ slug: flexibleRegex }, { name: flexibleRegex }],
       }).lean();
     }
 
-    if (doc) {
+    if (doc && (doc as any).status === 'active') {
       return formatMongoProduct(doc);
     }
   } catch {
@@ -52,7 +54,7 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
   const product = await fetchProductBySlugOrId(slug);
 
   if (!product) {
-    return { title: 'Product Details' };
+    return { title: 'Product Not Found' };
   }
 
   return {
@@ -76,16 +78,18 @@ export default async function ProductPage({ params }: ProductPageProps) {
   const apiEndpoint = getApiEndpoint(slug);
   const product = await fetchProductBySlugOrId(slug);
 
+  if (!product) {
+    notFound();
+  }
+
   return (
     <>
-      {product && (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify(getStructuredData(product)),
-          }}
-        />
-      )}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(getStructuredData(product)),
+        }}
+      />
       <ProductDetailContent slug={slug} apiEndpoint={apiEndpoint} />
     </>
   );
