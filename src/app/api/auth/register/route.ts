@@ -42,6 +42,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!phone || typeof phone !== 'string' || !phone.trim()) {
+      return NextResponse.json(
+        { success: false, error: 'Phone number is required' },
+        { status: 400 }
+      );
+    }
+
+    const cleanPhone = phone.trim();
+    const phoneRegex = /^(?:0\d{9}|\+\d{9,14}|[1-9]\d{8,9})$/;
+    if (!phoneRegex.test(cleanPhone)) {
+      return NextResponse.json(
+        { success: false, error: 'Please enter a valid mobile number (e.g. 07XXXXXXXX)' },
+        { status: 400 }
+      );
+    }
+
     // Connect to database
     await connectDB();
 

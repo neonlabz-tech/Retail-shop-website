@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     const inStockOnly = searchParams.get('inStock') === 'true' || searchParams.get('availability') === 'in-stock';
 
     const matchQuery: Record<string, any> = {
-      status: { $ne: 'archived' },
+      status: 'active',
       ...(inStockOnly ? { stock: { $gt: 0 } } : {}),
     };
 

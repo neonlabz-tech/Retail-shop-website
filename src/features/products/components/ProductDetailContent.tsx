@@ -798,7 +798,7 @@ export function ProductDetailContent({
     }
   }, []);
 
-  if (isLoading || !product) {
+  if (isLoading) {
     return (
       <div className="container-main py-[40px]">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-[40px] items-start">
@@ -811,6 +811,23 @@ export function ProductDetailContent({
             <div className="h-[48px] w-[180px] rounded-[30px] animate-shimmer mt-[24px]" />
           </div>
         </div>
+      </div>
+    );
+  }
+
+  if (!product) {
+    return (
+      <div className="container-main py-[100px] text-center">
+        <h1 className="text-[32px] font-bold text-[#222] mb-[12px]">Product Not Found</h1>
+        <p className="text-[16px] text-[#666] mb-[28px]">
+          The product you are looking for does not exist or is no longer available.
+        </p>
+        <Link
+          href="/products"
+          className="inline-flex items-center justify-center px-[32px] py-[14px] bg-[#222] text-[#fff] text-[15px] font-semibold rounded-[30px] hover:bg-[#F15B41] transition-colors"
+        >
+          Return to shop
+        </Link>
       </div>
     );
   }

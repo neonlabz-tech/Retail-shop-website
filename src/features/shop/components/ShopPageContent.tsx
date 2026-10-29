@@ -228,6 +228,9 @@ function FilterSidebar({
     : [];
 
   const activeFilterTags: { label: string; key: string }[] = [];
+  if (selectedFilters.search) {
+    activeFilterTags.push({ label: `Search: "${selectedFilters.search}"`, key: 'q' });
+  }
   if (priceRange[0] > 0 || priceRange[1] < filters.priceRange.max) {
     activeFilterTags.push({
       label: `LKR ${priceRange[0].toLocaleString('en-US')} – LKR ${priceRange[1].toLocaleString('en-US')}`,
@@ -267,7 +270,10 @@ function FilterSidebar({
               key={tag.key}
               label={tag.label}
               onRemove={() => {
-                if (tag.key === 'price') {
+                if (tag.key === 'q') {
+                  if (onBatchFilterChange) onBatchFilterChange({ q: '', search: '' });
+                  else onFilterChange('q', '');
+                } else if (tag.key === 'price') {
                   onPriceChange([0, filters.priceRange.max]);
                 } else if (tag.key === 'category') {
                   if (onBatchFilterChange) onBatchFilterChange({ category: '', subcategory: '' });
@@ -541,6 +547,7 @@ export function ShopPageContent({
     router.push(`${basePath}?${params.toString()}`, { scroll: false });
   }, [router, searchParams, basePath]);
 
+  const searchQuery = (searchParams.get('q') || searchParams.get('search') || '').trim();
   const currentPage = parseInt(searchParams.get('page') || '1');
   const sort = searchParams.get('sort') || 'featured';
   const category = searchParams.get('category') || '';
@@ -558,6 +565,7 @@ export function ShopPageContent({
     page: currentPage,
     limit: PRODUCTS_PER_PAGE,
     sort,
+    q: searchQuery || undefined,
     category: category || undefined,
     subcategory: subcategory || undefined,
     collection: collection || undefined,
@@ -603,11 +611,13 @@ export function ShopPageContent({
       <div className="container-main pt-[16px] min-[750px]:pt-[20px]">
         <div className="rounded-[10px] h-[80px] min-[750px]:h-[88px] flex items-center py-0 px-[24px] min-[750px]:px-[32px]" style={{ backgroundColor: theme.headerBg }}>
           <div>
-            <h1 className="text-[24px] min-[750px]:text-[28px] font-bold mb-[3px]" style={{ color: theme.textColor }}>{title}</h1>
+            <h1 className="text-[24px] min-[750px]:text-[28px] font-bold mb-[3px]" style={{ color: theme.textColor }}>
+              {searchQuery ? `Search: "${searchQuery}"` : title}
+            </h1>
             <div className="flex items-center gap-[6px] text-[13px] min-[750px]:text-[14px]">
               <Link href={homeHref} className="underline underline-offset-[3px]" style={{ color: theme.mutedColor }}>{homeLabel}</Link>
               <span className="text-[#bbb]">/</span>
-              <span style={{ color: theme.textColor }}>{breadcrumbLabel}</span>
+              <span style={{ color: theme.textColor }}>{searchQuery ? 'Search Results' : breadcrumbLabel}</span>
             </div>
           </div>
         </div>
@@ -700,7 +710,7 @@ export function ShopPageContent({
           <div className="shop-sidebar w-[290px] shrink-0">
             <FilterSidebar
               filters={data?.filters || filtersDataRef.current}
-              selectedFilters={{ category, subcategory, brand, color, size, availability }}
+              selectedFilters={{ search: searchQuery, category, subcategory, brand, color, size, availability }}
               onFilterChange={handleFilterChange}
               onBatchFilterChange={updateParams}
               priceRange={[minPrice, displayMaxPrice]}
@@ -726,22 +736,41 @@ export function ShopPageContent({
                 viewCols === 2 ? 'grid-cols-2' : viewCols === 3 ? 'grid-cols-3' : 'grid-cols-4'
               } ${filterLoading ? 'opacity-[0.15] min-h-[400px]' : 'opacity-100 min-h-auto'}`}
             >
-              {isLoading
-                ? Array.from({ length: PRODUCTS_PER_PAGE }).map((_, i) => <ProductSkeleton key={i} cardVariant={cardVariant} />)
-                : data?.products.map((product, i) => (
-                    renderCard ? (
-                      <div key={product.id} className="min-w-0">{renderCard(product, i)}</div>
-                    ) : (
-                      <HomeProductCard
-                        key={product.id}
-                        product={product}
-                        index={i}
-                        hrefBase={productHrefBase}
-                        {...cardTheme}
-                      />
-                    )
-                  ))
-              }
+              {isLoading ? (
+                Array.from({ length: PRODUCTS_PER_PAGE }).map((_, i) => <ProductSkeleton key={i} cardVariant={cardVariant} />)
+              ) : (!data?.products || data.products.length === 0) ? (
+                <div className="col-span-full py-[60px] text-center">
+                  <p className="text-[20px] font-bold text-[#222] mb-[8px]">
+                    {searchQuery ? `No products found for "${searchQuery}"` : 'No products found'}
+                  </p>
+                  <p className="text-[14px] text-[#666] mb-[24px]">
+                    Try checking your spelling, using broader terms, or clearing filters.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      router.replace(basePath, { scroll: false });
+                    }}
+                    className="inline-flex items-center justify-center px-[22px] py-[11px] bg-[#222] text-white rounded-[6px] text-[14px] font-medium cursor-pointer hover:bg-[#444] transition-colors border-none"
+                  >
+                    Clear all filters
+                  </button>
+                </div>
+              ) : (
+                data.products.map((product, i) => (
+                  renderCard ? (
+                    <div key={product.id} className="min-w-0">{renderCard(product, i)}</div>
+                  ) : (
+                    <HomeProductCard
+                      key={product.id}
+                      product={product}
+                      index={i}
+                      hrefBase={productHrefBase}
+                      {...cardTheme}
+                    />
+                  )
+                ))
+              )}
             </div>
 
             {!filterLoading && data?.pagination && (

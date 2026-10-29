@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useUIStore } from '@/store/uiStore';
 
 function IconSearch({ size = 22 }: { size?: number }) {
@@ -21,12 +22,22 @@ function IconSearch({ size = 22 }: { size?: number }) {
 
 export function SearchBar() {
   const [value, setValue] = useState('');
+  const router = useRouter();
   const { openSearch } = useUIStore();
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (value.trim()) {
+      router.push(`/products?q=${encodeURIComponent(value.trim())}`);
+    } else {
+      openSearch();
+    }
+  };
 
   return (
     <form
       className="hdr-search"
-      onSubmit={(e) => { e.preventDefault(); openSearch(); }}
+      onSubmit={handleSubmit}
       role="search"
     >
       <input
