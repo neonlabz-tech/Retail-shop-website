@@ -10,6 +10,7 @@ import { useCartStore } from '@/store/cartStore';
 import { checkAuthOrRedirect } from '@/store/authStore';
 import { formatPrice } from '@/utils/formatPrice';
 import { getStorefrontOfProductId, isSameStoreScope, productHrefBaseFor, shopHrefFor, type Storefront } from '@/utils/storefront';
+import { FALLBACK_IMAGE_SRC, handleImageError, normalizeImageSrc } from '@/lib/imageFallback';
 
 function IconEye({ size = 16 }: { size?: number }) {
   return (
@@ -97,7 +98,7 @@ export function ComparePageContent({ storefront }: { storefront?: Storefront } =
     if (!checkAuthOrRedirect(router)) return;
     const variant = product.variants?.[0];
     const variantId = variant?.id || product.id || 'default';
-    const image = variant?.image || product.images?.[0]?.src || '';
+    const image = normalizeImageSrc(variant?.image) || normalizeImageSrc(product.images?.[0]?.src) || FALLBACK_IMAGE_SRC;
     addItem({
       productId: product.id,
       variantId,
@@ -184,7 +185,14 @@ export function ComparePageContent({ storefront }: { storefront?: Storefront } =
                   href={`${productHrefBase}/${product.slug}`}
                   className="cp-product-img-link block relative w-full max-w-[200px] h-[260px] mx-auto mb-[16px] bg-[#f5f5f5] overflow-hidden"
                 >
-                  <Image src={product.images[0]?.src || ''} alt={product.name} fill className="object-cover" sizes="(max-width: 749px) 50vw, 200px" />
+                  <Image
+                    src={normalizeImageSrc(product.images[0]?.src) || FALLBACK_IMAGE_SRC}
+                    alt={product.name}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 749px) 50vw, 200px"
+                    onError={handleImageError}
+                  />
                 </Link>
 
                 <Link

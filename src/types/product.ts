@@ -12,13 +12,21 @@ export interface ColorOption {
 
 export interface ProductVariant {
   id: string;
+  name?: string;
+  variantName?: string;
   color: string;
   size: string;
+  label?: string;
+  unit?: string;
   price: number;
+  salePrice?: number | null;
   compareAtPrice: number | null;
   image: string;
   available: boolean;
   sku: string;
+  stock?: number;
+  lowStockThreshold?: number;
+  weight?: number;
 }
 
 export interface Review {
@@ -61,5 +69,7 @@ export interface Product {
   countdownEnd: string | null;
   collections?: string[];
   stock?: number;
+  lowStockThreshold?: number;
+  salePrice?: number | null;
   weight?: number;
 }

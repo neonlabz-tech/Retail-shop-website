@@ -1,6 +1,6 @@
 import type { Product } from '@/types/product';
 import { parseWeightInGrams } from '@/utils/weight';
-import { FALLBACK_IMAGE_SRC } from '@/lib/imageFallback';
+import { FALLBACK_IMAGE_SRC, normalizeImageSrc } from '@/lib/imageFallback';
 
 const CATEGORY_ID_MAP: Record<string, string> = {
   '6ad5f26d8c37efc3ddcb1a03': 'Toys & Games',
@@ -47,17 +47,7 @@ export function formatMongoProduct(doc: any): Product {
   const rawImages: unknown[] = Array.isArray(doc.images) ? doc.images : [];
   const images = rawImages
     .map((image, index) => {
-      const src =
-        typeof image === 'string'
-          ? image.trim()
-          : image && typeof image === 'object'
-            ? String(
-                (image as { src?: unknown; url?: unknown; secure_url?: unknown }).src ||
-                  (image as { url?: unknown }).url ||
-                  (image as { secure_url?: unknown }).secure_url ||
-                  ''
-              ).trim()
-            : '';
+      const src = normalizeImageSrc(image);
       return src
         ? {
             id: `img-${index}`,
@@ -83,16 +73,99 @@ export function formatMongoProduct(doc: any): Product {
   const finalPrice = isSale ? doc.salePrice : (doc.price ?? 0);
   const compareAtPrice = isSale ? doc.price : null;
 
-  const defaultVariant = {
-    id: `v-default-${productId}`,
-    color: '',
-    size: '',
-    price: finalPrice,
-    compareAtPrice,
-    image: images[0]?.src || FALLBACK_IMAGE_SRC,
-    available: inStock,
-    sku: doc.sku || '',
-  };
+  // ── Parse Mongo Variants (supporting name, price, salePrice, stock, lowStockThreshold) ──
+  const rawVariants: any[] = Array.isArray(doc.variants) && doc.variants.length > 0 ? doc.variants : [];
+  let mappedVariants: any[] = [];
+  const extractedSizes: string[] = [];
+  const extractedColors: Array<{ name: string; value: string; type: 'hex' | 'image' }> = [];
+
+  if (rawVariants.length > 0) {
+    mappedVariants = rawVariants.map((v: any, index: number) => {
+      const vId = v._id?.toString() || v.id || v.sku || `v-${productId}-${index}`;
+      const vName = (v.name || v.label || v.unit || v.size || '').trim();
+
+      // Determine regular and sale prices
+      const vRegularPrice = typeof v.price === 'number' && v.price > 0 ? v.price : (doc.price ?? 0);
+      const vHasSale = typeof v.salePrice === 'number' && v.salePrice > 0 && v.salePrice < vRegularPrice;
+      const vEffectivePrice = vHasSale ? v.salePrice : vRegularPrice;
+      const vCompareAt = vHasSale
+        ? vRegularPrice
+        : (typeof v.compareAtPrice === 'number' && v.compareAtPrice > vEffectivePrice ? v.compareAtPrice : null);
+
+      const vStock = typeof v.stock === 'number' ? v.stock : (typeof doc.stock === 'number' ? doc.stock : 0);
+      const vLowStockThreshold = typeof v.lowStockThreshold === 'number'
+        ? v.lowStockThreshold
+        : (typeof doc.lowStockThreshold === 'number' ? doc.lowStockThreshold : 10);
+      const vAvailable = vStock > 0 && v.available !== false;
+      const vRawImage = (Array.isArray(v.images) && v.images.length > 0 ? v.images[0] : null) || v.image;
+      const vImage = normalizeImageSrc(vRawImage) || images[0]?.src || FALLBACK_IMAGE_SRC;
+
+      if (vName && !extractedSizes.includes(vName)) {
+        extractedSizes.push(vName);
+      }
+
+      let vColor = (v.color || '').trim();
+      if (!vColor && vName.includes(' - ')) {
+        const parts = vName.split(' - ');
+        if (parts.length === 2 && !/\d/.test(parts[0])) {
+          vColor = parts[0].trim();
+        }
+      }
+      if (vColor && !extractedColors.some(c => c.name.toLowerCase() === vColor.toLowerCase())) {
+        extractedColors.push({
+          name: vColor,
+          value: v.colorCode || '#222222',
+          type: 'hex',
+        });
+      }
+
+      return {
+        id: vId,
+        name: vName,
+        variantName: vName,
+        label: vName,
+        size: vName,
+        color: vColor,
+        unit: v.unit || '',
+        price: vEffectivePrice,
+        salePrice: v.salePrice ?? null,
+        compareAtPrice: vCompareAt,
+        image: vImage,
+        available: vAvailable,
+        sku: v.sku || doc.sku || '',
+        stock: vStock,
+        lowStockThreshold: vLowStockThreshold,
+        weight: typeof v.weight === 'number' ? v.weight : parseWeightInGrams(doc),
+      };
+    });
+  }
+
+  // If no variants in DB, provide single default variant
+  if (mappedVariants.length === 0) {
+    mappedVariants = [{
+      id: `v-default-${productId}`,
+      name: '',
+      variantName: '',
+      color: '',
+      size: '',
+      label: '',
+      unit: doc.unit || '',
+      price: finalPrice,
+      salePrice: doc.salePrice ?? null,
+      compareAtPrice,
+      image: images[0]?.src || FALLBACK_IMAGE_SRC,
+      available: inStock,
+      sku: doc.sku || '',
+      stock: typeof doc.stock === 'number' ? doc.stock : 0,
+      lowStockThreshold: typeof doc.lowStockThreshold === 'number' ? doc.lowStockThreshold : 10,
+      weight: parseWeightInGrams(doc),
+    }];
+  }
+
+  // Calculate starting / display price (if variants exist with varying prices)
+  const displayPrice = mappedVariants.length > 0 && rawVariants.length > 0
+    ? (mappedVariants.find(v => v.available)?.price ?? mappedVariants[0].price)
+    : finalPrice;
 
   const resolvedCategory = resolveCategory(doc);
 
@@ -102,13 +175,13 @@ export function formatMongoProduct(doc: any): Product {
     name: doc.name,
     vendor: doc.subcategory || resolvedCategory || 'Store',
     brand: doc.subcategory || resolvedCategory || 'Store',
-    price: finalPrice,
+    price: displayPrice,
     compareAtPrice: compareAtPrice,
     currency: 'LKR',
     images,
-    variants: [defaultVariant],
-    colors: [],
-    sizes: [],
+    variants: mappedVariants,
+    colors: extractedColors,
+    sizes: extractedSizes,
     category: resolvedCategory,
     subcategory: doc.subcategory || '',
     tags: [doc.subcategory, resolvedCategory].filter(Boolean) as string[],
@@ -125,6 +198,8 @@ export function formatMongoProduct(doc: any): Product {
     sku: doc.sku || '',
     countdownEnd: null,
     stock: typeof doc.stock === 'number' ? doc.stock : 0,
+    lowStockThreshold: typeof doc.lowStockThreshold === 'number' ? doc.lowStockThreshold : 10,
+    salePrice: typeof doc.salePrice === 'number' ? doc.salePrice : null,
     weight: parseWeightInGrams(doc),
   };
 }

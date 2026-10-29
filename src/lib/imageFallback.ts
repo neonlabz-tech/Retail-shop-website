@@ -5,7 +5,16 @@ export const FALLBACK_IMAGE_SRC =
 
 export function normalizeImageSrc(value: unknown): string {
   if (typeof value === 'string') {
-    return value.trim();
+    let trimmed = value.trim();
+    if (!trimmed) return '';
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      try {
+        trimmed = encodeURI(decodeURI(trimmed));
+      } catch {
+        // keep trimmed if decode fails
+      }
+    }
+    return trimmed;
   }
 
   if (Array.isArray(value)) {
@@ -60,6 +69,7 @@ export function handleImageError(
       // Append or update cache-busting timestamp to force fresh browser request
       const cleanBase = originalSrc.replace(/([?&])_retry=\d+/, '');
       const sep = cleanBase.includes('?') ? '&' : '?';
+      image.srcset = '';
       image.src = `${cleanBase}${sep}_retry=${Date.now()}`;
     }, retryDelayMs);
 
@@ -68,6 +78,7 @@ export function handleImageError(
 
   // All retries failed: fall back to placeholder
   if (image.src !== FALLBACK_IMAGE_SRC && !image.src.endsWith(FALLBACK_IMAGE_SRC)) {
+    image.srcset = '';
     image.src = FALLBACK_IMAGE_SRC;
   }
 }

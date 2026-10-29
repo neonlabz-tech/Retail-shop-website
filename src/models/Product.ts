@@ -16,6 +16,7 @@ export interface IProductDocument extends Document {
   sku?: string;
   images: string[];
   imageKeys?: string[];
+  variants?: any[];
   specifications?: ISpecification[];
   stock: number;
   weight?: number;
@@ -39,6 +40,7 @@ const ProductSchema = new Schema<IProductDocument>(
     sku: { type: String, default: '' },
     images: { type: [String], default: [] },
     imageKeys: { type: [String], default: [] },
+    variants: { type: [Schema.Types.Mixed], default: [] },
     specifications: [
       {
         key: { type: String, required: true },

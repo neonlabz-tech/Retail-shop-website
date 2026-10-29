@@ -4,6 +4,7 @@ export interface IOrderItem {
   product?: any;
   productId?: string;
   variantId?: string;
+  variantName?: string;
   name: string;
   slug?: string;
   image?: string;
@@ -82,6 +83,7 @@ const OrderItemSchema = new Schema<IOrderItem>(
     product: { type: Schema.Types.Mixed },
     productId: { type: String, default: '' },
     variantId: { type: String, default: '' },
+    variantName: { type: String, default: '' },
     name: { type: String, required: true },
     slug: { type: String, default: '' },
     image: { type: String, default: '' },

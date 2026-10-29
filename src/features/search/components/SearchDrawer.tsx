@@ -8,6 +8,7 @@ import { useSearch } from '@/features/products/hooks/useSearch';
 import { useDebounce } from '@/hooks/useDebounce';
 import { formatPrice } from '@/utils/formatPrice';
 import { POPULAR_SEARCHES } from '@/lib/constants';
+import { FALLBACK_IMAGE_SRC, handleImageError, normalizeImageSrc } from '@/lib/imageFallback';
 
 function IconSearch({ size = 20 }: { size?: number }) {
   return (
@@ -144,7 +145,14 @@ export function SearchDrawer() {
                     className="search-product-item flex items-center gap-[16px] py-[14px] px-0 border-b border-[#f0f0f0] no-underline text-inherit"
                   >
                     <div className="w-[60px] h-[70px] rounded-[4px] overflow-hidden bg-[#f5f5f5] shrink-0 relative">
-                      <Image src={product.images[0]?.src || ''} alt={product.name} fill className="object-cover" sizes="60px" />
+                      <Image
+                        src={normalizeImageSrc(product.images[0]?.src) || FALLBACK_IMAGE_SRC}
+                        alt={product.name}
+                        fill
+                        className="object-cover"
+                        sizes="60px"
+                        onError={handleImageError}
+                      />
                     </div>
                     <div>
                       <p className="text-[16px] font-semibold text-[#222] mb-[5px]">
@@ -217,7 +225,14 @@ export function SearchDrawer() {
                     className="search-product-item flex items-center gap-[16px] py-[14px] px-0 border-b border-[#f0f0f0] no-underline text-inherit"
                   >
                     <div className="w-[60px] h-[70px] rounded-[4px] overflow-hidden bg-[#f5f5f5] shrink-0 relative">
-                      <Image src={product.images[0]?.src || ''} alt={product.name} fill className="object-cover" sizes="60px" />
+                      <Image
+                        src={normalizeImageSrc(product.images[0]?.src) || FALLBACK_IMAGE_SRC}
+                        alt={product.name}
+                        fill
+                        className="object-cover"
+                        sizes="60px"
+                        onError={handleImageError}
+                      />
                     </div>
                     <div>
                       <p className="text-[12px] font-semibold text-[#888] tracking-[1.5px] uppercase mb-[4px]">

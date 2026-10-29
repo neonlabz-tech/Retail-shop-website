@@ -10,6 +10,7 @@ import { QuantitySelector } from '@/components/ui/QuantitySelector';
 import { FeaturedSlider } from '@/features/home/components/FeaturedSlider';
 import { formatPrice } from '@/utils/formatPrice';
 import { FREE_SHIPPING_THRESHOLD, GIFT_WRAP_PRICE } from '@/lib/constants';
+import { FALLBACK_IMAGE_SRC, handleImageError, normalizeImageSrc } from '@/lib/imageFallback';
 
 const ACCENT = '#c96742';
 
@@ -244,11 +245,12 @@ export function CartPageContent() {
                 <div key={`${item.productId}-${item.variantId}`} className="cp-item relative">
                   <Link href={`/products/${item.slug}`} className="cp-item-img">
                     <Image
-                      src={item.image}
+                      src={normalizeImageSrc(item.image) || FALLBACK_IMAGE_SRC}
                       alt={item.name}
                       fill
                       sizes="100px"
                       className="object-contain"
+                      onError={handleImageError}
                     />
                   </Link>
                   <div className="cp-item-body">
