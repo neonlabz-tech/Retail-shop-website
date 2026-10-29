@@ -13,13 +13,13 @@ export async function GET(
 
     await connectDB();
     const isMongoId = mongoose.Types.ObjectId.isValid(id);
-    const query = isMongoId
-      ? { $or: [{ _id: id }, { slug: id }] }
-      : { slug: id };
+    const query: Record<string, any> = isMongoId
+      ? { status: 'active', $or: [{ _id: id }, { slug: id }] }
+      : { status: 'active', slug: id };
 
     const mongoProduct = await Product.findOne(query).lean();
 
-    if (mongoProduct) {
+    if (mongoProduct && (mongoProduct as any).status === 'active') {
       const formatted = formatMongoProduct(mongoProduct);
       return NextResponse.json({ product: formatted });
     }

@@ -23,9 +23,10 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const searchRegex = new RegExp(query, 'i');
+    const sanitized = query.replace(/[-[\]{}()*+?.,\\^$|#]/g, '\\$&').trim().replace(/\s+/g, '.*');
+    const searchRegex = new RegExp(sanitized, 'i');
     const searchFilter: Record<string, any> = {
-      status: { $ne: 'archived' },
+      status: 'active',
       $or: [
         { name: { $regex: searchRegex } },
         { sku: { $regex: searchRegex } },

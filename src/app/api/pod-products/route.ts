@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
   } else {
     try {
       await connectDB();
-      const mongoDocs = await ProductModel.find({ status: { $ne: 'archived' } }).lean();
+      const mongoDocs = await ProductModel.find({ status: 'active' }).lean();
       if (mongoDocs && mongoDocs.length > 0) {
         allPodProducts = mongoDocs.map(formatMongoProduct);
         cachedPodProducts = allPodProducts;

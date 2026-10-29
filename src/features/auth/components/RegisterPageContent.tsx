@@ -64,6 +64,7 @@ export function RegisterPageContent() {
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [phoneError, setPhoneError] = useState<string | null>(null);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(true);
@@ -74,6 +75,87 @@ export function RegisterPageContent() {
   const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
   const [resendStatus, setResendStatus] = useState<string | null>(null);
   const [isResending, setIsResending] = useState(false);
+
+  // Validate phone format: must match 10-digit local (e.g. 07XXXXXXXX) or international (+94XXXXXXXXX)
+  const isValidPhone = (val: string) => {
+    const trimmed = val.trim();
+    if (!trimmed) return false;
+    return /^(?:0\d{9}|\+\d{9,14}|[1-9]\d{8,9})$/.test(trimmed);
+  };
+
+  const handlePhoneKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Allow functional/control keys
+    if (
+      e.key === 'Backspace' ||
+      e.key === 'Delete' ||
+      e.key === 'Tab' ||
+      e.key === 'Escape' ||
+      e.key === 'Enter' ||
+      e.key === 'ArrowLeft' ||
+      e.key === 'ArrowRight' ||
+      e.key === 'ArrowUp' ||
+      e.key === 'ArrowDown' ||
+      e.key === 'Home' ||
+      e.key === 'End' ||
+      e.ctrlKey ||
+      e.metaKey
+    ) {
+      return;
+    }
+
+    // Allow '+' only at index 0 if not already present
+    if (e.key === '+') {
+      const input = e.currentTarget;
+      if (input.selectionStart === 0 && !input.value.includes('+')) {
+        return;
+      }
+      e.preventDefault();
+      return;
+    }
+
+    // Block any non-digit character (letters, punctuation, etc.)
+    if (!/^[0-9]$/.test(e.key)) {
+      e.preventDefault();
+    }
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    const startsWithPlus = raw.startsWith('+');
+    const digitsOnly = raw.replace(/\D/g, '');
+    let sanitized = startsWithPlus ? `+${digitsOnly}` : digitsOnly;
+    // Limit length: international +94 + 9 digits = 12-13 chars max, or 10 digits for local
+    const maxLen = startsWithPlus ? 13 : 10;
+    sanitized = sanitized.slice(0, maxLen);
+    setPhone(sanitized);
+    if (phoneError) {
+      setPhoneError(null);
+    }
+  };
+
+  const handlePhonePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData('text');
+    const startsWithPlus = pasted.trim().startsWith('+') || phone.startsWith('+');
+    const digitsOnly = pasted.replace(/\D/g, '');
+    let sanitized = startsWithPlus ? `+${digitsOnly}` : digitsOnly;
+    const maxLen = startsWithPlus ? 13 : 10;
+    sanitized = sanitized.slice(0, maxLen);
+    setPhone(sanitized);
+    if (phoneError) {
+      setPhoneError(null);
+    }
+  };
+
+  const handlePhoneBlur = () => {
+    if (!phone.trim()) {
+      setPhoneError('Phone number is required');
+    } else if (!isValidPhone(phone)) {
+      setPhoneError('Please enter a valid 10-digit mobile number (e.g. 07XXXXXXXX)');
+    } else {
+      setPhoneError(null);
+    }
+  };
 
   // Read redirect query parameter
   useEffect(() => {
@@ -89,10 +171,25 @@ export function RegisterPageContent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setPhoneError(null);
     setSuccess(null);
 
     if (password.length < 6) {
       setError('Password must be at least 6 characters long');
+      return;
+    }
+
+    if (!phone.trim()) {
+      const msg = 'Phone number is required';
+      setError(msg);
+      setPhoneError(msg);
+      return;
+    }
+
+    if (!isValidPhone(phone)) {
+      const msg = 'Please enter a valid 10-digit mobile number (e.g. 07XXXXXXXX)';
+      setError(msg);
+      setPhoneError(msg);
       return;
     }
 
@@ -330,7 +427,7 @@ export function RegisterPageContent() {
             {/* Phone Field */}
             <div className="flex flex-col gap-[0.4rem]">
               <label className="text-[1.25rem] font-semibold text-[#1e293b]" htmlFor="register-phone">
-                Phone Number (optional)
+                Phone Number <span className="text-[#ef4444]">*</span>
               </label>
               <div className="relative flex items-center w-full">
                 <span className="absolute left-[1.2rem] text-[#94a3b8] flex items-center pointer-events-none">
@@ -339,14 +436,29 @@ export function RegisterPageContent() {
                 <input
                   id="register-phone"
                   type="tel"
+                  inputMode="tel"
                   autoComplete="tel"
-                  placeholder="+94 7X XXX XXXX"
+                  placeholder="07XXXXXXXX"
+                  required
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="w-full h-[4.4rem] pl-[3.8rem] pr-[1.4rem] bg-white border border-[#cbd5e1] rounded-[0.75rem] text-[1.6rem] sm:text-[1.35rem] text-[#0f172a] placeholder-[#94a3b8] outline-none transition-all focus:border-[#c96742] focus:ring-2 focus:ring-[#c96742]/15 disabled:bg-[#f8fafc] disabled:cursor-not-allowed"
+                  onKeyDown={handlePhoneKeyDown}
+                  onChange={handlePhoneChange}
+                  onPaste={handlePhonePaste}
+                  onBlur={handlePhoneBlur}
+                  maxLength={13}
+                  className={`w-full h-[4.4rem] pl-[3.8rem] pr-[1.4rem] bg-white border rounded-[0.75rem] text-[1.6rem] sm:text-[1.35rem] text-[#0f172a] placeholder-[#94a3b8] outline-none transition-all focus:ring-2 disabled:bg-[#f8fafc] disabled:cursor-not-allowed ${
+                    phoneError
+                      ? 'border-[#ef4444] focus:border-[#ef4444] focus:ring-[#ef4444]/15'
+                      : 'border-[#cbd5e1] focus:border-[#c96742] focus:ring-[#c96742]/15'
+                  }`}
                   disabled={isLoading}
                 />
               </div>
+              {phoneError && (
+                <p className="text-[1.15rem] text-[#ef4444] font-medium mt-[0.2rem]">
+                  {phoneError}
+                </p>
+              )}
             </div>
 
             {/* Password Field */}

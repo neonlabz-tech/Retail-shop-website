@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useUIStore } from '@/store/uiStore';
 import { useSearch } from '@/features/products/hooks/useSearch';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -36,14 +37,14 @@ function IconArrowRight({ size = 18 }: { size?: number }) {
 }
 
 export function SearchDrawer() {
+  const router = useRouter();
   const { searchOpen, closeSearch } = useUIStore();
   const searchEndpoint = '/api/search';
   const productHrefBase = '/products';
-  const shopHref = '/shop';
   const popularTerms = POPULAR_SEARCHES;
   const [query, setQuery] = useState('');
   const debouncedQuery = useDebounce(query, 300);
-  const { data } = useSearch(debouncedQuery, { endpoint: searchEndpoint });
+  const { data, isLoading } = useSearch(debouncedQuery, { endpoint: searchEndpoint });
 
   useEffect(() => {
     if (searchOpen) {
@@ -60,6 +61,20 @@ export function SearchDrawer() {
     document.addEventListener('keydown', handleEsc);
     return () => document.removeEventListener('keydown', handleEsc);
   }, [searchOpen, closeSearch]);
+
+  const handleSearchSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const trimmed = query.trim();
+    if (!trimmed) return;
+    closeSearch();
+    router.push(`/products?q=${encodeURIComponent(trimmed)}`);
+  };
+
+  const handleTermClick = (term: string) => {
+    setQuery(term);
+    closeSearch();
+    router.push(`/products?q=${encodeURIComponent(term)}`);
+  };
 
   const hasQuery = query.trim().length > 0;
 
@@ -80,8 +95,17 @@ export function SearchDrawer() {
         }`}
       >
         <div className="pt-[24px] px-[24px] pb-0">
-          <div className="flex items-center gap-[12px] pb-[14px] border-b-[1.5px] border-[#222]">
-            <IconSearch size={24} />
+          <form
+            onSubmit={handleSearchSubmit}
+            className="flex items-center gap-[12px] pb-[14px] border-b-[1.5px] border-[#222]"
+          >
+            <button
+              type="submit"
+              className="bg-transparent border-none p-0 cursor-pointer text-[#222] flex items-center justify-center"
+              aria-label="Submit search"
+            >
+              <IconSearch size={24} />
+            </button>
             <input
               type="text"
               value={query}
@@ -92,6 +116,7 @@ export function SearchDrawer() {
             />
             {hasQuery && (
               <button
+                type="button"
                 onClick={() => setQuery('')}
                 className="w-[20px] h-[20px] rounded-full bg-[#e0e0e0] border-none cursor-pointer flex items-center justify-center text-[12px] text-[#666] leading-none"
                 aria-label="Clear search"
@@ -100,13 +125,14 @@ export function SearchDrawer() {
               </button>
             )}
             <button
+              type="button"
               onClick={closeSearch}
               className="flex items-center justify-center bg-transparent border-none cursor-pointer text-[#222]"
               aria-label="Close search"
             >
               <IconClose size={24} />
             </button>
-          </div>
+          </form>
         </div>
 
         <div className="flex-1 overflow-y-auto px-[24px] py-0">
@@ -122,7 +148,8 @@ export function SearchDrawer() {
                     {popularTerms.map((term) => (
                       <button
                         key={term}
-                        onClick={() => setQuery(term)}
+                        type="button"
+                        onClick={() => handleTermClick(term)}
                         className="text-[16px] text-[#555] bg-transparent border-none cursor-pointer p-0 transition-colors duration-200 ease-in-out hover:text-[#F15B41]"
                       >
                         {term}
@@ -137,7 +164,7 @@ export function SearchDrawer() {
               </h4>
 
               <div>
-                {data?.products.map((product) => (
+                {data?.products?.map((product) => (
                   <Link
                     key={product.id}
                     href={`${productHrefBase}/${product.slug}`}
@@ -189,7 +216,14 @@ export function SearchDrawer() {
 
           {hasQuery && (
             <>
-              {data?.suggestions && data.suggestions.length > 0 && (
+              {isLoading && (
+                <div className="py-[40px] flex flex-col items-center justify-center gap-[10px]">
+                  <div className="w-[30px] h-[30px] border-[3px] border-[#e5e5e5] border-t-[#222] rounded-full animate-spin" />
+                  <span className="text-[14px] text-[#777]">Searching products...</span>
+                </div>
+              )}
+
+              {!isLoading && data?.suggestions && data.suggestions.length > 0 && (
                 <div className="pt-[20px] mb-[8px]">
                   <div className="pb-[10px] border-b border-[#e5e5e5] mb-[12px]">
                     <span className="text-[12px] font-bold text-[#888] tracking-[2px] uppercase">
@@ -199,10 +233,9 @@ export function SearchDrawer() {
                   {data.suggestions.slice(0, 3).map((suggestion) => (
                     <button
                       key={suggestion}
-                      onClick={() => setQuery(suggestion)}
-                      className="block w-full text-left text-[16px] text-[#222] py-[10px] px-0 bg-transparent border-none cursor-pointer transition-[color] duration-200 ease-in-out"
-                      onMouseEnter={(e) => { e.currentTarget.style.color = '#F15B41'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.color = '#222'; }}
+                      type="button"
+                      onClick={() => handleTermClick(suggestion)}
+                      className="block w-full text-left text-[16px] text-[#222] py-[10px] px-0 bg-transparent border-none cursor-pointer transition-[color] duration-200 ease-in-out hover:text-[#F15B41]"
                     >
                       {suggestion}
                     </button>
@@ -210,83 +243,96 @@ export function SearchDrawer() {
                 </div>
               )}
 
-              <div className="pb-[10px] border-b border-[#e5e5e5] mb-[12px]">
-                <span className="text-[12px] font-bold text-[#888] tracking-[2px] uppercase">
-                  PRODUCTS
-                </span>
-              </div>
+              {!isLoading && (
+                <>
+                  <div className="pb-[10px] border-b border-[#e5e5e5] mb-[12px] pt-[14px]">
+                    <span className="text-[12px] font-bold text-[#888] tracking-[2px] uppercase">
+                      PRODUCTS ({data?.products?.length || 0})
+                    </span>
+                  </div>
 
-              <div>
-                {data?.products.map((product) => (
-                  <Link
-                    key={product.id}
-                    href={`${productHrefBase}/${product.slug}`}
-                    onClick={closeSearch}
-                    className="search-product-item flex items-center gap-[16px] py-[14px] px-0 border-b border-[#f0f0f0] no-underline text-inherit"
-                  >
-                    <div className="w-[60px] h-[70px] rounded-[4px] overflow-hidden bg-[#f5f5f5] shrink-0 relative">
-                      <Image
-                        src={normalizeImageSrc(product.images[0]?.src) || FALLBACK_IMAGE_SRC}
-                        alt={product.name}
-                        fill
-                        className="object-cover"
-                        sizes="60px"
-                        onError={handleImageError}
-                      />
+                  {(!data?.products || data.products.length === 0) ? (
+                    <div className="py-[32px] text-center">
+                      <p className="text-[16px] text-[#444] mb-[8px]">
+                        No products found matching &ldquo;<span className="font-semibold text-[#222]">{query}</span>&rdquo;
+                      </p>
+                      <p className="text-[13px] text-[#888]">
+                        Check the spelling or try searching for another product.
+                      </p>
                     </div>
+                  ) : (
                     <div>
-                      <p className="text-[12px] font-semibold text-[#888] tracking-[1.5px] uppercase mb-[4px]">
-                        {product.vendor}
-                      </p>
-                      <p className="text-[16px] font-semibold text-[#222] mb-[5px]">
-                        {product.name}
-                      </p>
-                      {(() => {
-                        const sDiscount = product.compareAtPrice && product.compareAtPrice > product.price
-                          ? Math.round(((product.compareAtPrice - product.price) / product.compareAtPrice) * 100)
-                          : 0;
-                        return (
-                          <div className="flex items-baseline gap-[6px] flex-wrap">
-                            <span className="product-price-text text-[15px] font-bold text-[#e01117]">
-                              {formatPrice(product.price)}
-                            </span>
-                            {sDiscount > 0 && (
-                              <span className="text-[#F15B41] bg-[#fff0ed] text-[11px] font-bold px-[4px] py-[1px] rounded-[3px] leading-none">
-                                -{sDiscount}%
-                              </span>
-                            )}
-                            {product.compareAtPrice && (
-                              <span className="text-[13px] text-[#999] line-through font-normal">
-                                {formatPrice(product.compareAtPrice)}
-                              </span>
-                            )}
+                      {data.products.map((product) => (
+                        <Link
+                          key={product.id}
+                          href={`${productHrefBase}/${product.slug}`}
+                          onClick={closeSearch}
+                          className="search-product-item flex items-center gap-[16px] py-[14px] px-0 border-b border-[#f0f0f0] no-underline text-inherit"
+                        >
+                          <div className="w-[60px] h-[70px] rounded-[4px] overflow-hidden bg-[#f5f5f5] shrink-0 relative">
+                            <Image
+                              src={normalizeImageSrc(product.images[0]?.src) || FALLBACK_IMAGE_SRC}
+                              alt={product.name}
+                              fill
+                              className="object-cover"
+                              sizes="60px"
+                              onError={handleImageError}
+                            />
                           </div>
-                        );
-                      })()}
+                          <div>
+                            <p className="text-[12px] font-semibold text-[#888] tracking-[1.5px] uppercase mb-[4px]">
+                              {product.vendor || 'RKF'}
+                            </p>
+                            <p className="text-[16px] font-semibold text-[#222] mb-[5px]">
+                              {product.name}
+                            </p>
+                            {(() => {
+                              const sDiscount = product.compareAtPrice && product.compareAtPrice > product.price
+                                ? Math.round(((product.compareAtPrice - product.price) / product.compareAtPrice) * 100)
+                                : 0;
+                              return (
+                                <div className="flex items-baseline gap-[6px] flex-wrap">
+                                  <span className="product-price-text text-[15px] font-bold text-[#e01117]">
+                                    {formatPrice(product.price)}
+                                  </span>
+                                  {sDiscount > 0 && (
+                                    <span className="text-[#F15B41] bg-[#fff0ed] text-[11px] font-bold px-[4px] py-[1px] rounded-[3px] leading-none">
+                                      -{sDiscount}%
+                                    </span>
+                                  )}
+                                  {product.compareAtPrice && (
+                                    <span className="text-[13px] text-[#999] line-through font-normal">
+                                      {formatPrice(product.compareAtPrice)}
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })()}
+                          </div>
+                        </Link>
+                      ))}
                     </div>
-                  </Link>
-                ))}
-              </div>
+                  )}
+                </>
+              )}
             </>
           )}
         </div>
 
         {hasQuery && (
-          <div className="flex items-center justify-between py-[16px] px-[24px] border-t border-[#e5e5e5]">
-            <Link
-              href={`${shopHref}?q=${encodeURIComponent(query)}`}
-              onClick={closeSearch}
-              className="text-[14px] text-[#F15B41] underline font-medium"
+          <div className="py-[16px] px-[24px] border-t border-[#e5e5e5]">
+            <button
+              type="button"
+              onClick={() => handleSearchSubmit()}
+              className="flex items-center justify-between w-full bg-transparent border-none cursor-pointer p-0 text-left"
             >
-              Search for &quot;{query}&quot;
-            </Link>
-            <Link
-              href={`${shopHref}?q=${encodeURIComponent(query)}`}
-              onClick={closeSearch}
-              className="text-[#222] flex"
-            >
-              <IconArrowRight size={18} />
-            </Link>
+              <span className="text-[14px] text-[#F15B41] underline font-medium">
+                Search for &quot;{query}&quot;
+              </span>
+              <span className="text-[#222] flex">
+                <IconArrowRight size={18} />
+              </span>
+            </button>
           </div>
         )}
       </div>

@@ -190,6 +190,11 @@ export function CheckoutPageContent() {
       setOrderError('Please enter your Phone Number.');
       return;
     }
+    const phoneRegex = /^(?:0\d{9}|\+\d{9,14}|[1-9]\d{8,9})$/;
+    if (!phoneRegex.test(phone.trim())) {
+      setOrderError('Please enter a valid Phone Number (e.g. 07XXXXXXXX).');
+      return;
+    }
     if (!email.trim()) {
       setOrderError('Please enter your Email.');
       return;
@@ -484,9 +489,26 @@ export function CheckoutPageContent() {
                     <label className="co-label">Phone Number<span className="co-req">*</span></label>
                     <input
                       type="tel"
+                      inputMode="tel"
                       value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="+94 77 123 4567"
+                      onKeyDown={(e) => {
+                        if (
+                          e.key === 'Backspace' || e.key === 'Delete' || e.key === 'Tab' ||
+                          e.key === 'Escape' || e.key === 'Enter' || e.key.startsWith('Arrow') ||
+                          e.key === 'Home' || e.key === 'End' || e.ctrlKey || e.metaKey
+                        ) return;
+                        if (e.key === '+' && e.currentTarget.selectionStart === 0 && !e.currentTarget.value.includes('+')) return;
+                        if (!/^[0-9]$/.test(e.key)) e.preventDefault();
+                      }}
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        const startsWithPlus = raw.startsWith('+');
+                        const digits = raw.replace(/\D/g, '');
+                        const val = startsWithPlus ? `+${digits}` : digits;
+                        setPhone(val.slice(0, 13));
+                      }}
+                      placeholder="07XXXXXXXX"
+                      maxLength={13}
                       className="co-input"
                     />
                   </div>
